@@ -1,0 +1,165 @@
+# =============================================================================
+# SITE DESIGN CONTRACT — Precios Tandil
+# Estándar visual basado en UI/UX Pro Max. Vinculante para apps/web.
+# Principios rectores: Mobile-First Absoluto · Legibilidad en góndola ·
+# Cero ruido visual · Accesibilidad WCAG 2.1 AA
+# =============================================================================
+
+meta:
+  project: precios-tandil
+  version: 1.0.0
+  date: 2026-08-20
+  brand_line: "Tecnología de análisis impulsada por Sigma | Difundido por Tandil Alerta"
+  primary_user: >
+    Vecino de Tandil parado en la góndola, una mano libre, red móvil inestable,
+    necesita el precio comparado en ≤ 3 segundos.
+
+design_principles:
+  - id: DP-1
+    rule: Mobile-first absoluto; todo layout se diseña primero a 360px de ancho.
+    rationale: El caso de uso primario ocurre en un teléfono dentro del supermercado.
+  - id: DP-2
+    rule: Respuesta visible en ≤ 3s; ningún estado intermedio sin feedback.
+    rationale: Regla de oro del producto (Constitution III).
+  - id: DP-3
+    rule: Verde nunca es el único portador de significado; siempre acompañado de texto.
+    rationale: Accesibilidad para daltonismo (Constitution VI).
+  - id: DP-4
+    rule: Una acción primaria por pantalla; jerarquía visual estricta.
+    rationale: Uso con una mano bajo presión de tiempo.
+  - id: DP-5
+    rule: Cero decoración sin función; sin ilustraciones que compitan con datos.
+    rationale: Ruido visual = segundos perdidos en góndola.
+
+# -----------------------------------------------------------------------------
+palette:
+  color_system: oklch
+  light:
+    background: "#FFFFFF"
+    surface: "#F6F7F9"
+    surface-raised: "#FFFFFF"
+    text-primary: "#0B1220"        # contraste 16.8:1 sobre background
+    text-secondary: "#475569"
+    border: "#E2E8F0"
+    accent-primary: "#0E5FD8"      # acciones / links (AA sobre blanco)
+    best-price-green: "#0B7A3B"    # texto verde AA sobre blanco; fondo chip #DCFCE7
+    price-drop-badge-bg: "#DCFCE7"
+    warning-red: "#B42318"         # subas de precio
+    opportunity-gold: "#854D0E"    # badge oportunidad (texto) sobre #FEF9C3
+  dark:
+    background: "#0B1220"
+    surface: "#111A2C"
+    surface-raised: "#16213A"
+    text-primary: "#F1F5F9"
+    text-secondary: "#94A3B8"
+    border: "#24304A"
+    accent-primary: "#6EA8FF"
+    best-price-green: "#4ADE80"    # texto sobre dark; chip rgba(74,222,128,.12)
+    price-drop-badge-bg: "rgba(74,222,128,0.12)"
+    warning-red: "#F87171"
+    opportunity-gold: "#FDE047"
+  semantic_rules:
+    - green + label "Mejor precio" → exclusivo del precio mínimo de la tarjeta.
+    - red + "+X %" → solo variaciones al alza.
+    - gold → solo badge "Mejor Oportunidad de la Semana".
+    - Nada más usa estos tres colores semánticos.
+
+typography:
+  primary: Inter                    # fallback: Geist, system-ui
+  scale_mobile_first:
+    display: { size: 28px, weight: 700, line_height: 1.15 }   # precio destacado
+    h1:      { size: 22px, weight: 700, line_height: 1.2 }
+    h2:      { size: 18px, weight: 600 }
+    body:    { size: 16px, weight: 400 }                      # mínimo absoluto móvil
+    caption: { size: 13px, weight: 500, letter_spacing: 0.01em }
+    price-hero: { size: 32px, weight: 800, tabular_nums: true }
+  rules:
+    - font_feature_settings tabular-nums en TODOS los precios.
+    - Sin tipografía < 13px en ninguna vista.
+    - Máx 2 pesos visibles por pantalla.
+
+spacing_layout:
+  base_unit: 4px
+  screen_padding_mobile: 16px
+  card_gap: 12px
+  touch_target_min: "44x44px"
+  thumb_zone: "acciones primarias en tercio inferior de la pantalla"
+  breakpoints:
+    base: 360px     # diseño canónico
+    sm: 640px
+    md: 768px       # tablet: máx content 720px centrado
+    lg: 1024px      # desktop: máx content 1100px
+
+components:
+  search_bar:
+    role: "Buscador global predictivo — componente más importante del sistema."
+    specs:
+      position: sticky top, altura 56px, ancho completo menos padding.
+      behavior: autocompletado ≤ 300ms post-tecla, hasta 8 sugerencias,
+        debounce 150ms, resultados agrupados por categoría.
+      states: [default, focus(ring 2px accent), loading(skeleton), empty("Sin resultados para 'X' — probá por categoría")]
+      a11y: role combobox + aria-expanded + navegación por flechas.
+  product_comparison_card:
+    anatomy:
+      - header: nombre normalizado + marca + unidad + imagen 64px.
+      - hero_price: precio mínimo 32px bold VERDE + chip textual "Mejor precio".
+      - store_breakdown: lista por supermercado (logo/nombre, precio,
+        diferencia % vs mínimo, frescura "hace Xh"), orden asc.
+      - history_strip: pestaña secundaria con mínimos 30/90d y variación 7d.
+      - badges_row: "Mejor Oportunidad de la Semana" (gold) / "-12% esta semana" (green).
+      - freshness_footer: "Actualizado hace Xh · Fuente: [tienda]".
+    states: [default, stale(avisos ámbar "sin actualizar desde…"), partial("Solo disponible en X"), loading(skeleton), error(retry)]
+  deal_badge:
+    variants: [opportunity(gold bg #FEF9C3, texto "Mejor Oportunidad de la Semana"),
+               price_drop(green, "-X% esta semana"),
+               near_min(green outline, "Cerca del mínimo histórico")]
+    rule: siempre icono + texto; nunca solo color.
+  category_chips:
+    spec: scroll horizontal snap, altura 36px, filtro instantáneo client-side.
+  cobranding_footer:
+    spec: "Tecnología de análisis impulsada por Sigma | Difundido por Tandil Alerta"
+    placement: footer global + home + tarjetas compartidas; discreto, 13px,
+      text-secondary, logos monocromáticos altura 16px.
+
+screens:
+  home:
+    above_fold_mobile: [search_bar, category_chips, top_deals(badges vigentes)]
+    below_fold: [categorías populares, cómo funciona, cobranding]
+  product_page(/p/[slug]):
+    order: [comparison_card, history_strip, freshness_footer, productos relacionados]
+    seo: JSON-LD Product+Offer, OG image dinámica con mejor precio.
+  admin_ingest:
+    audience: operadores Sigma/Tandil Alerta
+    components: [run_table(estado por tienda), retry_button, matches_review_queue, deals_approval_list]
+    style: mismo sistema, densidad alta permitida (uso desk).
+
+motion:
+  philosophy: "funcional, ≤ 200ms, nunca bloquea lectura de datos"
+  rules:
+    - skeleton loaders (no spinners) para search y cards.
+    - transiciones de página implícitas (App Router), sin animación decorativa.
+    - respetar prefers-reduced-motion: desactivar todo movimiento.
+
+accessibility:
+  standard: WCAG 2.1 AA
+  requirements:
+    - contraste ≥ 4.5:1 texto normal; ≥ 3:1 texto grande e iconos.
+    - foco visible 2px accent en todos los interactivos.
+    - targets táctiles ≥ 44x44px; separación ≥ 8px.
+    - modo oscuro vía prefers-color-scheme + toggle manual persistido.
+    - landmarks + h1 único por página + alt descriptivo en imágenes de producto.
+    - formularios con label visible y errores anunciados aria-live.
+
+performance_budget_ui:
+  lcp_mobile_4g: "< 2.5s"
+  inp: "< 200ms"
+  cls: "< 0.1"
+  js_initial_gzip: "< 150KB"
+  images: "AVIF/WebP responsivas, width/height explícitos, lazy below-fold"
+  fonts: "Inter subset latin, display swap, preloaded"
+
+seo_local:
+  title_pattern: "{Producto} precio en Tandil hoy — Precios Tandil"
+  description_pattern: "Compará el precio de {producto} en Carrefour, DIA, Vea, Monarca, Comerciante y Cooperativa Obrera. Mejor precio hoy: ${precio}."
+  structured_data: [Product, Offer, BreadcrumbList]
+  sitemap: dinámico productos+categorías, lastmod = refreshed_at.
