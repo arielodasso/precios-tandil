@@ -1,0 +1,49 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: precios
+          POSTGRES_PASSWORD: precios
+          POSTGRES_DB: precios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U precios -d precios"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://precios:precios@localhost:5432/precios
+      ADMIN_TOKEN_DEV: ci-token
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Validar migraciones y seeds contra PostgreSQL 16
+        run: |
+          pnpm --filter @precios/db migrate
+          pnpm --filter @precios/db seed
+
+  perf-budget:
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Placeholder T072 — k6 (API p95<200ms) + Lighthouse CI (LCP<2.5s) se activan con US1"

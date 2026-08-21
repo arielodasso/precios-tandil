@@ -1,0 +1,26 @@
+{
+  "name": "@precios/scraper-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@precios/shared": "workspace:*",
+    "pino": "^9.5.0",
+    "undici": "^7.1.0"
+  },
+  "peerDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "playwright": "^1.49.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

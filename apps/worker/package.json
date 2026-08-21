@@ -1,0 +1,37 @@
+{
+  "name": "@precios/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "ingest": "tsx src/cli-ingest.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@precios/adapters-carrefour": "workspace:*",
+    "@precios/adapters-comerciante-maxi": "workspace:*",
+    "@precios/adapters-cooperativa-obrera": "workspace:*",
+    "@precios/adapters-dia": "workspace:*",
+    "@precios/adapters-monarca": "workspace:*",
+    "@precios/adapters-vea": "workspace:*",
+    "@precios/normalizer": "workspace:*",
+    "@precios/scraper-core": "workspace:*",
+    "@precios/shared": "workspace:*",
+    "kysely": "^0.27.5",
+    "pg": "^8.13.1",
+    "pg-boss": "^10.1.0",
+    "pino": "^9.5.0",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

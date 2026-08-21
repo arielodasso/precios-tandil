@@ -1,5 +1,5 @@
 ---
-description: "Task list for Precios Tandil feature implementation"
+description: 'Task list for Precios Tandil feature implementation'
 ---
 
 # Tasks: Precios Tandil — Motor de Análisis y Plataforma Web de Precios
@@ -28,11 +28,11 @@ description: "Task list for Precios Tandil feature implementation"
 
 **Purpose**: Estructura del monorepo y tooling base
 
-- [ ] T001 Inicializar monorepo pnpm con workspaces `apps/*`, `packages/*` y TypeScript 5.x strict + paths compartidos (`pnpm-workspace.yaml`, `tsconfig.base.json`)
-- [ ] T002 Configurar tooling común: ESLint flat config, Prettier, husky+lint-staged, scripts raíz `lint/typecheck/test` en `package.json`
-- [ ] T003 [P] Crear `infra/docker-compose.yml` (postgres:16, redis:7) y `.env.example` con variables del quickstart
-- [ ] T004 [P] Crear `packages/shared` con tipos base (`StoreSlug`, `ProductSnapshot`, errores canónicos) y utilidades ARS/fechas ART-UTC en `packages/shared/src/`
-- [ ] T005 Configurar CI (GitHub Actions): lint → typecheck → test → build en `.github/workflows/ci.yml`, con jobs de presupuesto de rendimiento placeholder
+- [x] T001 Inicializar monorepo pnpm con workspaces `apps/*`, `packages/*` y TypeScript 5.x strict + paths compartidos (`pnpm-workspace.yaml`, `tsconfig.base.json`)
+- [x] T002 Configurar tooling común: ESLint flat config, Prettier, husky+lint-staged, scripts raíz `lint/typecheck/test` en `package.json`
+- [x] T003 [P] Crear `infra/docker-compose.yml` (postgres:16, redis:7) y `.env.example` con variables del quickstart
+- [x] T004 [P] Crear `packages/shared` con tipos base (`StoreSlug`, `ProductSnapshot`, errores canónicos) y utilidades ARS/fechas ART-UTC en `packages/shared/src/`
+- [x] T005 Configurar CI (GitHub Actions): lint → typecheck → test → build en `.github/workflows/ci.yml`, con jobs de presupuesto de rendimiento placeholder
 
 ---
 
@@ -42,21 +42,21 @@ description: "Task list for Precios Tandil feature implementation"
 
 **⚠️ CRITICAL**: Ninguna user story comienza antes de completar esta fase
 
-- [ ] T010 Setup proyecto `db/` con node-pg-migrate, conexión vía `DATABASE_URL` y script `migrate` en `db/package.json`
-- [ ] T011 Escribir migración inicial completa según data-model.md: tablas `store`, `category`, `product`, `store_sku`, `match_link`, `price_record` (particionada + rules append-only), `price_aggregate`, `run_report`, `deal_candidate`, `deal_publication`, `admin_token` en `db/migrations/0001_init.sql`
-- [ ] T012 [P] Seeds: 6 tiendas objetivo (slugs carrefour/monarca/comerciante-maxi/dia/cooperativa-obrera/vea con URLs de spec) + árbol de categorías básico en `db/seeds/`
-- [ ] T013 Implementar cliente DB tipado con Kysely en `apps/api/src/lib/db.ts` + `apps/worker/src/lib/db.ts` (schema types generados)
-- [ ] T014 Implementar contrato `ScraperAdapter` + tipos (`ProductSnapshot`, `AdapterContext`) en `packages/scraper-core/src/contract.ts` según contracts/adapter-contract.md
-- [ ] T015 Implementar `ResilientHttpClient`: rotación User-Agents, pool de proxies configurable, reintentos backoff exponencial+jitter (3 intentos), circuit breaker (3 fallos→cuarentena) en `packages/scraper-core/src/http/resilient-http-client.ts`
-- [ ] T016 [P] Implementar validadores pre-persistencia de snapshots (precio>0, ARS, URL dominio tienda, checksum EAN, flag suspect >80%) en `packages/scraper-core/src/validation/snapshot-validator.ts` con tests unitarios
-- [ ] T017 Implementar normalizador léxico v1: unaccent, lowercase, stopwords ES-AR, extracción marca/unidad/cantidad en `packages/normalizer/src/clean/normalize.ts` (cobertura ≥90%)
-- [ ] T018 Implementar matching EAN-13 primario + scoring trigram/fuzzy fallback con umbral config y marcado `match_method` en `packages/normalizer/src/match/matcher.ts`
-- [ ] T019 Implementar pipeline worker core: scrape→validate→normalize→match→persist (append-only, dedupe intra-corrida) en `apps/worker/src/pipeline/pipeline.ts` con logs pino correlation-id
-- [ ] T020 Setup pg-boss en worker: colas ingest/deals/aggregates, scheduler cron ventana 00:00–06:00 ART por tienda en `apps/worker/src/scheduler/scheduler.ts`
-- [ ] T021 Implementar escritura de `run_report` + eventos de cuarentena en `apps/worker/src/pipeline/run-reporter.ts`
-- [ ] T022 Setup API Fastify base: plugins cors/rate-limit/helmet, logging pino, error handler canónico, healthcheck `/healthz` en `apps/api/src/app.ts`
-- [ ] T023 Implementar auth Bearer admin (hash sha256 contra `admin_token`) como plugin en `apps/api/src/plugins/auth.ts`
-- [ ] T024 [P] Testcontainers PG: fixture de integración que corre migraciones+seeds para tests en `tests/integration/helpers/db.ts`
+- [x] T010 Setup proyecto `db/` con node-pg-migrate, conexión vía `DATABASE_URL` y script `migrate` en `db/package.json`
+- [x] T011 Escribir migración inicial completa según data-model.md: tablas `store`, `category`, `product`, `store_sku`, `match_link`, `price_record` (particionada + rules append-only), `price_aggregate`, `run_report`, `deal_candidate`, `deal_publication`, `admin_token` en `db/migrations/0001_init.sql`
+- [x] T012 [P] Seeds: 6 tiendas objetivo (slugs carrefour/monarca/comerciante-maxi/dia/cooperativa-obrera/vea con URLs de spec) + árbol de categorías básico en `db/seeds/`
+- [x] T013 Implementar cliente DB tipado con Kysely en `apps/api/src/lib/db.ts` + `apps/worker/src/lib/db.ts` (schema types generados)
+- [x] T014 Implementar contrato `ScraperAdapter` + tipos (`ProductSnapshot`, `AdapterContext`) en `packages/scraper-core/src/contract.ts` según contracts/adapter-contract.md
+- [x] T015 Implementar `ResilientHttpClient`: rotación User-Agents, pool de proxies configurable, reintentos backoff exponencial+jitter (3 intentos), circuit breaker (3 fallos→cuarentena) en `packages/scraper-core/src/http/resilient-http-client.ts`
+- [x] T016 [P] Implementar validadores pre-persistencia de snapshots (precio>0, ARS, URL dominio tienda, checksum EAN, flag suspect >80%) en `packages/scraper-core/src/validation/snapshot-validator.ts` con tests unitarios
+- [x] T017 Implementar normalizador léxico v1: unaccent, lowercase, stopwords ES-AR, extracción marca/unidad/cantidad en `packages/normalizer/src/clean/normalize.ts` (cobertura ≥90%)
+- [x] T018 Implementar matching EAN-13 primario + scoring trigram/fuzzy fallback con umbral config y marcado `match_method` en `packages/normalizer/src/match/matcher.ts`
+- [x] T019 Implementar pipeline worker core: scrape→validate→normalize→match→persist (append-only, dedupe intra-corrida) en `apps/worker/src/pipeline/pipeline.ts` con logs pino correlation-id
+- [x] T020 Setup pg-boss en worker: colas ingest/deals/aggregates, scheduler cron ventana 00:00–06:00 ART por tienda en `apps/worker/src/scheduler/scheduler.ts`
+- [x] T021 Implementar escritura de `run_report` + eventos de cuarentena en `apps/worker/src/pipeline/run-reporter.ts`
+- [x] T022 Setup API Fastify base: plugins cors/rate-limit/helmet, logging pino, error handler canónico, healthcheck `/healthz` en `apps/api/src/app.ts`
+- [x] T023 Implementar auth Bearer admin (hash sha256 contra `admin_token`) como plugin en `apps/api/src/plugins/auth.ts`
+- [x] T024 [P] Testcontainers PG: fixture de integración que corre migraciones+seeds para tests en `tests/integration/helpers/db.ts`
 
 **Checkpoint**: Foundation lista — pipeline puede capturar de 1 tienda real y persistir; API responde healthcheck. Las stories pueden ejecutarse en paralelo.
 
