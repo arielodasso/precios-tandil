@@ -1,23 +1,106 @@
-import { AppError, type ProductSnapshot } from '@precios/shared';
-import type { AdapterContext, ListingRef, ScraperAdapter } from '@precios/scraper-core';
+import type { ProductSnapshot } from '@precios/shared';
+import {
+  extractVtexApolloItems,
+  type AdapterContext,
+  type ListingRef,
+  type ScraperAdapter,
+  type VtexItemRecord,
+} from '@precios/scraper-core';
 
-const NOT_IMPLEMENTED = 'Adaptador Carrefour se implementa en US1 (T030)';
+const BASE_URL = 'https://www.carrefour.com.ar';
+const LISTING_PATHS = [
+  '/almacen',
+  '/almacen/arroz-y-legumbres/arroz',
+  '/almacen/aceites-y-vinagres/aceites',
+  '/almacen/yerbas-mate',
+  '/almacen/azucar-y-edulcorantes',
+  '/bebidas/gaseosas',
+  '/lacteos/leches',
+  '/almacen/harinas',
+];
+const PAGE_TIMEOUT_MS = 30_000;
+const CACHE_WAIT_MS = 20_000;
 
-async function* failCatalog(_ctx: AdapterContext): AsyncGenerator<ProductSnapshot, never, void> {
-  throw new AppError('adapter_missing', NOT_IMPLEMENTED);
+function toSnapshot(rec: VtexItemRecord, capturedAt: Date): ProductSnapshot {
+  return {
+    externalId: rec.itemId,
+    url: rec.url,
+    rawDescription: rec.name,
+    ean: rec.ean ?? undefined,
+    brand: rec.brand ?? undefined,
+    categoryPath: rec.categoryPath ?? undefined,
+    unitLabel: rec.unitLabel ?? undefined,
+    price: {
+      amount: rec.priceAmount,
+      listOrPromo: rec.listOrPromo,
+    },
+    imageUrl: rec.imageUrl ?? undefined,
+    capturedAt: capturedAt.toISOString(),
+  };
+}
+
+export function parseListing(html: string, capturedAt: Date = new Date()): ProductSnapshot[] {
+  const items = extractVtexApolloItems(html, { baseUrl: BASE_URL });
+  return items.map((rec) => toSnapshot(rec, capturedAt)).filter((s) => s.price.amount > 0);
+}
+
+async function fetchListingHtml(ctx: AdapterContext, url: string): Promise<string> {
+  ctx.signal.throwIfAborted();
+  const page = await ctx.browser.newPage();
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
+    await page
+      .locator('script')
+      .filter({ hasText: '{"Product' })
+      .first()
+      .waitFor({ timeout: CACHE_WAIT_MS })
+      .catch(() => undefined);
+    return await page.content();
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
+async function* discoverListings(): AsyncGenerator<ListingRef, void, void> {
+  for (const path of LISTING_PATHS) {
+    yield { url: `${BASE_URL}${path}` };
+  }
 }
 
 const adapter: ScraperAdapter = {
   storeSlug: 'carrefour',
 
-  async *discover(_ctx: AdapterContext): AsyncGenerator<ListingRef, never, void> {
-    throw new AppError('adapter_missing', NOT_IMPLEMENTED);
+  discover: discoverListings,
+
+  async *scrapeCatalog(ctx: AdapterContext): AsyncGenerator<ProductSnapshot, void, void> {
+    let yielded = 0;
+    let lastError: unknown;
+    for await (const ref of discoverListings()) {
+      try {
+        const html = await fetchListingHtml(ctx, ref.url);
+        const snapshots = parseListing(html);
+        yielded += snapshots.length;
+        for (const snap of snapshots) yield snap;
+      } catch (err) {
+        lastError = err;
+        ctx.logger.warn({ event: 'adapter.listing.failed', url: ref.url, err }, 'listado falló');
+      }
+    }
+    if (yielded === 0 && lastError !== undefined) {
+      throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    }
   },
 
-  scrapeCatalog: failCatalog,
-
-  async scrapeProduct(_ref, _ctx): Promise<ProductSnapshot | null> {
-    throw new AppError('adapter_missing', NOT_IMPLEMENTED);
+  async scrapeProduct(ref: ListingRef, ctx: AdapterContext): Promise<ProductSnapshot | null> {
+    ctx.signal.throwIfAborted();
+    const html = await fetchListingHtml(ctx, ref.url);
+    const snapshots = parseListing(html);
+    if (snapshots.length === 0) return null;
+    if (ref.externalId) {
+      return snapshots.find((s) => s.externalId === ref.externalId) ?? null;
+    }
+    const target = new URL(ref.url).pathname.replace(/\/$/, '');
+    return snapshots.find((s) => new URL(s.url).pathname.replace(/\/$/, '') === target) ?? null;
   },
 };
 

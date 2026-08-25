@@ -1,21 +1,32 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import helmet from '@fastify/helmet';
-import rateLimit from '@fastify/rate-limit';
 import { randomUUID } from 'node:crypto';
 import type { Kysely } from 'kysely';
 import type { DB } from '@precios/shared';
 import { AppError } from '@precios/shared';
 import { createDb } from './lib/db.ts';
+import { registerCache } from './plugins/cache.ts';
+import { registerSecurity } from './plugins/security.ts';
+import { searchRoutes } from './routes/v1/search.ts';
+import { productRoutes } from './routes/v1/products.ts';
+import { taxonomyRoutes } from './routes/v1/taxonomy.ts';
+import { historyRoutes } from './routes/v1/history.ts';
+import { dealsRoutes } from './routes/v1/deals.ts';
+import { adminDealRoutes } from './routes/admin/deals.ts';
+import { adminIngestRoutes } from './routes/admin/ingest.ts';
+import { adminMatchRoutes } from './routes/admin/matches.ts';
 import type { ApiConfig } from './lib/config.ts';
+import type { PgBossSender } from './lib/pgboss-sender.ts';
+import { registerMetrics } from './plugins/metrics.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Kysely<DB>;
+    boss?: PgBossSender;
   }
 }
 
-export function buildApp(config: ApiConfig): FastifyInstance {
+export function buildApp(config: ApiConfig, opts: { boss?: PgBossSender } = {}): FastifyInstance {
   const app = Fastify({
     logger: {
       level: config.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -26,10 +37,23 @@ export function buildApp(config: ApiConfig): FastifyInstance {
 
   const db = createDb(config.DATABASE_URL);
   app.decorate('db', db);
+  if (opts.boss) {
+    app.decorate('boss', opts.boss);
+  }
 
-  app.register(helmet);
   app.register(cors, { origin: true });
-  app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
+  app.register(registerSecurity);
+  registerCache(app, config.REDIS_URL);
+  registerMetrics(app);
+
+  app.register(searchRoutes, { prefix: '/api/v1' });
+  app.register(productRoutes, { prefix: '/api/v1' });
+  app.register(taxonomyRoutes, { prefix: '/api/v1' });
+  app.register(historyRoutes, { prefix: '/api/v1' });
+  app.register(dealsRoutes, { prefix: '/api/v1' });
+  app.register(adminDealRoutes, { prefix: '/api/v1' });
+  app.register(adminIngestRoutes, { prefix: '/api/v1' });
+  app.register(adminMatchRoutes, { prefix: '/api/v1' });
 
   app.get('/healthz', async () => {
     await db.selectFrom('store').select('id').limit(1).execute();

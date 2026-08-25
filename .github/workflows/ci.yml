@@ -44,6 +44,69 @@ jobs:
   perf-budget:
     runs-on: ubuntu-latest
     needs: quality
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: precios
+          POSTGRES_PASSWORD: precios
+          POSTGRES_DB: precios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U precios -d precios"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://precios:precios@localhost:5432/precios
+      ADMIN_TOKEN_DEV: ci-token
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Placeholder T072 — k6 (API p95<200ms) + Lighthouse CI (LCP<2.5s) se activan con US1"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @precios/db migrate
+      - run: pnpm --filter @precios/db seed
+
+      - name: Start API
+        run: pnpm --filter @precios/api dev &
+        env:
+          DATABASE_URL: postgres://precios:precios@localhost:5432/precios
+          PORT: 8080
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 30); do
+            curl -s http://localhost:8080/healthz && break
+            sleep 2
+          done
+
+      - name: k6 smoke test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: infra/k6/smoke.js
+        env:
+          BASE_URL: http://localhost:8080
+
+      - name: Start web
+        run: pnpm --filter @precios/web build && pnpm --filter @precios/web start &
+        env:
+          PORT: 3000
+
+      - name: Wait for web
+        run: |
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3000 && break
+            sleep 2
+          done
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: infra/lighthouserc.js
+        continue-on-error: true

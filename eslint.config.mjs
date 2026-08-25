@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/coverage/**',
       '.husky/**',
       'db/**',
+      '**/next-env.d.ts',
     ],
   },
   ...tseslint.configs.recommended,

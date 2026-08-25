@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev:web": "pnpm --filter @precios/web dev",
     "prepare": "husky",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -15,12 +16,14 @@
     "test": "vitest run --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test --config=apps/web/playwright.config.ts",
     "db:migrate": "pnpm --filter @precios/db migrate",
     "db:seed": "pnpm --filter @precios/db seed",
     "dev:api": "pnpm --filter @precios/api dev",
     "dev:worker": "pnpm --filter @precios/worker dev"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testcontainers/postgresql": "^10.16.0",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",

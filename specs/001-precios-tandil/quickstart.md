@@ -16,17 +16,17 @@ docker compose -f infra/docker-compose.yml up -d postgres redis
 pnpm install
 
 # 3. Migraciones + seeds
-pnpm --filter @precios/db migrate up
+pnpm --filter @precios/db migrate
 pnpm --filter @precios/db seed
 
 # 4. Worker (una corrida manual de ingesta)
-pnpm --filter @precios/worker run ingest --store dia --once
+pnpm --filter @precios/worker ingest --store dia
 
 # 5. API
-pnpm --filter @precios/api dev        # http://localhost:3001
+pnpm dev:api                         # http://localhost:3001
 
 # 6. Web
-pnpm --filter @precios/web dev        # http://localhost:3000
+pnpm dev:web                         # http://localhost:3000
 ```
 
 ## Variables de entorno mínimas
@@ -43,16 +43,17 @@ SCRAPER_WINDOW_ART=00:00-06:00       # ventana de ingesta masiva
 
 1. **US1**: buscar "arroz" en la web → tarjeta con ≥ 2 ofertas ordenadas,
    menor precio en verde con texto "Mejor precio".
-2. **US2**: abrir `/p/<slug>/historial` → mínimo 30d y variación semanal.
-3. **US4**: `GET /api/admin/ingest/runs` con Bearer → reporte de corrida.
-4. **Regresión scrapers**: `pnpm test -- filter @precios/adapters`
-   (fixtures HTML congeladas).
+2. **US2**: abrir `/p/<slug>` → mínimo 30d y variación semanal en HistoryStrip.
+3. **US3**: `POST /api/v1/admin/deals/candidates/:id/publish` con Bearer →
+   deal visible en `/ofertas` con badge.
+4. **US4**: `GET /api/v1/admin/ingest/runs` con Bearer → reporte de corrida.
+5. **Regresión scrapers**: `pnpm test` (fixtures HTML congeladas).
 
 ## Comandos útiles
 
 ```powershell
-pnpm test                 # unit + contract + integration
-pnpm test:e2e             # Playwright web
+pnpm test                 # unit + contract + a11y (136+ tests)
+pnpm test:integration     # integración con Testcontainers PG
+pnpm test:e2e             # Playwright E2E (requiere stack completo corriendo)
 pnpm lint && pnpm typecheck
-pnpm perf:k6              # smoke de presupuesto API (p95 < 200 ms)
 ```

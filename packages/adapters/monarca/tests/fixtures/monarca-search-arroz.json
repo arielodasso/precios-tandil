@@ -1,0 +1,798 @@
+{
+  "products": {
+    "content": [
+      {
+        "id": 911205,
+        "description": "ARROZ LARGO FINO",
+        "shortDescription": null,
+        "presentation": " 1kg",
+        "brand": "LUCCHETTI",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 54769,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790070431486_mundial.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790070431486_mundial.png",
+          "basePath": "prod/7790070431486_mundial.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15040,
+          "description": "LARGO FINO",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790070431486",
+        "price": 2050,
+        "strPrice": "2050.00",
+        "priceByUnity": 2050,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 1694.21,
+        "promotions": [],
+        "priority": 4404,
+        "origin": "30",
+        "html": null,
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 528645,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 528644,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 911208,
+        "description": "ARROZ PARBOIL",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "LUCCHETTI",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 54767,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790070431509_mundial.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790070431509_mundial.png",
+          "basePath": "prod/7790070431509_mundial.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15183,
+          "description": "PARBOIL",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790070431509",
+        "price": 2350,
+        "strPrice": "2350.00",
+        "priceByUnity": 2350,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 1456.61,
+        "promotions": [
+          {
+            "id": 198730,
+            "description": "U25 CORONADOS DEL 210826 AL 270826",
+            "fromDate": "20/08/2026 22:15:00",
+            "dateTo": "27/08/2026 22:15:59",
+            "type": "PERCENTAGE_OFF",
+            "productQuantity": 1,
+            "quantityToBill": null,
+            "percentageOff": 25,
+            "totalPrice": "1762.50",
+            "unitPrice": "1762.50",
+            "weekDays": [],
+            "content": "25% DE DESCUENTO (MAX 6 UNIDADES)",
+            "title": null
+          }
+        ],
+        "priority": 4405,
+        "origin": "5",
+        "html": null,
+        "gallery": [],
+        "tags": [
+          {
+            "id": 555,
+            "description": "coronados"
+          }
+        ],
+        "attrs": [
+          {
+            "id": 527071,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 527068,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 913471,
+        "description": "ARROZ ORO SELECCION ",
+        "shortDescription": null,
+        "presentation": "500grs",
+        "brand": "GALLO",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 53990,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790070433114_nuevo.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790070433114_nuevo.png",
+          "basePath": "prod/7790070433114_nuevo.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15040,
+          "description": "LARGO FINO",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790070433114",
+        "price": 1550,
+        "strPrice": "1550.00",
+        "priceByUnity": 3100,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 1024.79,
+        "promotions": [
+          {
+            "id": 198668,
+            "description": "U20 SOLO POR HOY DEL 210826 AL 270826",
+            "fromDate": "20/08/2026 22:15:00",
+            "dateTo": "27/08/2026 22:15:59",
+            "type": "PERCENTAGE_OFF",
+            "productQuantity": 1,
+            "quantityToBill": null,
+            "percentageOff": 20,
+            "totalPrice": "1240.00",
+            "unitPrice": "1240.00",
+            "weekDays": [],
+            "content": "PRODUCTO CON 20% DE DESCUENTO",
+            "title": null
+          }
+        ],
+        "priority": 4406,
+        "origin": "5",
+        "html": null,
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 526660,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 526658,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 908248,
+        "description": "ARROZ LARGO FINO",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "MARIA",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 49995,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790387070019_(2).png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790387070019_(2).png",
+          "basePath": "prod/7790387070019_(2).png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15040,
+          "description": "LARGO FINO",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790387070019",
+        "price": 1990,
+        "strPrice": "1990.00",
+        "priceByUnity": 1990,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 1644.63,
+        "promotions": [],
+        "priority": 4407,
+        "origin": "30",
+        "html": null,
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 482424,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 482425,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 2835,
+        "description": "ARROZ  FORTUNA ",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "AMANDA",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 18200,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7792710001516.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7792710001516.png",
+          "basePath": "prod/7792710001516.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15182,
+          "description": "DOBLE CAROLINA",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7792710001516",
+        "price": 3790,
+        "strPrice": "3790.00",
+        "priceByUnity": 3790,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 3132.23,
+        "promotions": [],
+        "priority": 4408,
+        "origin": "30",
+        "html": null,
+        "gallery": [],
+        "tags": [
+          {
+            "id": 82,
+            "description": "sin tacc"
+          }
+        ],
+        "attrs": [
+          {
+            "id": 511253,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 511252,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 14109,
+        "description": "ARROZ LARGO FINO  ",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "AMANDA",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 52923,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/Sin_título-2.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/Sin_título-2.png",
+          "basePath": "prod/Sin_título-2.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15040,
+          "description": "LARGO FINO",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7792710001523",
+        "price": 2490,
+        "strPrice": "2490.00",
+        "priceByUnity": 2490,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 2057.85,
+        "promotions": [],
+        "priority": 4409,
+        "origin": "30",
+        "html": "<p class=\"MsoNormal\"><span style=\"font-size: 13.3333px;\"><strong>&nbsp;</strong></span></p>",
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 499478,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 499479,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 914088,
+        "description": "ARROZ PARBOIL BOLSA ",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "GALLO",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 47854,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790070431417.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790070431417.png",
+          "basePath": "prod/7790070431417.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15183,
+          "description": "PARBOIL",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 125,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790070431417",
+        "price": 2790,
+        "strPrice": "2790.00",
+        "priceByUnity": 2790,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 2305.79,
+        "promotions": [],
+        "priority": 4410,
+        "origin": "5",
+        "html": null,
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 450077,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 450076,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      },
+      {
+        "id": 912986,
+        "description": "ARROZ ORO SELECCION ESTUCHE",
+        "shortDescription": null,
+        "presentation": "1kg",
+        "brand": "GALLO",
+        "baseUnit": {
+          "id": 4,
+          "parentId": null,
+          "description": "Unidades",
+          "shortName": "uds",
+          "increment": 1,
+          "convertion": 1,
+          "minByProd": 1
+        },
+        "featuredImage": {
+          "id": 54345,
+          "path": "https://d2n39a10pcqohq.cloudfront.net/unsafe/prod/7790070433091-2.png",
+          "resizePath": "https://d2n39a10pcqohq.cloudfront.net/unsafe/${params}/prod/7790070433091-2.png",
+          "basePath": "prod/7790070433091-2.png"
+        },
+        "imageShelf": {
+          "id": null,
+          "path": "",
+          "resizePath": "",
+          "basePath": ""
+        },
+        "category": {
+          "id": 15040,
+          "description": "LARGO FINO",
+          "parentId": 10043,
+          "featured": false,
+          "image": null,
+          "flagEnabled": true,
+          "area": 2200
+        },
+        "isFractionable": 0,
+        "fractions": [
+          {
+            "id": 4,
+            "parentId": null,
+            "description": "Unidades",
+            "shortName": "uds",
+            "increment": 1,
+            "convertion": 1,
+            "minByProd": 1
+          }
+        ],
+        "minimumByUnit": null,
+        "size": 100,
+        "stock": null,
+        "status": "Publicado",
+        "barcode": "7790070433091",
+        "price": 3490,
+        "strPrice": "3490.00",
+        "priceByUnity": 3490,
+        "referenceUnit": "1 kg",
+        "internal_tax": 0,
+        "value_added_tax": 21,
+        "price_without_taxes": 2884.3,
+        "promotions": [],
+        "priority": 4412,
+        "origin": "30",
+        "html": null,
+        "gallery": [],
+        "tags": [],
+        "attrs": [
+          {
+            "id": 505359,
+            "name": "Sin Azucar",
+            "value": ""
+          },
+          {
+            "id": 505357,
+            "name": "Sin Sal",
+            "value": ""
+          }
+        ],
+        "showDisplayPricePerUnit": false,
+        "displayPrice": null,
+        "displayPresentation": null,
+        "displayPriceWithoutTaxes": null
+      }
+    ],
+    "pageable": {
+      "sort": {
+        "sorted": false,
+        "unsorted": true
+      },
+      "offset": 0,
+      "pageSize": 20,
+      "pageNumber": 0,
+      "paged": true,
+      "unpaged": false
+    },
+    "totalPages": 2,
+    "totalElements": 23,
+    "last": false,
+    "first": true,
+    "sort": {
+      "sorted": false,
+      "unsorted": true
+    },
+    "size": 20,
+    "number": 0,
+    "numberOfElements": 8
+  },
+  "brandDetails": [
+    {
+      "name": "GALLO",
+      "count": 11
+    },
+    {
+      "name": "LUCCHETTI",
+      "count": 6
+    },
+    {
+      "name": "DOS HERMANOS",
+      "count": 3
+    },
+    {
+      "name": "AMANDA",
+      "count": 2
+    },
+    {
+      "name": "MARIA",
+      "count": 1
+    }
+  ],
+  "categoryDetails": [
+    {
+      "name": "LARGO FINO",
+      "count": 8
+    },
+    {
+      "name": "DOBLE CAROLINA",
+      "count": 5
+    },
+    {
+      "name": "INTEGRAL",
+      "count": 5
+    },
+    {
+      "name": "PARBOIL",
+      "count": 3
+    },
+    {
+      "name": "ARROZ",
+      "count": 2
+    }
+  ],
+  "attrsDetails": [
+    {
+      "name": "Sin Azucar",
+      "count": 22
+    },
+    {
+      "name": "Sin Sal",
+      "count": 22
+    }
+  ],
+  "tagsDetails": [
+    {
+      "name": "sin tacc",
+      "count": 3
+    },
+    {
+      "name": "coronados",
+      "count": 1
+    }
+  ]
+}
