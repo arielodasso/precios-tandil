@@ -1,6 +1,7 @@
 import { loadConfig } from './lib/config.ts';
 import { createDb } from './lib/db.ts';
 import { logger } from './lib/logger.ts';
+import { matchCategoryByName } from './lib/category-map.ts';
 
 /**
  * Backfill de categorías por nombre.
@@ -14,24 +15,6 @@ import { logger } from './lib/logger.ts';
  * (no sustituye el fix del pipeline, solo corrige los productos ya scrapeados).
  */
 
-interface Rule {
-  categoryPath: string;
-  prefixes: string[];
-}
-
-// Ordenadas de más específica a menos específica.
-const RULES: Rule[] = [
-  { categoryPath: 'almacen/arroz', prefixes: ['arroz'] },
-  { categoryPath: 'almacen/aceite', prefixes: ['aceite'] },
-  { categoryPath: 'almacen/azucar', prefixes: ['azucar', 'edulcorante', 'endulzan', 'stevia'] },
-  { categoryPath: 'almacen/yerba', prefixes: ['yerba', 'mate cocido'] },
-  { categoryPath: 'bebidas/gaseosas', prefixes: ['gaseosa'] },
-  { categoryPath: 'lacteos', prefixes: ['leche', 'queso'] },
-  { categoryPath: 'frescos', prefixes: ['pan'] },
-];
-
-const DEFAULT_PATH = 'almacen';
-
 interface CategoryRow {
   id: number;
   path: string;
@@ -40,14 +23,6 @@ interface CategoryRow {
 interface ProductRow {
   id: number;
   canonical_name: string;
-}
-
-function matchPath(name: string): string {
-  const n = name.toLowerCase().trim();
-  for (const rule of RULES) {
-    if (rule.prefixes.some((p) => n.startsWith(p))) return rule.categoryPath;
-  }
-  return DEFAULT_PATH;
 }
 
 const config = loadConfig();
@@ -69,7 +44,7 @@ const unmapped: string[] = [];
 let assigned = 0;
 
 for (const p of products) {
-  const path = matchPath(p.canonical_name);
+  const path = matchCategoryByName(p.canonical_name);
   const id = pathToId.get(path);
   if (id === undefined) {
     unmapped.push(`${path} (${p.canonical_name})`);

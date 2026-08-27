@@ -24,6 +24,7 @@ import {
   type MatchCandidate,
 } from '@precios/normalizer';
 import { RunReporter, resolveStatus } from './run-reporter.ts';
+import { matchCategoryByName, matchCategoryByStorePath } from '../lib/category-map.ts';
 
 const UA_POOL = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -274,6 +275,16 @@ export class IngestPipeline {
       )
       .execute();
 
+    const productCategoryId = await this.resolveCategory(snap.categoryPath, norm.normName);
+    if (productCategoryId !== null) {
+      await this.db
+        .updateTable('product')
+        .set({ category_id: productCategoryId })
+        .where('id', '=', productId)
+        .where('category_id', 'is', null)
+        .execute();
+    }
+
     const last = await this.db
       .selectFrom('price_record')
       .select('price_amount')
@@ -320,7 +331,7 @@ export class IngestPipeline {
       .digest('base64url')
       .slice(0, 6);
     const slug = `${slugBase}-${hash}`;
-    const categoryId = await this.resolveCategory(snap.categoryPath);
+    const categoryId = await this.resolveCategory(snap.categoryPath, norm.normName);
 
     const inserted = await this.db
       .insertInto('product')
@@ -334,13 +345,33 @@ export class IngestPipeline {
         image_url: snap.imageUrl ?? null,
         category_id: categoryId,
       })
-      .onConflict((oc) => oc.column('slug').doUpdateSet({ updated_at: new Date() }))
+      .onConflict((oc) =>
+        oc.column('slug').doUpdateSet({
+          updated_at: new Date(),
+          ...(categoryId !== null ? { category_id: categoryId } : {}),
+          ...(snap.imageUrl ? { image_url: snap.imageUrl } : {}),
+        }),
+      )
       .returning('id')
       .executeTakeFirstOrThrow();
     return Number(inserted.id);
   }
 
-  private async resolveCategory(categoryPath: string[] | undefined): Promise<number | null> {
+  private async resolveCategory(
+    categoryPath: string[] | undefined,
+    name?: string,
+  ): Promise<number | null> {
+    let taxPath = matchCategoryByStorePath(categoryPath);
+    if (!taxPath && name) taxPath = matchCategoryByName(name);
+    if (taxPath) {
+      const byPath = await this.db
+        .selectFrom('category')
+        .select('id')
+        .where('path', '=', taxPath)
+        .limit(1)
+        .executeTakeFirst();
+      if (byPath) return Number(byPath.id);
+    }
     if (!categoryPath || categoryPath.length === 0) return null;
     const fullPath = categoryPath.join('/');
     const exact = await this.db
@@ -349,14 +380,14 @@ export class IngestPipeline {
       .where('path', '=', fullPath)
       .limit(1)
       .executeTakeFirst();
-    if (exact) return exact.id;
+    if (exact) return Number(exact.id);
     const root = await this.db
       .selectFrom('category')
       .select('id')
       .where('path', '=', categoryPath[0]!)
       .limit(1)
       .executeTakeFirst();
-    return root?.id ?? null;
+    return root ? Number(root.id) : null;
   }
 }
 
