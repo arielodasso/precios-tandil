@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   },
   description:
     'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto. Historial de precios y oportunidades.',
+  icons: {
+    icon: '/sigma-market.png',
+    shortcut: '/sigma-market.png',
+    apple: '/sigma-market.png',
+  },
 };
 
 const themeScript = `
@@ -34,11 +39,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="border-b border-border bg-background">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-black text-sm font-black text-alerta">
-                T
-              </span>
+              <img
+                src="/sigma-market.png"
+                alt="Precios Tandil"
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded"
+              />
               <span className="text-lg font-extrabold tracking-tight">
-                Precios <span className="text-alerta-strong">Tandil</span>
+                Precios <span className="text-alerta">Tandil</span>
               </span>
             </Link>
             <nav aria-label="principal" className="flex items-center gap-3 text-sm">
