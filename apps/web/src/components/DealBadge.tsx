@@ -1,9 +1,12 @@
+import { badgeVariants } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 export type DealBadgeVariant = 'gold' | 'green';
 
 /**
  * T061 — Badge de oportunidad con variante gold ("Mejor Oportunidad de la
  * Semana") o green (variación a la baja). FR-015: siempre con texto,
- * nunca solo color.
+ * nunca solo color. Reduce a un <span> inline (sin div anidado).
  */
 export function DealBadge({
   variant = 'green',
@@ -13,14 +16,16 @@ export function DealBadge({
   label?: string;
 }) {
   const text = label ?? (variant === 'gold' ? 'Mejor Oportunidad de la Semana' : 'Precio bajó');
-  const styles =
-    variant === 'gold'
-      ? 'bg-[var(--gold-bg)] text-[var(--gold-text)] border-[var(--gold-text)]'
-      : 'bg-transparent text-[var(--accent-strong)] border-[var(--accent)]';
   return (
     <span
       role="status"
-      className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${styles}`}
+      className={cn(
+        badgeVariants({ variant: 'outline' }),
+        'whitespace-nowrap bg-transparent',
+        variant === 'gold'
+          ? 'border-alerta-strong bg-alerta text-black'
+          : 'border-emerald-300 bg-emerald-100 text-emerald-800',
+      )}
     >
       {text}
     </span>

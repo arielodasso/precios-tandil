@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import type { SearchResultItem, SearchResponse } from '@/lib/types';
 
 /**
@@ -42,31 +44,34 @@ export function SearchBar() {
 
   return (
     <div role="search" className="relative">
-      <input
-        type="search"
-        aria-label="Buscar producto"
-        placeholder="Buscar producto…"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="w-full rounded-lg border border-black/15 bg-[var(--surface)] px-4 py-3 text-base outline-none focus:border-[var(--accent)] dark:border-white/15"
-      />
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          aria-label="Buscar producto"
+          placeholder="Buscar producto…"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          className="h-11 rounded-lg pl-9 text-base"
+        />
+      </div>
       {status === 'loading' && (
         <p
           role="status"
-          className="absolute z-10 mt-1 w-full rounded bg-[var(--surface)] p-2 text-sm text-[var(--muted)] shadow"
+          className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card p-2 text-sm text-muted-foreground shadow"
         >
           Buscando…
         </p>
       )}
       {status === 'done' && open && (
-        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded bg-[var(--surface)] shadow-lg">
+        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-card shadow-lg">
           {hits.length === 0 ? (
-            <li className="px-4 py-3 text-sm text-[var(--muted)]">
+            <li className="px-4 py-3 text-sm text-muted-foreground">
               Sin resultados para “{query}”. Probá con otra palabra o el nombre de marca (ej.:
               “arroz gallo”).
             </li>
@@ -75,12 +80,12 @@ export function SearchBar() {
               <li key={hit.slug}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground"
                   onMouseDown={() => router.push(`/p/${hit.slug}`)}
                 >
                   <span>{hit.name}</span>
                   {hit.best_price !== null && (
-                    <span className="text-sm font-semibold text-[var(--accent-strong)]">
+                    <span className="text-sm font-semibold text-primary">
                       ${hit.best_price.toFixed(2)}
                     </span>
                   )}
@@ -91,7 +96,7 @@ export function SearchBar() {
         </ul>
       )}
       {status === 'error' && (
-        <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="mt-1 text-sm text-destructive">
           No pudimos buscar en este momento. Reintentá en unos segundos.
         </p>
       )}

@@ -1,4 +1,7 @@
 import type { HistoryResponse } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 /**
  * T054 + T055 — Strip de historial: sparkline SVG ligero (sin librerías),
@@ -10,15 +13,14 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
 
   if (series.length < 2) {
     return (
-      <section
-        aria-label="Historial de precio"
-        className="mt-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
-      >
-        <p className="text-sm text-[var(--muted)]">
-          Datos insuficientes: todavía no tenemos suficientes días de historia para este producto.
-          Volvé en unos días.
-        </p>
-      </section>
+      <Card className="mt-4">
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">
+            Datos insuficientes: todavía no tenemos suficientes días de historia para este producto.
+            Volvé en unos días.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -39,93 +41,83 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
   const pctWeek = stats.pct_change_7d;
 
   return (
-    <section
-      aria-label={`Historial de precio últimos ${window} días`}
-      className="mt-4 rounded-lg border border-black/10 p-4 dark:border-white/10"
-    >
-      <h2 className="mb-2 text-sm font-semibold">Historial de precio</h2>
-      {insufficient_history && (
-        <p className="mb-2 rounded bg-black/5 px-3 py-2 text-xs dark:bg-white/10">
-          Datos insuficientes: menos de 7 días de historia; los indicadores son preliminares.
-        </p>
-      )}
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-16 w-full"
-        role="img"
-        aria-label={`Gráfico: mínimo ${formatArs(min)}, máximo ${formatArs(max)}`}
-      >
-        <polyline
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          points={points}
-        />
-      </svg>
-      <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-        <Stat
-          label={`Mínimo ${window}d`}
-          value={stats.min_window !== null ? formatArs(stats.min_window) : '—'}
-        />
-        <Stat
-          label="Promedio 30d"
-          value={stats.avg_30d !== null ? formatArs(stats.avg_30d) : '—'}
-        />
-        <Stat
-          label="Mínimo histórico"
-          value={
-            history.stats.min_window !== null && window === 'all'
-              ? formatArs(min)
-              : stats.min_window !== null
-                ? formatArs(stats.min_window)
-                : '—'
-          }
-        />
-        <Stat
-          label="Hoy vs 7 días"
-          value={pctWeek !== null ? `${pctWeek > 0 ? '+' : ''}${pctWeek}%` : '—'}
-          tone={pctWeek === null ? undefined : pctWeek <= 0 ? 'good' : 'bad'}
-        />
-      </dl>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {stats.near_min_90d === true && (
-          <span
-            role="status"
-            className="rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]"
-          >
-            Cerca del mínimo histórico
-          </span>
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="text-sm">Historial de precio</CardTitle>
+        {insufficient_history && (
+          <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Datos insuficientes: menos de 7 días de historia; los indicadores son preliminares.
+          </p>
         )}
-        {pctWeek !== null && pctWeek > 0 && (
-          <span
-            role="status"
-            className="rounded-full border border-red-600 px-3 py-1 text-xs font-semibold text-red-700 dark:text-red-400"
-          >
-            Subió {pctWeek}% esta semana
-          </span>
-        )}
-        {pctWeek !== null && pctWeek <= 0 && (
-          <span
-            role="status"
-            className="rounded-full border border-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]"
-          >
-            Bajó {Math.abs(pctWeek)}% esta semana
-          </span>
-        )}
-      </div>
-    </section>
+      </CardHeader>
+      <CardContent>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-16 w-full"
+          role="img"
+          aria-label={`Gráfico: mínimo ${formatArs(min)}, máximo ${formatArs(max)}`}
+        >
+          <polyline
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            points={points}
+          />
+        </svg>
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          <Stat
+            label={`Mínimo ${window}d`}
+            value={stats.min_window !== null ? formatArs(stats.min_window) : '—'}
+          />
+          <Stat
+            label="Promedio 30d"
+            value={stats.avg_30d !== null ? formatArs(stats.avg_30d) : '—'}
+          />
+          <Stat
+            label="Mínimo histórico"
+            value={
+              history.stats.min_window !== null && window === 'all'
+                ? formatArs(min)
+                : stats.min_window !== null
+                  ? formatArs(stats.min_window)
+                  : '—'
+            }
+          />
+          <Stat
+            label="Hoy vs 7 días"
+            value={pctWeek !== null ? `${pctWeek > 0 ? '+' : ''}${pctWeek}%` : '—'}
+            tone={pctWeek === null ? undefined : pctWeek <= 0 ? 'good' : 'bad'}
+          />
+        </dl>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {stats.near_min_90d === true && (
+            <Badge className="border bg-secondary text-secondary-foreground">
+              Cerca del mínimo histórico
+            </Badge>
+          )}
+          {pctWeek !== null && pctWeek > 0 && (
+            <Badge className="bg-red-100 text-red-700 hover:bg-red-200">
+              Subió {pctWeek}% esta semana
+            </Badge>
+          )}
+          {pctWeek !== null && pctWeek <= 0 && (
+            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
+              Bajó {Math.abs(pctWeek)}% esta semana
+            </Badge>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'bad' }) {
-  const color = tone === 'good' ? 'var(--accent-strong)' : tone === 'bad' ? '#dc2626' : undefined;
+  const color = tone === 'good' ? 'text-emerald-600' : tone === 'bad' ? 'text-red-600' : undefined;
   return (
     <div>
-      <dt className="text-xs text-[var(--muted)]">{label}</dt>
-      <dd className="font-semibold" style={color ? { color } : undefined}>
-        {value}
-      </dd>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn('font-semibold', color)}>{value}</dd>
     </div>
   );
 }

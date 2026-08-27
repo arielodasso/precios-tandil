@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface Run {
   run_id: string;
@@ -98,19 +100,13 @@ export default function AdminPage() {
           }}
           className="flex gap-2"
         >
-          <input
+          <Input
             type="password"
             aria-label="Token admin"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            className="w-full rounded border border-black/15 bg-[var(--surface)] px-3 py-2 dark:border-white/15"
           />
-          <button
-            type="submit"
-            className="rounded bg-[var(--accent)] px-4 py-2 font-semibold text-white"
-          >
-            Ingresar
-          </button>
+          <Button type="submit">Ingresar</Button>
         </form>
         <p role="alert" className="mt-2 text-sm text-red-600">
           {message}
@@ -131,7 +127,7 @@ export default function AdminPage() {
         <table className="w-full text-sm">
           <caption className="sr-only">Corridas de ingesta por tienda</caption>
           <thead>
-            <tr className="text-left text-[var(--muted)]">
+            <tr className="text-left text-muted-foreground">
               <th scope="col">Tienda</th>
               <th scope="col">Estado</th>
               <th scope="col">SKUs</th>
@@ -144,7 +140,7 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {runs.slice(0, 20).map((run) => (
-              <tr key={run.run_id} className="border-t border-black/5 dark:border-white/10">
+              <tr key={run.run_id} className="border-t border-border">
                 <td>{run.store_slug}</td>
                 <td>{run.status}</td>
                 <td>{run.skus_captured}</td>
@@ -154,7 +150,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => retryStore(run.store_slug)}
-                    className="rounded border border-[var(--accent)] px-2 py-1 text-xs text-[var(--accent-strong)]"
+                    className="rounded border border-border px-2 py-1 text-xs text-foreground"
                   >
                     Reintentar
                   </button>
@@ -167,23 +163,23 @@ export default function AdminPage() {
 
       <h2 className="mb-2 mt-8 font-semibold">Matches pendientes ({matches.length})</h2>
       {matches.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">No hay matches para revisar.</p>
+        <p className="text-sm text-muted-foreground">No hay matches para revisar.</p>
       ) : (
         <ul className="grid gap-2">
           {matches.map((match) => (
             <li
               key={match.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded border border-black/10 p-3 text-sm dark:border-white/10"
+              className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-3 text-sm"
             >
               <span>
                 <strong>{match.product_name}</strong> ↔ {match.sku_name}{' '}
-                <span className="text-[var(--muted)]">({match.method})</span>
+                <span className="text-muted-foreground">({match.method})</span>
               </span>
               <span className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => decide(match.id, 'confirmed')}
-                  className="rounded bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white"
+                  className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
                 >
                   Confirmar
                 </button>

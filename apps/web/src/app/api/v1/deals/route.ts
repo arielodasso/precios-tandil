@@ -29,16 +29,22 @@ export async function GET(request: Request) {
       published_at: Date;
       expires_at: Date | null;
     }>`
-      select p.slug as product_slug, p.canonical_name as product_name, p.image_url,
-             pa.best_store_id, pa.best_price, dc.discount_pct, dp.badge,
-             dp.published_at, dp.expires_at, s.slug as best_store_slug
-      from deal_publication dp
-      join deal_candidate dc on dc.id = dp.candidate_id and dc.status = 'published'
+      select distinct on (p.id)
+             p.slug as product_slug, p.canonical_name as product_name, p.image_url,
+             pa.best_store_id, pa.best_price, dc.discount_pct,
+             case when dp.badge is not null then dp.badge
+                  else case when dc.discount_pct >= 25 then 'gold' else 'green' end
+             end as badge,
+             coalesce(dp.published_at, dc.detected_at) as published_at,
+             dp.expires_at, s.slug as best_store_slug
+      from deal_candidate dc
       join product p on p.id = dc.product_id
+      left join deal_publication dp on dp.candidate_id = dc.id
       left join price_aggregate pa on pa.product_id = p.id
       left join store s on s.id = pa.best_store_id
-      where (dp.expires_at is null or dp.expires_at > now())
-      order by dc.discount_pct desc, dp.published_at desc
+      where dc.status in ('pending', 'published')
+        and (dp.expires_at is null or dp.expires_at > now())
+      order by p.id, dc.discount_pct desc, dc.detected_at desc
       limit 50
     `.execute(db);
 

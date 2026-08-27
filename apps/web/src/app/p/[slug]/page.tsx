@@ -90,13 +90,16 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         dealBadge={product.deal_badge ? { badge: product.deal_badge } : null}
       />
       {product.summary?.spread_pct !== null && product.summary?.spread_pct !== undefined && (
-        <p className="mt-3 text-sm text-[var(--muted)]">
+        <p className="mt-3 text-sm text-muted-foreground">
           Diferencia entre el más barato y el más caro:{' '}
-          <strong>{product.summary.spread_pct}%</strong>
+          <strong className="text-foreground">{product.summary.spread_pct}%</strong>
         </p>
       )}
       {product.stale_notice && (
-        <p role="status" className="mt-3 rounded bg-black/5 px-3 py-2 text-sm dark:bg-white/10">
+        <p
+          role="status"
+          className="mt-3 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground"
+        >
           {product.stale_notice}
         </p>
       )}

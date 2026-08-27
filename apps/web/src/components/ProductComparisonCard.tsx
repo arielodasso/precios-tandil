@@ -1,5 +1,7 @@
+import { Badge } from '@/components/ui/badge';
 import { DealBadge } from './DealBadge';
 import { formatArs } from './HistoryStrip';
+import { cn } from '@/lib/utils';
 
 export interface OfferView {
   store: string;
@@ -29,63 +31,65 @@ export function ProductComparisonCard({
   const min = prices.length > 0 ? Math.min(...prices) : null;
 
   return (
-    <section className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+    <section className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{name}</h1>
-          {brand && <p className="text-sm text-[var(--muted)]">{brand}</p>}
+          {brand && <p className="mt-1 text-sm text-muted-foreground">{brand}</p>}
         </div>
         {dealBadge && <DealBadge variant={dealBadge.badge} />}
       </div>
 
-      {fresh.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--muted)]">
-          Este producto no tiene precios actualizados en las últimas tiendas.
-        </p>
-      ) : (
-        <ul className="mt-4 divide-y divide-black/5 dark:divide-white/10">
-          {[...fresh]
-            .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
-            .map((offer) => {
-              const isBest = offer.price !== null && offer.price === min;
-              const diff =
-                min !== null && offer.price !== null && offer.price > min
-                  ? ((offer.price - min) / min) * 100
-                  : null;
-              return (
-                <li
-                  key={offer.store}
-                  className={`flex items-center justify-between gap-2 py-3 ${
-                    isBest ? 'rounded bg-[var(--accent)]/10 px-2 font-semibold' : ''
-                  }`}
-                  style={isBest ? { color: 'var(--accent-strong)' } : undefined}
-                >
-                  <span>
-                    {offer.store_name}
-                    {isBest && (
-                      <span className="ml-2 rounded bg-[var(--accent)] px-2 py-0.5 text-xs font-bold text-white">
-                        Mejor precio
-                      </span>
+      <div className="mt-4">
+        {fresh.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Este producto no tiene precios actualizados en las últimas tiendas.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {[...fresh]
+              .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
+              .map((offer) => {
+                const isBest = offer.price !== null && offer.price === min;
+                const diff =
+                  min !== null && offer.price !== null && offer.price > min
+                    ? ((offer.price - min) / min) * 100
+                    : null;
+                return (
+                  <li
+                    key={offer.store}
+                    className={cn(
+                      'flex items-center justify-between gap-2 py-3',
+                      isBest && 'rounded-md bg-primary px-2 text-primary-foreground',
                     )}
-                  </span>
-                  <span className="text-right">
-                    {offer.price !== null && formatArs(offer.price)}
-                    {diff !== null && (
-                      <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-        </ul>
-      )}
+                  >
+                    <span>
+                      {offer.store_name}
+                      {isBest && (
+                        <Badge className="ml-2 bg-alerta text-black hover:bg-alerta-strong">
+                          Mejor precio
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="text-right">
+                      {offer.price !== null && formatArs(offer.price)}
+                      {diff !== null && (
+                        <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
 
-      {offers.some((o) => o.is_stale) && (
-        <p className="mt-3 rounded bg-black/5 px-3 py-2 text-xs text-[var(--muted)] dark:bg-white/10">
-          Algunos supermercados no reportan precios actualizados; sus datos pueden estar
-          desactualizados y se muestran aparte del ranking.
-        </p>
-      )}
+        {offers.some((o) => o.is_stale) && (
+          <p className="mt-3 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Algunos supermercados no reportan precios actualizados; sus datos pueden estar
+            desactualizados y se muestran aparte del ranking.
+          </p>
+        )}
+      </div>
     </section>
   );
 }
