@@ -30,7 +30,7 @@ export default async function HomePage() {
     <div className="py-8">
       <h1 className="mb-2 text-3xl font-extrabold tracking-tight">¿Dónde conviene comprar hoy?</h1>
       <p className="mb-6 text-muted-foreground">
-        Precios comparados entre supermercados de Tandil, actualizados a diario por Tandil Alerta.
+        Precios comparados entre supermercados de Tandil, actualizados a diario.
       </p>
 
       <SearchBar />
