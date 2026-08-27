@@ -15,6 +15,12 @@ export interface ResilientHttpOptions {
   logger?: Logger;
 }
 
+export interface FetchOptions {
+  method?: 'GET' | 'POST';
+  json?: unknown;
+  headers?: Record<string, string>;
+}
+
 interface BreakerState {
   failures: number;
   state: 'closed' | 'open' | 'half-open';
@@ -62,18 +68,18 @@ export class ResilientHttpClient {
     this.logger = opts.logger;
   }
 
-  async fetchText(url: string, signal?: AbortSignal): Promise<string> {
+  async fetchText(url: string, signal?: AbortSignal, opts: FetchOptions = {}): Promise<string> {
     await this.acquire();
     try {
       await this.pace();
-      return await this.fetchWithRetries(url, signal);
+      return await this.fetchWithRetries(url, signal, opts);
     } finally {
       this.release();
     }
   }
 
-  async fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-    const text = await this.fetchText(url, signal);
+  async fetchJson<T>(url: string, signal?: AbortSignal, opts: FetchOptions = {}): Promise<T> {
+    const text = await this.fetchText(url, signal, opts);
     return JSON.parse(text) as T;
   }
 
@@ -150,10 +156,17 @@ export class ResilientHttpClient {
     return { dispatcher: this.dispatchers[idx]!, idx };
   }
 
-  private async fetchWithRetries(url: string, externalSignal?: AbortSignal): Promise<string> {
+  private async fetchWithRetries(
+    url: string,
+    externalSignal?: AbortSignal,
+    opts: FetchOptions = {},
+  ): Promise<string> {
     const origin = new URL(url).origin;
     this.checkBreaker(origin);
     let lastErr: unknown;
+
+    const method = opts.method ?? 'GET';
+    const body = opts.json !== undefined ? JSON.stringify(opts.json) : undefined;
 
     for (let attempt = 0; attempt < this.maxAttempts; attempt++) {
       if (externalSignal?.aborted) throw new Error('abortado por señal externa');
@@ -162,12 +175,16 @@ export class ResilientHttpClient {
       try {
         const res = await request(url, {
           dispatcher,
+          method,
+          ...(body !== undefined ? { body } : {}),
           headersTimeout: this.timeoutMs,
           bodyTimeout: this.timeoutMs,
           headers: {
             'user-agent': ua,
             accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
             'accept-language': 'es-AR,es;q=0.9',
+            ...(body !== undefined ? { 'content-type': 'application/json;charset=UTF-8' } : {}),
+            ...(opts.headers ?? {}),
           },
           signal: externalSignal,
         });

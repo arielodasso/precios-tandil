@@ -16,7 +16,7 @@ const adapters = await loadAdapters({
   warn: (msg, err) => logger.warn({ err }, msg),
 });
 
-const STORES_TO_SCRAPE: StoreSlug[] = ['carrefour', 'monarca', 'dia', 'vea'];
+const STORES_TO_SCRAPE: StoreSlug[] = ['carrefour', 'monarca', 'dia', 'vea', 'cooperativa-obrera'];
 const PER_STORE_TIMEOUT_MS = 45 * 60_000; // 45 minutos por tienda
 
 logger.info({ stores: STORES_TO_SCRAPE }, 'iniciando ingest-all');
