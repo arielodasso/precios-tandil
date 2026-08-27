@@ -86,10 +86,14 @@ jobs:
             sleep 2
           done
 
+      - name: Install k6
+        run: |
+          curl -sL https://github.com/grafana/k6/releases/latest/download/k6-linux-amd64.tar.gz -o /tmp/k6.tar.gz
+          sudo tar xz -C /usr/local/bin --strip-components=1 -f /tmp/k6.tar.gz
+          k6 version
+
       - name: k6 smoke test
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: infra/k6/smoke.js
+        run: k6 run infra/k6/smoke.js
         env:
           BASE_URL: http://localhost:8080
 
