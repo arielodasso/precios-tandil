@@ -85,10 +85,29 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
     ],
   },
   { path: 'congelados', tokens: ['congelado', 'congelados', 'freezer', 'freezers'] },
-  { path: 'limpieza', tokens: ['limpieza', 'lavanderia', 'detergente', 'higiene-del-hogar'] },
+  {
+    path: 'limpieza',
+    tokens: [
+      'limpieza',
+      'lavanderia',
+      'detergente',
+      'detergentes',
+      'lavandinas',
+      'higiene-del-hogar',
+    ],
+  },
   {
     path: 'perfumeria',
-    tokens: ['perfumeria', 'belleza', 'cuidado-personal', 'higiene-personal', 'shampoo', 'tocador'],
+    tokens: [
+      'perfumeria',
+      'belleza',
+      'cuidado-personal',
+      'higiene-personal',
+      'shampoo',
+      'cuidado-e-higiene-cabello',
+      'higiene-bucal',
+      'tocador',
+    ],
   },
 ];
 

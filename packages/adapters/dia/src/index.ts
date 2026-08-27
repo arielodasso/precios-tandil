@@ -17,6 +17,8 @@ const LISTING_PATHS = [
   '/azucar',
   '/leche',
   '/harina',
+  '/perfumeria',
+  '/limpieza',
 ];
 const PAGE_TIMEOUT_MS = 30_000;
 const CACHE_WAIT_MS = 15_000;

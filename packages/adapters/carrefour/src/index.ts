@@ -17,6 +17,8 @@ const LISTING_PATHS = [
   '/bebidas/gaseosas',
   '/lacteos/leches',
   '/almacen/harinas',
+  '/perfumeria',
+  '/limpieza',
 ];
 const PAGE_TIMEOUT_MS = 30_000;
 const CACHE_WAIT_MS = 20_000;

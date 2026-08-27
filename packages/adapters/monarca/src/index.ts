@@ -13,6 +13,10 @@ const LISTING_CATEGORIES = [
   { categoryId: '5022', label: 'Azúcar' },
   { categoryId: '5027', label: 'Leches' },
   { categoryId: '5008', label: 'Harinas' },
+  { categoryId: '5055', label: 'Cuidado e higiene cabello' },
+  { categoryId: '5057', label: 'Cuidado e higiene bucal' },
+  { categoryId: '5072', label: 'Detergentes' },
+  { categoryId: '15160', label: 'Lavandinas' },
 ] as const;
 
 export interface MonarcaPromotion {
