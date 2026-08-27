@@ -10,7 +10,6 @@ jobs:
     timeout-minutes: 240 # 4 horas máximo
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      NODE_ENV: production
       LOG_LEVEL: info
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +28,8 @@ jobs:
 
       - name: Scrape all stores + refresh aggregates
         run: pnpm --filter @precios/worker run ingest-all
+        env:
+          NODE_ENV: production
 
       - name: Update Vercel deployment
         if: success()
