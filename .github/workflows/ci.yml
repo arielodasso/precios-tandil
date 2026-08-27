@@ -88,7 +88,9 @@ jobs:
 
       - name: Install k6
         run: |
-          curl -sL https://github.com/grafana/k6/releases/latest/download/k6-linux-amd64.tar.gz -o /tmp/k6.tar.gz
+          K6_URL=$(curl -s https://api.github.com/repos/grafana/k6/releases/latest | grep -oP '"browser_download_url":\s*"\K[^"]+linux-amd64.tar.gz' | head -1)
+          echo "Downloading $K6_URL"
+          curl -sL "$K6_URL" -o /tmp/k6.tar.gz
           sudo tar xz -C /usr/local/bin --strip-components=1 -f /tmp/k6.tar.gz
           k6 version
 
