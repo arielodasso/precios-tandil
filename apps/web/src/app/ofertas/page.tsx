@@ -35,6 +35,8 @@ export default async function OfertasPage() {
                   best_price: deal.price,
                   store_slug: deal.store_slug,
                   discount_pct: deal.discount_pct,
+                  image_url: deal.image_url,
+                  offers: deal.offers,
                 }}
               />
             </li>

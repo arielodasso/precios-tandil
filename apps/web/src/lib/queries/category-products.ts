@@ -1,41 +1,57 @@
 import { sql, type Kysely } from 'kysely';
 import type { DB } from '@precios/shared';
+import { loadOffersByProduct } from './offers';
+import type { CardOffer } from '@/lib/types';
 
-const FRESH_WINDOW_DAYS = 7;
-const freshWindowInterval = sql.raw(`interval '${FRESH_WINDOW_DAYS} days'`);
-const DEFAULT_LIMIT = 24;
-const MAX_LIMIT = 60;
+const DEFAULT_PAGE_SIZE = 10;
 
 interface CategoryProductRow {
+  id: string | number;
   slug: string;
   name: string;
   brand: string | null;
   image_url: string | null;
   best_price: string | number | null;
   stores_count: string | number | null;
-  freshest_captured_at: Date | string | null;
 }
 
 export interface CategoryProductItem {
+  id: number;
   slug: string;
   name: string;
   brand: string | null;
   image_url: string | null;
   best_price: number | null;
   stores_count: number | null;
-  freshest_captured_at: string | null;
+  offers: CardOffer[];
+}
+
+export interface CategoryProductPage {
+  items: CategoryProductItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+interface CategoryProductCountRow {
+  total: string | number;
 }
 
 /**
- * Lista los productos con precios frescos dentro de una categoría
- * (incluyendo subcategorías). Si la categoría no existe devuelve null.
+ * Lista los productos que pertenecen a una categoría (incluyendo
+ * subcategorías). La pertenencia queda garantizada por el path de la
+ * categoría. Devuelve además el total para paginar. Si la categoría no
+ * existe devuelve null.
  */
 export async function listCategoryProducts(
   db: Kysely<DB>,
   categoryToken: string,
-  opts: { limit?: number } = {},
-): Promise<CategoryProductItem[] | null> {
-  const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
+  opts: { page?: number; pageSize?: number } = {},
+): Promise<CategoryProductPage | null> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(Math.max(opts.pageSize ?? DEFAULT_PAGE_SIZE, 1), 60);
+  const offset = (page - 1) * pageSize;
 
   const cat = await sql<{ path: string }>`
     select path from category
@@ -47,29 +63,42 @@ export async function listCategoryProducts(
   const categoryPath = cat.rows[0]?.path ?? null;
   if (!categoryPath) return null;
 
-  const rows = await sql<CategoryProductRow>`
-    select distinct on (p.id)
-           p.slug, p.canonical_name as name, p.brand, p.image_url,
-           pa.best_price::float8 as best_price, pa.stores_count,
-           pa.best_captured_at as freshest_captured_at
+  const countRows = await sql<CategoryProductCountRow>`
+    select count(*)::int as total
     from product p
-    join price_aggregate pa on pa.product_id = p.id
     join category c on c.id = p.category_id
-    where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
-      and pa.best_captured_at >= now() - ${freshWindowInterval}
-    order by p.id, pa.best_price asc nulls last
-    limit ${limit}
+    where c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`}
+  `.execute(db);
+  const total = Number(countRows.rows[0]?.total ?? 0);
+
+  const rows = await sql<CategoryProductRow>`
+    select p.id, p.slug, p.canonical_name as name, p.brand, p.image_url,
+           pa.best_price::float8 as best_price, pa.stores_count
+    from product p
+    join category c on c.id = p.category_id
+    left join price_aggregate pa on pa.product_id = p.id
+    where c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`}
+    order by (pa.best_price asc nulls last), p.canonical_name asc
+    limit ${pageSize} offset ${offset}
   `.execute(db);
 
-  return rows.rows.map((r) => ({
-    slug: r.slug,
-    name: r.name,
-    brand: r.brand,
-    image_url: r.image_url,
-    best_price: r.best_price == null ? null : Number(r.best_price),
-    stores_count: r.stores_count == null ? null : Number(r.stores_count),
-    freshest_captured_at: r.freshest_captured_at
-      ? new Date(r.freshest_captured_at).toISOString()
-      : null,
-  }));
+  const ids = rows.rows.map((r) => Number(r.id));
+  const offersByProduct = await loadOffersByProduct(db, ids);
+
+  const items: CategoryProductItem[] = rows.rows.map((r) => {
+    const id = Number(r.id);
+    return {
+      id,
+      slug: r.slug,
+      name: r.name,
+      brand: r.brand,
+      image_url: r.image_url,
+      best_price: r.best_price == null ? null : Number(r.best_price),
+      stores_count: r.stores_count == null ? null : Number(r.stores_count),
+      offers: offersByProduct.get(id) ?? [],
+    };
+  });
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  return { items, total, page, pageSize, totalPages };
 }

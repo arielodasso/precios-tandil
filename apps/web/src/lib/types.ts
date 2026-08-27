@@ -73,4 +73,13 @@ export interface DealItem {
   badge: string;
   published_at: string;
   expires_at: string | null;
+  offers: CardOffer[];
+}
+
+/** Oferta individual (fuente) para mostrar dentro de una tarjeta de producto. */
+export interface CardOffer {
+  store: string;
+  store_name: string;
+  price: number | null;
+  source_url: string | null;
 }

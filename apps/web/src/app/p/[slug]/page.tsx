@@ -57,6 +57,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     store_name: o.store_name,
     price: o.price,
     is_stale: o.is_stale,
+    source_url: o.source_url,
   }));
 
   const jsonLd = {
@@ -86,6 +87,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <ProductComparisonCard
         name={product.name}
         brand={product.brand}
+        imageUrl={product.image_url}
         offers={offers}
         dealBadge={product.deal_badge ? { badge: product.deal_badge } : null}
       />

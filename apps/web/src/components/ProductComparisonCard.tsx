@@ -1,13 +1,16 @@
 import { Badge } from '@/components/ui/badge';
+import { ExternalLink } from 'lucide-react';
 import { DealBadge } from './DealBadge';
+import { ProductImage } from './ProductImage';
 import { formatArs } from './HistoryStrip';
-import { cn } from '@/lib/utils';
+import { cn, titleCase } from '@/lib/utils';
 
 export interface OfferView {
   store: string;
   store_name: string;
   price: number | null;
   is_stale: boolean;
+  source_url?: string | null;
 }
 
 /**
@@ -18,11 +21,13 @@ export interface OfferView {
 export function ProductComparisonCard({
   name,
   brand,
+  imageUrl,
   offers,
   dealBadge,
 }: {
   name: string;
   brand: string | null;
+  imageUrl?: string | null;
   offers: OfferView[];
   dealBadge?: { badge: 'gold' | 'green' } | null;
 }) {
@@ -33,9 +38,14 @@ export function ProductComparisonCard({
   return (
     <section className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">{name}</h1>
-          {brand && <p className="mt-1 text-sm text-muted-foreground">{brand}</p>}
+        <div className="flex items-start gap-3">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+            <ProductImage src={imageUrl ?? null} alt={titleCase(name)} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">{titleCase(name)}</h1>
+            {brand && <p className="mt-1 text-sm text-muted-foreground">{brand}</p>}
+          </div>
         </div>
         {dealBadge && <DealBadge variant={dealBadge.badge} />}
       </div>
@@ -64,7 +74,19 @@ export function ProductComparisonCard({
                     )}
                   >
                     <span>
-                      {offer.store_name}
+                      {offer.source_url ? (
+                        <a
+                          href={offer.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 hover:text-alerta"
+                        >
+                          {offer.store_name}
+                          <ExternalLink className="size-3 opacity-70" />
+                        </a>
+                      ) : (
+                        offer.store_name
+                      )}
                       {isBest && (
                         <Badge className="ml-2 bg-alerta text-black hover:bg-alerta-strong">
                           Mejor precio

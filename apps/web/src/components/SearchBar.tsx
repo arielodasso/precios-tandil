@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { titleCase } from '@/lib/utils';
 import type { SearchResultItem, SearchResponse } from '@/lib/types';
 
 /**
@@ -83,7 +84,7 @@ export function SearchBar() {
                   className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground"
                   onMouseDown={() => router.push(`/p/${hit.slug}`)}
                 >
-                  <span>{hit.name}</span>
+                  <span>{titleCase(hit.name)}</span>
                   {hit.best_price !== null && (
                     <span className="text-sm font-semibold text-primary">
                       ${hit.best_price.toFixed(2)}

@@ -42,8 +42,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
             </Link>
             <nav aria-label="principal" className="flex items-center gap-3 text-sm">
-              <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
-                por Tandil Alerta
+              <span className="hidden items-center gap-1 text-xs font-medium text-muted-foreground sm:inline-flex">
+                por{' '}
+                <a
+                  href="https://sigmatecnologiasarg.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-alerta hover:text-alerta-strong"
+                >
+                  Sigma Tecnologías
+                </a>
+                <span aria-hidden="true">&amp;</span>
+                <a
+                  href="https://www.instagram.com/tandilalerta/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-alerta hover:text-alerta-strong"
+                >
+                  Tandil Alerta
+                </a>
               </span>
               <ThemeToggle />
             </nav>

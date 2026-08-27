@@ -1,7 +1,10 @@
 import { sql, type Kysely } from 'kysely';
 import type { DB } from '@precios/shared';
+import { loadOffersByProduct } from './offers';
+import type { CardOffer } from '@/lib/types';
 
 interface DealRow {
+  product_id: string | number;
   product_slug: string;
   product_name: string;
   image_url: string | null;
@@ -23,12 +26,14 @@ export interface DealPublicItem {
   badge: string;
   published_at: string;
   expires_at: string | null;
+  offers: CardOffer[];
 }
 
 export async function listPublishedDeals(db: Kysely<DB>): Promise<DealPublicItem[]> {
   const rows = await sql<DealRow>`
     select distinct on (p.id)
-           p.slug as product_slug, p.canonical_name as product_name, p.image_url,
+           p.id as product_id, p.slug as product_slug, p.canonical_name as product_name,
+           p.image_url,
            pa.best_store_id, pa.best_price, dc.discount_pct,
            case when dp.badge is not null then dp.badge
                 else case when dc.discount_pct >= 25 then 'gold' else 'green' end
@@ -46,15 +51,24 @@ export async function listPublishedDeals(db: Kysely<DB>): Promise<DealPublicItem
     limit 50
   `.execute(db);
 
-  return rows.rows.map((r) => ({
-    slug: r.product_slug,
-    name: r.product_name,
-    image_url: r.image_url ?? null,
-    store_slug: r.best_store_slug ?? null,
-    price: r.best_price == null ? null : Number(r.best_price),
-    discount_pct: Number(r.discount_pct),
-    badge: r.badge,
-    published_at: new Date(r.published_at).toISOString(),
-    expires_at: r.expires_at ? new Date(r.expires_at).toISOString() : null,
-  }));
+  const offersByProduct = await loadOffersByProduct(
+    db,
+    rows.rows.map((r) => Number(r.product_id)),
+  );
+
+  return rows.rows.map((r) => {
+    const pid = Number(r.product_id);
+    return {
+      slug: r.product_slug,
+      name: r.product_name,
+      image_url: r.image_url ?? null,
+      store_slug: r.best_store_slug ?? null,
+      price: r.best_price == null ? null : Number(r.best_price),
+      discount_pct: Number(r.discount_pct),
+      badge: r.badge,
+      published_at: new Date(r.published_at).toISOString(),
+      expires_at: r.expires_at ? new Date(r.expires_at).toISOString() : null,
+      offers: offersByProduct.get(pid) ?? [],
+    };
+  });
 }

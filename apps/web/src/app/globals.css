@@ -68,9 +68,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Tandil Alerta brand helpers */
-  --color-alerta: #fb0;
-  --color-alerta-strong: #f5a623;
+  /* Tandil Alerta brand helpers — Sigma Tecnologías design system */
+  --color-alerta: #ffb909; /* amarillo primario */
+  --color-alerta-strong: #fdec20; /* segundo tono de amarillo */
   --color-black: #000;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -85,5 +85,34 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Scrollbars alineados a la paleta de Sigma Tecnologías */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-alerta) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--color-alerta), var(--color-alerta-strong));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-alerta-strong);
+    background-clip: padding-box;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
   }
 }
