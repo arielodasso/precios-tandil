@@ -409,4 +409,44 @@ describe('pipeline de ingesta con snapshots de fixtures reales (fake-db)', () =>
     const normales = prices.filter((p) => p.is_suspect === false);
     expect(normales.length).toBe(base.length);
   });
+
+  it('marca como pending_review un match por EAN con descripción genérica (yerba Amanda)', async () => {
+    const db = new FakeKysely();
+    seedStores(db);
+
+    const branded: ProductSnapshot = {
+      externalId: 'dia-amanda-1kg',
+      url: 'https://diaonline.supermercadosdia.com.ar/product/amanda',
+      rawDescription: 'Yerba Mate Amanda Tradicional 1 Kg.',
+      brand: 'Amanda',
+      ean: '7792710000175',
+      categoryPath: ['almacen'],
+      unitLabel: '1 kg',
+      price: { amount: 4989, listOrPromo: 'list' },
+      capturedAt: new Date().toISOString(),
+    };
+    const generica: ProductSnapshot = {
+      externalId: 'c4-yerba-tradicional',
+      url: 'https://www.carrefour.com.ar/product/yerba',
+      rawDescription: 'YERBA TRADICIONAL 1kg',
+      brand: undefined,
+      ean: '7792710000175',
+      categoryPath: ['almacen'],
+      price: { amount: 4490, listOrPromo: 'list' },
+      capturedAt: new Date().toISOString(),
+    };
+
+    await runAdapter(db, new FixtureAdapter('dia', [branded]), 1);
+    await runAdapter(db, new FixtureAdapter('carrefour', [generica]), 2);
+
+    const links = db.tables.get('match_link')!;
+    const carrefour = links.find((l) =>
+      db.tables
+        .get('store_sku')!
+        .find((s) => s.id === l.store_sku_id && s.external_id === 'c4-yerba-tradicional'),
+    );
+    expect(carrefour).toBeDefined();
+    expect(carrefour!.method).toBe('ean');
+    expect(carrefour!.status).toBe('pending_review');
+  });
 });
