@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "ingest": "tsx src/cli-ingest.ts",
     "ingest-all": "tsx src/cli-ingest-all.ts",
+    "backfill-categories": "tsx src/cli-backfill-categories.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
