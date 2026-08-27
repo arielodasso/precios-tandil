@@ -42,9 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <img
                 src="/sigma-market.png"
                 alt="Precios Tandil"
-                width={60}
-                height={60}
-                className="h-[60px] w-[60px] rounded"
+                width={40}
+                height={40}
+                className="h-[40px] w-[40px] rounded object-cover"
               />
               <span className="text-lg font-extrabold tracking-tight">
                 Precios <span className="text-alerta">Tandil</span>
