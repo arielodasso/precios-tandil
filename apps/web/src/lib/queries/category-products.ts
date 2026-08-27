@@ -78,7 +78,7 @@ export async function listCategoryProducts(
     join category c on c.id = p.category_id
     left join price_aggregate pa on pa.product_id = p.id
     where c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`}
-    order by (pa.best_price asc nulls last), p.canonical_name asc
+    order by pa.best_price asc nulls last, p.canonical_name asc
     limit ${pageSize} offset ${offset}
   `.execute(db);
 
