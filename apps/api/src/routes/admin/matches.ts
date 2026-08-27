@@ -28,8 +28,8 @@ export async function adminMatchRoutes(app: FastifyInstance): Promise<void> {
              ml.store_sku_id,
              p.slug as product_slug,
              p.canonical_name as product_name,
-             ss.name as sku_name,
-             ss.ean as sku_ean,
+             ss.raw_description as sku_name,
+             ss.declared_ean as sku_ean,
              ml.method
       from match_link ml
       join product p on p.id = ml.product_id

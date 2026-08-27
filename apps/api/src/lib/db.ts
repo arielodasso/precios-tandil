@@ -3,6 +3,10 @@ import { Kysely, PostgresDialect } from 'kysely';
 import type { DB } from '@precios/shared';
 
 export function createDb(databaseUrl: string): Kysely<DB> {
-  const pool = new Pool({ connectionString: databaseUrl, max: 10 });
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    max: 10,
+    ssl: databaseUrl.includes('sslmode') ? { rejectUnauthorized: false } : undefined,
+  });
   return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 }

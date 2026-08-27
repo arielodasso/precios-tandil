@@ -35,10 +35,10 @@ export default function AdminPage() {
 
   const load = useCallback(async (t: string) => {
     const headers = { authorization: `Bearer ${t}` };
-    const runsRes = await fetch('/api-proxy/v1/admin/ingest/runs', { headers });
+    const runsRes = await fetch('/api/v1/admin/ingest/runs', { headers });
     if (!runsRes.ok) throw new Error('token inválido');
     setRuns(((await runsRes.json()) as { runs: Run[] }).runs);
-    const matchesRes = await fetch('/api-proxy/v1/admin/matches/pending', { headers });
+    const matchesRes = await fetch('/api/v1/admin/matches/pending', { headers });
     if (matchesRes.ok) {
       setMatches(((await matchesRes.json()) as { matches: PendingMatch[] }).matches);
     }
@@ -58,7 +58,7 @@ export default function AdminPage() {
 
   async function retryStore(slug: string): Promise<void> {
     setMessage('');
-    const res = await fetch(`/api-proxy/v1/admin/ingest/stores/${slug}/retry`, {
+    const res = await fetch(`/api/v1/admin/ingest/${slug}/retry`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}` },
       body: '{}',
@@ -73,7 +73,7 @@ export default function AdminPage() {
   }
 
   async function decide(id: number, decision: 'confirmed' | 'rejected'): Promise<void> {
-    const res = await fetch(`/api-proxy/v1/admin/matches/${id}/decision`, {
+    const res = await fetch(`/api/v1/admin/matches/${id}/decision`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ decision }),

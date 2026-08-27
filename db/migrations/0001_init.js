@@ -130,7 +130,7 @@ exports.up = (pgm) => {
       current_month date := date_trunc('month', now())::date;
     BEGIN
       PERFORM ensure_price_record_partition(current_month);
-      PERFORM ensure_price_record_partition(current_month + interval '1 month');
+      PERFORM ensure_price_record_partition((current_month + interval '1 month')::date);
     END $$;
 
     CREATE OR REPLACE FUNCTION price_record_immutable()
@@ -188,6 +188,7 @@ exports.up = (pgm) => {
       id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       product_id     bigint NOT NULL REFERENCES product(id),
       detected_at    timestamptz NOT NULL DEFAULT now(),
+      detected_date  date GENERATED ALWAYS AS ((detected_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date) STORED,
       discount_pct   numeric(6,2) NOT NULL,
       evidence       jsonb NOT NULL,
       status         text NOT NULL DEFAULT 'pending'
@@ -195,7 +196,7 @@ exports.up = (pgm) => {
       rejected_until timestamptz
     );
     CREATE UNIQUE INDEX uq_deal_candidate_daily
-      ON deal_candidate (product_id, (detected_at::date));
+      ON deal_candidate (product_id, detected_date);
 
     CREATE TABLE deal_publication (
       id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

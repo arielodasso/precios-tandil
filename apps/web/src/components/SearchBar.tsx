@@ -26,9 +26,7 @@ export function SearchBar() {
     timer.current = setTimeout(async () => {
       setStatus('loading');
       try {
-        const res = await fetch(
-          `/api-proxy/v1/search?q=${encodeURIComponent(query.trim())}&limit=8`,
-        );
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query.trim())}&limit=8`);
         if (!res.ok) throw new Error(String(res.status));
         const data = (await res.json()) as SearchResponse;
         setHits(data.results ?? []);

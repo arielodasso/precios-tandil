@@ -9,7 +9,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@precios/shared": "workspace:*",
+    "kysely": "^0.27.5",
     "next": "^15.1.0",
+    "pg": "^8.13.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -17,6 +20,7 @@
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.17.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "postcss": "^8.4.49",

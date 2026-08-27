@@ -8,7 +8,7 @@ async function* failCatalog(_ctx: AdapterContext): AsyncGenerator<ProductSnapsho
 }
 
 const adapter: ScraperAdapter = {
-  storeSlug: 'carrefour',
+  storeSlug: 'cooperativa-obrera',
 
   async *discover(_ctx: AdapterContext): AsyncGenerator<ListingRef, never, void> {
     throw new AppError('adapter_missing', NOT_IMPLEMENTED);
