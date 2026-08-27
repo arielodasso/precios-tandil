@@ -55,6 +55,17 @@ function collapse(s: string | null | undefined): string {
   return (s ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function productSlug(description: string): string {
+  return description
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 function unitLabel(article: CoopArticle): string | undefined {
   const amount = num(article.gramaje);
   const unit = collapse(article.unimed_desc);
@@ -117,7 +128,7 @@ export function toSnapshot(article: CoopArticle, capturedAt: Date): ProductSnaps
 
   return {
     externalId: code,
-    url: `${WWW_BASE}/articulo/${code}`,
+    url: `${WWW_BASE}/producto/${productSlug(description)}/${code}`,
     rawDescription: `${description}${unitLabel(article) ? ` ${unitLabel(article)}` : ''}`,
     brand: collapse(article.marca_desc) || undefined,
     categoryPath: categoryPath?.map((p) => p.slice(0, 120)),
