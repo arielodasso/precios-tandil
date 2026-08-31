@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav aria-label="principal" className="flex items-center gap-4 text-sm">
               <Link
-                href="/analytics"
+                href="/admin/tandilalerta"
                 className="hidden font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline"
               >
                 Analíticas
