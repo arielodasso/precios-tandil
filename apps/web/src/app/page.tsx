@@ -28,7 +28,9 @@ export default async function HomePage() {
 
   return (
     <div className="py-8">
-      <h1 className="mb-2 text-3xl font-extrabold tracking-tight">¿Dónde conviene comprar hoy?</h1>
+      <h1 className="mb-2 text-3xl font-extrabold tracking-tight lg:text-4xl">
+        ¿Dónde conviene comprar hoy?
+      </h1>
       <p className="mb-6 text-muted-foreground">
         Precios comparados entre supermercados de Tandil, actualizados a diario.
       </p>
@@ -53,7 +55,7 @@ export default async function HomePage() {
         </ul>
       </nav>
 
-      <section aria-labelledby="top-deals" className="mt-9">
+      <section aria-labelledby="top-deals" className="mt-10">
         <div className="mb-4 flex items-center gap-2">
           <h2 id="top-deals" className="text-lg font-bold">
             Oportunidades de la semana

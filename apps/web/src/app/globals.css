@@ -3,51 +3,53 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0 0);
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0 0);
+  --card-foreground: oklch(0.15 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0 0);
+  --popover-foreground: oklch(0.15 0 0);
   --primary: oklch(0.21 0 0);
-  --primary-foreground: oklch(0.95 0.15 99);
-  --secondary: oklch(0.94 0.08 95);
-  --secondary-foreground: oklch(0.25 0.12 90);
-  --muted: oklch(0.955 0.02 85);
-  --muted-foreground: oklch(0.45 0.02 85);
-  --accent: oklch(0.9 0.16 95);
-  --accent-foreground: oklch(0.25 0.12 90);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.96 0.02 90);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.96 0.01 90);
+  --muted-foreground: oklch(0.50 0 0);
+  --accent: oklch(0.92 0.12 95);
+  --accent-foreground: oklch(0.20 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0.02 85);
-  --input: oklch(0.922 0.02 85);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
   --ring: oklch(0.85 0.16 95);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 }
 
 .dark {
-  --background: oklch(0.13 0 0);
-  --foreground: oklch(0.95 0.15 99);
-  --card: oklch(0.17 0.01 90);
-  --card-foreground: oklch(0.95 0.15 99);
-  --popover: oklch(0.17 0.01 90);
-  --popover-foreground: oklch(0.95 0.15 99);
-  --primary: oklch(0.9 0.16 95);
-  --primary-foreground: oklch(0.2 0.03 90);
-  --secondary: oklch(0.27 0.04 90);
-  --secondary-foreground: oklch(0.95 0.15 99);
-  --muted: oklch(0.25 0.02 90);
-  --muted-foreground: oklch(0.65 0.03 90);
-  --accent: oklch(0.35 0.09 90);
-  --accent-foreground: oklch(0.95 0.15 99);
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.16 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.90 0.16 95);
+  --primary-foreground: oklch(0.12 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.20 0 0);
+  --muted-foreground: oklch(0.60 0 0);
+  --accent: oklch(0.30 0.06 95);
+  --accent-foreground: oklch(0.96 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.85 0.16 95);
 }
 
 @theme inline {
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -68,15 +70,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Tandil Alerta brand helpers — Sigma Tecnologías design system */
-  --color-alerta: #ffb909; /* amarillo primario */
-  --color-alerta-strong: #fdec20; /* segundo tono de amarillo */
+  --color-alerta: #FFB909;
+  --color-alerta-strong: #FDEC20;
   --color-black: #000;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
 @layer base {
@@ -87,14 +88,13 @@
     @apply bg-background text-foreground;
   }
 
-  /* Scrollbars alineados a la paleta de Sigma Tecnologías */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-alerta) transparent;
   }
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;

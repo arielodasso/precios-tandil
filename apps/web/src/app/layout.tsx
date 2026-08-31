@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Montserrat } from 'next/font/google';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Footer } from '@/components/Footer';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-montserrat',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -31,20 +35,20 @@ const themeScript = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" suppressHydrationWarning>
+    <html lang="es-AR" suppressHydrationWarning className={montserrat.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${inter.className} min-h-dvh antialiased`}>
-        <header className="border-b border-border bg-background">
+      <body className={`${montserrat.className} min-h-dvh antialiased`}>
+        <header className="border-b border-border bg-background/80 backdrop-blur-sm">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2.5">
               <img
                 src="/sigma-market.png"
                 alt="Precios Tandil"
-                width={40}
-                height={40}
-                className="h-[40px] w-[40px] rounded object-cover"
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-lg object-cover"
               />
               <span className="text-lg font-extrabold tracking-tight">
                 Precios <span className="text-alerta">Tandil</span>
@@ -57,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   href="https://sigmatecnologiasarg.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-alerta hover:text-alerta-strong"
+                  className="font-semibold text-alerta transition-colors hover:text-alerta-strong"
                 >
                   Sigma Tecnologías
                 </a>
@@ -66,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   href="https://www.instagram.com/tandilalerta/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-alerta hover:text-alerta-strong"
+                  className="font-semibold text-alerta transition-colors hover:text-alerta-strong"
                 >
                   Tandil Alerta
                 </a>
@@ -75,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 pb-16">{children}</main>
+        <main className="mx-auto max-w-3xl px-4 pb-16 pt-2">{children}</main>
         <Footer />
       </body>
     </html>

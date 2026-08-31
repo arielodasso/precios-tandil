@@ -37,7 +37,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     sortedOffers !== null && sortedOffers.length > 0 && sortedOffers[0]!.price != null;
 
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="overflow-hidden transition-all hover:shadow-md">
       <CardContent className="p-0">
         <div className="flex items-start gap-4 p-4 pb-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           <div className="min-w-0 flex-1">
             <Link
               href={`/p/${slug}`}
-              className="line-clamp-2 text-base font-bold leading-snug text-foreground hover:text-alerta"
+              className="line-clamp-2 text-base font-bold leading-snug transition-colors hover:text-alerta"
             >
               {titleCase(name)}
             </Link>
@@ -77,7 +77,10 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             {sortedOffers.map((offer) => {
               const isBest = offer.price !== null && offer.price === bestPrice;
               return (
-                <li key={offer.store} className="flex items-center justify-between gap-2 px-4 py-2">
+                <li
+                  key={offer.store}
+                  className="flex items-center justify-between gap-2 px-4 py-2.5"
+                >
                   <span
                     className={cn(
                       'truncate text-muted-foreground',
@@ -96,7 +99,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                       href={offer.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary hover:text-alerta"
+                      className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary transition-colors hover:text-alerta"
                     >
                       {offer.price != null ? formatArs(offer.price) : '—'}
                       <ExternalLink className="size-3" />

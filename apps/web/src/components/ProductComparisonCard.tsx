@@ -43,7 +43,7 @@ export function ProductComparisonCard({
             <ProductImage src={imageUrl ?? null} alt={titleCase(name)} />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{titleCase(name)}</h1>
+            <h1 className="text-xl font-bold tracking-tight">{titleCase(name)}</h1>
             {brand && <p className="mt-1 text-sm text-muted-foreground">{brand}</p>}
           </div>
         </div>
@@ -79,7 +79,7 @@ export function ProductComparisonCard({
                           href={offer.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 hover:text-alerta"
+                          className="inline-flex items-center gap-1 transition-colors hover:text-alerta"
                         >
                           {offer.store_name}
                           <ExternalLink className="size-3 opacity-70" />
@@ -93,7 +93,7 @@ export function ProductComparisonCard({
                         </Badge>
                       )}
                     </span>
-                    <span className="text-right">
+                    <span className="text-right font-semibold">
                       {offer.price !== null && formatArs(offer.price)}
                       {diff !== null && (
                         <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
