@@ -158,7 +158,7 @@ export async function searchProducts(
       select distinct ml.product_id
       from price_record pr
       join store_sku ss on ss.id = pr.store_sku_id
-      join match_link ml on ml.store_sku_id = ss.id and ml.status <> 'rejected'
+      join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
       join store s on s.id = ss.store_id
       where pr.is_suspect = false
         and pr.captured_at >= now() - ${freshWindowInterval}

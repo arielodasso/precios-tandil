@@ -36,7 +36,7 @@ export async function loadOffersByProduct(
              ml.product_id, ss.store_id, pr.price_amount, pr.source_url
       from price_record pr
       join store_sku ss on ss.id = pr.store_sku_id
-      join match_link ml on ml.store_sku_id = ss.id and ml.status <> 'rejected'
+      join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
       where ml.product_id in (${sql.raw(idList)})
         and pr.is_suspect = false
       order by ml.product_id, ss.store_id, pr.captured_at desc

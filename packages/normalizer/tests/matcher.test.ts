@@ -18,6 +18,7 @@ const candidates: MatchCandidate[] = [
     unitAmount: 1,
     unitType: 'kg',
     brand: 'gallo',
+    brandProvided: true,
     typeKeys: ['arroz'],
     imageHash: '1111111111111111',
     imageUrl: 'https://img.example/arroz.jpg',
@@ -30,6 +31,7 @@ const candidates: MatchCandidate[] = [
     unitAmount: 1,
     unitType: 'kg',
     brand: 'gallo',
+    brandProvided: true,
     typeKeys: ['arroz'],
     imageHash: null,
     imageUrl: null,
@@ -42,6 +44,7 @@ const candidates: MatchCandidate[] = [
     unitAmount: 500,
     unitType: 'g',
     brand: 'gallo',
+    brandProvided: true,
     typeKeys: ['arroz'],
     imageHash: null,
     imageUrl: null,
@@ -54,6 +57,7 @@ const candidates: MatchCandidate[] = [
     unitAmount: 1,
     unitType: 'kg',
     brand: null,
+    brandProvided: false,
     typeKeys: ['arroz'],
     imageHash: null,
     imageUrl: null,
@@ -95,6 +99,7 @@ describe('semanticScore', () => {
       unitAmount: 1,
       unitType: 'kg',
       brand: null,
+      brandProvided: false,
       typeKeys: ['harina'],
       imageHash: null,
       imageUrl: null,
@@ -115,6 +120,7 @@ describe('semanticScore', () => {
       unitAmount: 200,
       unitType: 'g',
       brand: null,
+      brandProvided: false,
       typeKeys: ['chocolate', 'leche'],
       imageHash: null,
       imageUrl: null,
@@ -133,12 +139,37 @@ describe('semanticScore', () => {
       unitAmount: 1,
       unitType: 'kg',
       brand: 'gallo',
+      brandProvided: true,
       typeKeys: ['arroz'],
       imageHash: null,
       imageUrl: null,
       contextText: '',
     };
     expect(semanticScore(conGallo, cand)).toBeGreaterThan(semanticScore(conOtra, cand));
+  });
+
+  it('penaliza fuertemente marcas declaradas distintas', () => {
+    const noel = normalizeDescription('Polenta Noel Instantanea x 500g', { brand: 'noel' });
+    const coop = normalizeDescription('Polenta Cooperativa Instantanea 500grs', {
+      brand: 'cooperativa',
+    });
+    const cand: MatchCandidate = {
+      productId: 88,
+      ean: null,
+      normName: 'polenta noel instantanea',
+      unitAmount: 500,
+      unitType: 'g',
+      brand: 'noel',
+      brandProvided: true,
+      typeKeys: ['legumbre'],
+      imageHash: null,
+      imageUrl: null,
+      contextText: '',
+    };
+    const scoreSame = semanticScore(noel, cand);
+    const scoreDiff = semanticScore(coop, cand);
+    expect(scoreDiff).toBeLessThan(scoreSame);
+    expect(scoreDiff).toBeLessThan(0.5);
   });
 
   it('penaliza fuertemente imágenes dispares', () => {

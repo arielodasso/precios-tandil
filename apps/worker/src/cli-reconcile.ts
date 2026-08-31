@@ -45,6 +45,7 @@ function toCandidate(p: ProductRow): MatchCandidate {
     unitAmount: p.unit_amount !== null ? Number(p.unit_amount) : null,
     unitType: p.unit_type,
     brand: p.brand,
+    brandProvided: norm.brandProvided,
     typeKeys: norm.typeKeys,
     imageHash: p.image_hash,
     imageUrl: p.image_url,

@@ -7,6 +7,7 @@ export interface MatchCandidate {
   unitAmount: number | null;
   unitType: string | null;
   brand: string | null;
+  brandProvided: boolean;
   typeKeys: string[];
   imageHash: string | null;
   imageUrl: string | null;
@@ -116,6 +117,18 @@ export function semanticScore(
 
   if (norm.brandProvided && cand.brand && cand.brand === norm.brand) {
     score = Math.min(1, score * 1.04);
+  }
+
+  // Marcas declaradas (fuente) y distintas = productos distintos: penalizar
+  // fuerte para no mezclar marca propia de supermercado con marca real.
+  if (
+    norm.brandProvided &&
+    cand.brandProvided &&
+    cand.brand &&
+    norm.brand &&
+    norm.brand !== cand.brand
+  ) {
+    score *= 0.4;
   }
 
   const normHash = opts.incomingImageHash ?? null;

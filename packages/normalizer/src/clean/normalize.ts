@@ -176,11 +176,15 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length > 1 && !STOPWORDS.has(t) && !/^\d+([.,]\d+)?$/.test(t));
 }
 
-/** Heurística de marca: primer token alfabético largo que no es un tipo de producto. */
+/** Heurística de marca: primer token alfabético largo que no es un término de tipo de producto. */
 function guessBrand(tokens: string[], typeKeys: string[]): string | null {
+  const stopTerms = new Set(
+    PRODUCT_TYPES.flatMap((t) => t.terms).map((t) => stripAccents(t.toLowerCase())),
+  );
   for (const token of tokens) {
     if (!/^[a-z]{3,}$/.test(token)) continue;
     if (typeKeys.includes(token)) continue;
+    if (stopTerms.has(token)) continue;
     if (token === 'x') continue;
     return token;
   }

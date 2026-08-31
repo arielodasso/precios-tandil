@@ -51,7 +51,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
-        where ml.status <> 'rejected'
+        where ml.status in ('auto', 'confirmed')
       ),
       fresh as (
         select product_id, store_id, price_amount, captured_at
@@ -88,7 +88,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
-        where ml.status <> 'rejected'
+        where ml.status in ('auto', 'confirmed')
         group by ml.product_id
       ),
       ref_24h as (
@@ -97,7 +97,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
-        where ml.status <> 'rejected'
+        where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '24 hours'
         order by ml.product_id, pr.captured_at desc
       ),
@@ -107,7 +107,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
-        where ml.status <> 'rejected'
+        where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '7 days'
         order by ml.product_id, pr.captured_at desc
       ),
