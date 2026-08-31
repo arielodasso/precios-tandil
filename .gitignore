@@ -20,3 +20,7 @@ re.pid
 re2.pid
 *.err
 cloudflared*.log
+
+# Redis dump
+*.rdb
+
