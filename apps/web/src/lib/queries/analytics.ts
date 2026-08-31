@@ -164,25 +164,35 @@ export async function getStoreCompetitiveness(db: KyselyDB) {
 
 /** Products near historical minimum (best_price <= min_90d * 1.05) */
 export async function getNearHistoricalLow(db: KyselyDB, limit = 10) {
-  return db
-    .selectFrom('price_aggregate as pa')
-    .innerJoin('product as p', 'p.id', 'pa.product_id')
-    .innerJoin('store as s', 's.id', 'pa.best_store_id')
-    .where('pa.best_price', 'is not', null)
-    .where('pa.min_90d', 'is not', null)
-    .where('pa.stores_count', '>=', 2)
-    .where(sql`pa.best_price::numeric <= pa.min_90d::numeric * 1.05`, '=', true)
-    .select([
-      'p.slug',
-      'p.canonical_name as name',
-      'p.brand',
-      'pa.best_price',
-      'pa.min_90d',
-      'pa.stores_count',
-      's.name as best_store',
-      's.slug as best_store_slug',
-    ])
-    .orderBy('pa.best_price', 'asc')
-    .limit(limit)
-    .execute();
+  return sql<{
+    slug: string;
+    name: string;
+    brand: string | null;
+    best_price: string;
+    min_90d: string;
+    stores_count: number;
+    best_store: string;
+    best_store_slug: string;
+  }>`
+    select
+      p.slug,
+      p.canonical_name as name,
+      p.brand,
+      pa.best_price,
+      pa.min_90d,
+      pa.stores_count,
+      s.name as best_store,
+      s.slug as best_store_slug
+    from price_aggregate pa
+    join product p on p.id = pa.product_id
+    join store s on s.id = pa.best_store_id
+    where pa.best_price is not null
+      and pa.min_90d is not null
+      and pa.stores_count >= 2
+      and pa.best_price::numeric <= pa.min_90d::numeric * 1.05
+    order by pa.best_price::numeric asc
+    limit ${limit}
+  `
+    .execute(db)
+    .then((r) => r.rows);
 }
