@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "=== Precios Tandil — Tunnel URL Updater ===" -ForegroundColor Cyan
+Write-Host "=== Precios Tandil - Tunnel URL Updater ===" -ForegroundColor Cyan
 
 # 1. Kill existing cloudflared
 $existing = Get-Process cloudflared -ErrorAction SilentlyContinue
@@ -18,38 +18,34 @@ if ($existing) {
     Start-Sleep -Seconds 2
 }
 
-# 2. Start cloudflared in background and capture output
+# 2. Start cloudflared in background, logging to a temp file
 Write-Host "[2/5] Starting cloudflared tunnel..." -ForegroundColor Yellow
-$process = New-Object System.Diagnostics.Process
-$process.StartInfo.FileName = "cloudflared"
-$process.StartInfo.Arguments = "tunnel --url http://localhost:3001"
-$process.StartInfo.RedirectStandardOutput = $true
-$process.StartInfo.RedirectStandardError = $true
-$process.StartInfo.UseShellExecute = $false
-$process.StartInfo.CreateNoWindow = $true
-$process.Start() | Out-Null
+$logFile = Join-Path $env:TEMP ("cloudflared-{0}.log" -f [System.Guid]::NewGuid().ToString("N"))
+$errFile = Join-Path $env:TEMP ("cloudflared-{0}.err" -f [System.Guid]::NewGuid().ToString("N"))
+if (Get-Command cloudflared -ErrorAction SilentlyContinue) {
+    Start-Process -FilePath "cloudflared" -ArgumentList "tunnel --url http://localhost:3001" -RedirectStandardOutput $logFile -RedirectStandardError $errFile -WindowStyle Hidden
+}
+$tunnelUrl = $null
 
-# Wait for the URL to appear in stderr (cloudflared prints to stderr)
-$ tunnelUrl = $null
-$maxWait = 30
+# Wait for the URL (cloudflared prints it to stderr)
+$maxWait = 60
 $elapsed = 0
-while ($elapsed -lt $maxWait) {
-    Start-Sleep -Seconds 1
-    $elapsed++
-    # Read stderr line by line
-    while ($process.StandardError.Peek() -ge 0) {
-        $line = $process.StandardError.ReadLine()
-        if ($line -match 'https://[a-z0-9-]+\.trycloudflare\.com') {
-            $tunnelUrl = $Matches[0]
-            break
+while ($elapsed -lt $maxWait -and -not $tunnelUrl) {
+    Start-Sleep -Milliseconds 500
+    $elapsed += 0.5
+    foreach ($f in @($logFile, $errFile)) {
+        if (Test-Path $f) {
+            $content = Get-Content -LiteralPath $f -Raw -ErrorAction SilentlyContinue
+            if ($content -match 'https://[a-z0-9-]+\.trycloudflare\.com') {
+                $tunnelUrl = $Matches[0]
+            }
         }
     }
-    if ($tunnelUrl) { break }
 }
 
 if (-not $tunnelUrl) {
     Write-Host "ERROR: Could not detect tunnel URL after ${maxWait}s" -ForegroundColor Red
-    $process.Kill()
+    Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force
     exit 1
 }
 
@@ -94,5 +90,6 @@ Write-Host "Tunnel URL:  $tunnelUrl"
 Write-Host "API URL:     $apiUrl"
 Write-Host "Web URL:     https://web-two-plum-r3fk6yvjnz.vercel.app"
 Write-Host ""
-Write-Host "Note: cloudflared is running in background (PID: $($process.Id))" -ForegroundColor DarkGray
-Write-Host "To stop: Stop-Process -Id $($process.Id)" -ForegroundColor DarkGray
+$cfPid = (Get-Process cloudflared -ErrorAction SilentlyContinue | Select-Object -First 1).Id
+Write-Host "Note: cloudflared is running in background (PID: $cfPid)" -ForegroundColor DarkGray
+Write-Host "To stop: Stop-Process -Id $cfPid" -ForegroundColor DarkGray
