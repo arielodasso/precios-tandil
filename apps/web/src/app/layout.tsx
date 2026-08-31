@@ -54,7 +54,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Precios <span className="text-alerta">Tandil</span>
               </span>
             </Link>
-            <nav aria-label="principal" className="flex items-center gap-3 text-sm">
+            <nav aria-label="principal" className="flex items-center gap-4 text-sm">
+              <Link
+                href="/analytics"
+                className="hidden font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline"
+              >
+                Analíticas
+              </Link>
               <span className="hidden items-center gap-1 text-xs font-medium text-muted-foreground sm:inline-flex">
                 por{' '}
                 <a
