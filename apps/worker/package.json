@@ -10,6 +10,7 @@
     "ingest-all": "tsx src/cli-ingest-all.ts",
     "backfill-categories": "tsx src/cli-backfill-categories.ts",
     "reconcile": "tsx src/cli-reconcile.ts",
+    "consolidate": "tsx src/cli-consolidate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
