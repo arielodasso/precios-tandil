@@ -177,6 +177,7 @@ export async function searchProducts(
     left join category c on c.id = p.category_id
     where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q})
       and exists (select 1 from avail a where a.product_id = p.id)
+      and pa.stores_count >= 2
       ${categoryFilter}
     order by greatest(
                ts_rank_cd(p.search_vector, ${tsQuery}),

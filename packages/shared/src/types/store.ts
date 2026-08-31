@@ -5,6 +5,7 @@ export const STORE_SLUGS = [
   'dia',
   'cooperativa-obrera',
   'vea',
+  'golopolis',
 ] as const;
 
 export type StoreSlug = (typeof STORE_SLUGS)[number];
@@ -30,6 +31,7 @@ export const STORES: StoreInfo[] = [
     baseUrl: 'https://www.cooperativaobrera.coop/',
   },
   { slug: 'vea', name: 'Vea', baseUrl: 'https://www.vea.com.ar/' },
+  { slug: 'golopolis', name: 'Golopolis', baseUrl: 'https://www.golopolis.com.ar/' },
 ];
 
 export interface StoreConfig {

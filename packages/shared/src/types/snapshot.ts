@@ -10,6 +10,7 @@ export const productSnapshotSchema = z.object({
   externalId: z.string().min(1),
   url: z.string().url(),
   rawDescription: z.string().min(1).max(500),
+  description: z.string().max(2000).optional(),
   ean: z
     .string()
     .regex(/^\d{13}$/)

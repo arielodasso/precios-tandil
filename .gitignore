@@ -14,3 +14,9 @@ playwright-report/
 .vercel
 .env*
 *.tsbuildinfo
+ingest.pid
+ingest-*.log
+re.pid
+re2.pid
+*.err
+cloudflared*.log

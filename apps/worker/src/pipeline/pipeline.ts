@@ -25,6 +25,7 @@ import {
 } from '@precios/normalizer';
 import { RunReporter, resolveStatus } from './run-reporter.ts';
 import { matchCategoryByName, matchCategoryByStorePath } from '../lib/category-map.ts';
+import { computeImageHash } from '../lib/image-hash.ts';
 
 const UA_POOL = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -36,6 +37,7 @@ const UA_POOL = [
 const AUTO_MATCH_THRESHOLD = 0.82;
 const REVIEW_THRESHOLD = 0.65;
 const EAN_CONFLICT_SIMILARITY = 0.75;
+const CANDIDATE_POOL_SIZE = 8000;
 
 export interface PipelineRunOptions {
   runId: string;
@@ -63,12 +65,17 @@ interface StoreLite {
 }
 
 export class IngestPipeline {
+  private browser: BrowserContext | null = null;
+  private readonly imageHashCache = new Map<string, Promise<string | null>>();
+
   constructor(
     private readonly db: Kysely<DB>,
     private readonly logger: Logger,
   ) {}
 
   async run(adapter: ScraperAdapter, opts: PipelineRunOptions): Promise<IngestRunSummary> {
+    this.browser = opts.browser;
+    this.imageHashCache.clear();
     const store = await this.loadStore(adapter.storeSlug);
     const log = this.logger.child({ runId: opts.runId, storeSlug: store.slug });
     const reporter = new RunReporter(this.db, log, {
@@ -161,17 +168,90 @@ export class IngestPipeline {
   private async loadCandidates(): Promise<MatchCandidate[]> {
     const rows = await this.db
       .selectFrom('product')
-      .select(['id', 'ean', 'canonical_name', 'unit_amount', 'unit_type'])
-      .orderBy('updated_at', 'desc')
-      .limit(2000)
+      .select([
+        'product.id',
+        'product.ean',
+        'product.canonical_name',
+        'product.brand',
+        'product.unit_amount',
+        'product.unit_type',
+        'product.image_url',
+        'product.image_hash',
+      ])
+      .orderBy('product.updated_at', 'desc')
+      .limit(CANDIDATE_POOL_SIZE)
       .execute();
-    return rows.map((r) => ({
-      productId: r.id,
-      ean: r.ean,
-      normName: normalizeDescription(r.canonical_name).normName,
-      unitAmount: r.unit_amount !== null ? Number(r.unit_amount) : null,
-      unitType: r.unit_type,
-    }));
+
+    const descriptions = await this.loadCandidateDescriptions(rows.map((r) => r.id));
+
+    return rows.map((r) => {
+      const desc = descriptions.get(Number(r.id)) ?? null;
+      const descText = desc?.description ?? null;
+      const n = normalizeDescription(r.canonical_name, {
+        brand: r.brand,
+        description: descText,
+      });
+      const context =
+        descText && descText !== r.canonical_name
+          ? normalizeDescription(r.canonical_name, {
+              brand: r.brand,
+              description: descText,
+            }).contextText
+          : n.contextText;
+      return {
+        productId: r.id,
+        ean: r.ean,
+        normName: n.normName,
+        unitAmount: r.unit_amount !== null ? Number(r.unit_amount) : null,
+        unitType: r.unit_type,
+        brand: r.brand,
+        typeKeys: n.typeKeys,
+        imageHash: r.image_hash,
+        imageUrl: r.image_url,
+        contextText: context,
+      };
+    });
+  }
+
+  /**
+   * Descripción más completa (la más larga) por producto, como contexto de
+   * similitud para confirmar que los enlaces corresponden al mismo producto
+   * y no a uno similar de otra marca o medida.
+   */
+  private async loadCandidateDescriptions(
+    productIds: number[],
+  ): Promise<Map<number, { description: string | null; raw_description: string }>> {
+    if (productIds.length === 0) return new Map();
+    const rows: Array<{
+      description: string | null;
+      raw_description: string;
+      product_id: string | number;
+    }> = await this.db
+      .selectFrom('store_sku')
+      .innerJoin('match_link', 'match_link.store_sku_id', 'store_sku.id')
+      .select(['store_sku.description', 'store_sku.raw_description', 'match_link.product_id'])
+      .where('match_link.status', '<>', 'rejected')
+      .where('match_link.product_id', 'in', productIds)
+      .execute();
+    const map = new Map<number, { description: string | null; raw_description: string }>();
+    for (const row of rows) {
+      const pid = Number(row.product_id);
+      const description = row.description ?? row.raw_description;
+      const existing = map.get(pid);
+      if (!existing || (description?.length ?? 0) > (existing.description?.length ?? 0)) {
+        map.set(pid, { description, raw_description: row.raw_description });
+      }
+    }
+    return map;
+  }
+
+  private async hashImage(url: string | undefined): Promise<string | null> {
+    if (!url || !this.browser) return null;
+    const cached = this.imageHashCache.get(url);
+    if (cached) return cached;
+    const pending = computeImageHash(this.browser, url);
+    this.imageHashCache.set(url, pending);
+    return pending;
   }
 
   private async persistSnapshot(
@@ -181,7 +261,10 @@ export class IngestPipeline {
     runId: string,
     log: Logger,
   ): Promise<void> {
-    const norm = normalizeDescription(snap.rawDescription);
+    const norm = normalizeDescription(snap.rawDescription, {
+      brand: snap.brand,
+      description: snap.description,
+    });
 
     const sku = await this.db
       .insertInto('store_sku')
@@ -190,6 +273,7 @@ export class IngestPipeline {
         external_id: snap.externalId,
         url: snap.url,
         raw_description: snap.rawDescription,
+        description: snap.description ?? null,
         declared_ean: snap.ean ?? null,
         unit_label: snap.unitLabel ?? null,
         last_seen_at: new Date(),
@@ -199,6 +283,7 @@ export class IngestPipeline {
         oc.columns(['store_id', 'external_id']).doUpdateSet({
           url: snap.url,
           raw_description: snap.rawDescription,
+          description: snap.description ?? null,
           declared_ean: snap.ean ?? null,
           unit_label: snap.unitLabel ?? null,
           last_seen_at: new Date(),
@@ -209,9 +294,28 @@ export class IngestPipeline {
       .executeTakeFirstOrThrow();
     const skuId = Number(sku.id);
 
-    const outcome = findBestMatch(norm, snap.ean, candidates, {
+    const firstOutcome = findBestMatch(norm, snap.ean, candidates, {
       autoThreshold: AUTO_MATCH_THRESHOLD,
     });
+    let outcome = firstOutcome;
+    let matched: MatchCandidate | undefined =
+      firstOutcome.method !== 'none'
+        ? candidates.find((c) => c.productId === firstOutcome.productId)
+        : undefined;
+
+    let incomingHash: string | null = null;
+    if (snap.imageUrl && matched?.imageHash && matched.imageUrl !== snap.imageUrl) {
+      incomingHash = await this.hashImage(snap.imageUrl);
+      const refined = findBestMatch(norm, snap.ean, candidates, {
+        autoThreshold: AUTO_MATCH_THRESHOLD,
+        incomingImageHash: incomingHash,
+      });
+      outcome = refined;
+      matched =
+        refined.method !== 'none'
+          ? candidates.find((c) => c.productId === refined.productId)
+          : undefined;
+    }
 
     let productId: number;
     let method: 'ean' | 'semantic';
@@ -244,7 +348,10 @@ export class IngestPipeline {
         'match dudoso enviado a revisión',
       );
     } else {
-      productId = await this.createProduct(norm, snap);
+      const createdHash = snap.imageUrl
+        ? (incomingHash ?? (await this.hashImage(snap.imageUrl)))
+        : null;
+      productId = await this.createProduct(norm, snap, createdHash);
       method = 'semantic';
       score = null;
       candidates.push({
@@ -253,6 +360,11 @@ export class IngestPipeline {
         normName: norm.normName,
         unitAmount: norm.unitAmount,
         unitType: norm.unitType,
+        brand: norm.brand,
+        typeKeys: norm.typeKeys,
+        imageHash: createdHash,
+        imageUrl: snap.imageUrl ?? null,
+        contextText: '',
       });
     }
 
@@ -274,6 +386,21 @@ export class IngestPipeline {
         }),
       )
       .execute();
+
+    if (incomingHash && snap.imageUrl) {
+      await this.db
+        .updateTable('product')
+        .set({ image_hash: incomingHash, image_url: snap.imageUrl })
+        .where('id', '=', productId)
+        .where((wb) =>
+          wb.or([
+            wb('image_url', 'is', null),
+            wb('image_url', '=', snap.imageUrl as string),
+            wb('image_hash', 'is', null),
+          ]),
+        )
+        .execute();
+    }
 
     const productCategoryId = await this.resolveCategory(snap.categoryPath, norm.normName);
     if (productCategoryId !== null) {
@@ -324,6 +451,7 @@ export class IngestPipeline {
   private async createProduct(
     norm: ReturnType<typeof normalizeDescription>,
     snap: ProductSnapshot,
+    imageHash: string | null,
   ): Promise<number> {
     const slugBase = norm.normName.replace(/\s+/g, '-').slice(0, 60) || 'producto';
     const hash = createHash('sha1')
@@ -343,6 +471,7 @@ export class IngestPipeline {
         unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
         unit_type: norm.unitType,
         image_url: snap.imageUrl ?? null,
+        image_hash: imageHash,
         category_id: categoryId,
       })
       .onConflict((oc) =>

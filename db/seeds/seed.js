@@ -10,6 +10,7 @@ const STORES = [
   ['dia', 'DIA', 'https://diaonline.supermercadosdia.com.ar/'],
   ['cooperativa-obrera', 'Cooperativa Obrera', 'https://www.cooperativaobrera.coop/'],
   ['vea', 'Vea', 'https://www.vea.com.ar/'],
+  ['golopolis', 'Golopolis', 'https://www.golopolis.com.ar/'],
 ];
 
 const CATEGORIES = [

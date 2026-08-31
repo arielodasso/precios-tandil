@@ -31,6 +31,7 @@ export interface ProductRow {
   unit_amount: string | null;
   unit_type: UnitType | null;
   image_url: string | null;
+  image_hash: string | null;
   category_id: number | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
@@ -42,6 +43,7 @@ export interface StoreSkuRow {
   external_id: string;
   url: string;
   raw_description: string;
+  description: string | null;
   declared_ean: string | null;
   unit_label: string | null;
   last_seen_at: Date | null;

@@ -9,6 +9,7 @@
     "ingest": "tsx src/cli-ingest.ts",
     "ingest-all": "tsx src/cli-ingest-all.ts",
     "backfill-categories": "tsx src/cli-backfill-categories.ts",
+    "reconcile": "tsx src/cli-reconcile.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "@precios/adapters-comerciante-maxi": "workspace:*",
     "@precios/adapters-cooperativa-obrera": "workspace:*",
     "@precios/adapters-dia": "workspace:*",
+    "@precios/adapters-golopolis": "workspace:*",
     "@precios/adapters-monarca": "workspace:*",
     "@precios/adapters-vea": "workspace:*",
     "@precios/normalizer": "workspace:*",

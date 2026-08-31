@@ -3,6 +3,7 @@ export interface VtexItemRecord {
   itemId: string;
   ean: string | null;
   name: string;
+  description: string | null;
   brand: string | null;
   linkText: string;
   url: string;
@@ -125,6 +126,13 @@ function unitLabelFromSku(sku: Json): string | null {
   return `${prettyMult} ${mu}`;
 }
 
+function cleanHtml(s: string): string {
+  return s
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function extractVtexApolloItems(
   html: string,
   opts: ExtractVtexApolloOptions,
@@ -193,11 +201,18 @@ export function extractVtexApolloItems(
 
     const mu = typeof sku.measurementUnit === 'string' ? sku.measurementUnit.toLowerCase() : null;
 
+    const descRaw =
+      (typeof root.description === 'string' && root.description.trim()) ||
+      (typeof root.metaTagDescription === 'string' && root.metaTagDescription.trim()) ||
+      '';
+    const description = descRaw ? cleanHtml(descRaw).slice(0, 2000) : null;
+
     records.push({
       productId: typeof root.productId === 'string' ? root.productId : cacheId,
       itemId,
       ean,
       name,
+      description,
       brand: typeof root.brand === 'string' && root.brand ? root.brand : null,
       linkText,
       url: new URL(`/${linkText}/p`, opts.baseUrl).toString(),

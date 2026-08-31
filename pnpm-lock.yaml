@@ -180,6 +180,9 @@ importers:
       '@precios/adapters-dia':
         specifier: workspace:*
         version: link:../../packages/adapters/dia
+      '@precios/adapters-golopolis':
+        specifier: workspace:*
+        version: link:../../packages/adapters/golopolis
       '@precios/adapters-monarca':
         specifier: workspace:*
         version: link:../../packages/adapters/monarca
@@ -289,6 +292,25 @@ importers:
         version: 5.9.3
 
   packages/adapters/dia:
+    dependencies:
+      '@precios/scraper-core':
+        specifier: workspace:*
+        version: link:../../scraper-core
+      '@precios/shared':
+        specifier: workspace:*
+        version: link:../../shared
+    devDependencies:
+      '@precios/normalizer':
+        specifier: workspace:*
+        version: link:../../normalizer
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(lightningcss@1.32.0)
+
+  packages/adapters/golopolis:
     dependencies:
       '@precios/scraper-core':
         specifier: workspace:*

@@ -36,10 +36,19 @@ function normValue(v: unknown): unknown {
   return v;
 }
 
+function bare(col: string): string {
+  return col.split('.').pop()!;
+}
+
+function resolveCol(row: Row, col: string, table: string): unknown {
+  return row[bare(col)] ?? row[`${table}.${bare(col)}`];
+}
+
 class SelectBuilder {
   private preds: Array<[string, unknown]> = [];
   private order?: { col: string; dir: string };
   private limitN?: number;
+  private join?: { table: string; left: string; right: string };
 
   constructor(
     private readonly db: FakeKysely,
@@ -47,6 +56,11 @@ class SelectBuilder {
   ) {}
 
   select(): this {
+    return this;
+  }
+
+  innerJoin(table2: string, left: string, right: string): this {
+    this.join = { table: table2, left, right };
     return this;
   }
 
@@ -67,14 +81,27 @@ class SelectBuilder {
 
   private rows(): Row[] {
     let out = [...(this.db.tables.get(this.table) ?? [])];
+    if (this.join) {
+      const { table: t2, left, right } = this.join;
+      const other = this.db.tables.get(t2) ?? [];
+      const combined: Row[] = [];
+      for (const leftRow of out) {
+        for (const rightRow of other) {
+          const lv = normValue(resolveCol(leftRow, left, this.table));
+          const rv = normValue(resolveCol(rightRow, right, t2));
+          if (lv === rv) combined.push({ ...rightRow, ...leftRow });
+        }
+      }
+      out = combined;
+    }
     for (const [col, val] of this.preds) {
-      out = out.filter((r) => normValue(r[col]) === normValue(val));
+      out = out.filter((r) => normValue(resolveCol(r, col, this.table)) === normValue(val));
     }
     if (this.order) {
       const { col, dir } = this.order;
       out.sort((a, b) => {
-        const av = a[col] ?? 0;
-        const bv = b[col] ?? 0;
+        const av = resolveCol(a, col, this.table) ?? 0;
+        const bv = resolveCol(b, col, this.table) ?? 0;
         const cmp =
           typeof av === 'number' && typeof bv === 'number'
             ? av - bv

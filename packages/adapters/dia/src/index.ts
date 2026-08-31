@@ -28,6 +28,7 @@ function toSnapshot(rec: VtexItemRecord, capturedAt: Date): ProductSnapshot {
     externalId: rec.itemId,
     url: rec.url,
     rawDescription: rec.name,
+    description: rec.description ?? undefined,
     ean: rec.ean ?? undefined,
     brand: rec.brand ?? undefined,
     categoryPath: rec.categoryPath ?? undefined,
