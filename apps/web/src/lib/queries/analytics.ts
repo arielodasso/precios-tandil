@@ -125,24 +125,66 @@ export async function getPriceGaps(db: KyselyDB, limit = 10) {
     .execute();
 }
 
-/** Average best price per store (basket of tracked products) */
+/**
+ * Canasta comparable: toma el catálogo de productos vendidos en más de una
+ * tienda (productos "comparables") y valúa en cada supermercado los productos
+ * de ese catálogo que esa tienda comercializa, usando el precio de la tienda.
+ * Los totales son comparables porque todos provienen del mismo catálogo; la
+ * cantidad por tienda refleja cuántos de esos productos vende cada una.
+ */
 export async function getBasketByStore(db: KyselyDB) {
-  return db
-    .selectFrom('price_aggregate as pa')
-    .innerJoin('store as s', 's.id', 'pa.best_store_id')
-    .select([
-      's.slug as store_slug',
-      's.name as store_name',
-      sql<number>`count(*)::int`.as('products_count'),
-      sql<string>`round(avg(pa.best_price::numeric), 0)::text`.as('avg_best_price'),
-      sql<string>`round(min(pa.best_price::numeric), 0)::text`.as('cheapest_product_price'),
-      sql<string>`round(sum(pa.best_price::numeric), 0)::text`.as('total_basket'),
-    ])
-    .where('pa.best_price', 'is not', null)
-    .where('pa.stores_count', '>=', 2)
-    .groupBy(['s.slug', 's.name'])
-    .orderBy(sql`count(*)`, 'desc')
-    .execute();
+  const rows = await sql<{
+    store_slug: string;
+    store_name: string;
+    products_count: number;
+    avg_price: string;
+    total_basket: string;
+  }>`
+    with prices as (
+      select ml.product_id, ss.store_id, min(pr.price_amount) as price
+      from match_link ml
+      join store_sku ss on ss.id = ml.store_sku_id and ss.is_active
+      join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+        and pr.captured_at >= now() - interval '7 days'
+      where ml.status in ('auto', 'confirmed')
+      group by ml.product_id, ss.store_id
+    ),
+    presence as (
+      select product_id, count(distinct store_id) as n
+      from prices group by product_id
+    ),
+    comparable as (
+      select product_id from presence where n >= 2
+    ),
+    per_store as (
+      select p.store_id,
+             count(*)::int as products_count,
+             avg(p.price) as avg_price,
+             sum(p.price) as total
+      from prices p
+      join comparable c on c.product_id = p.product_id
+      group by p.store_id
+    )
+    select
+      s.slug as store_slug,
+      s.name as store_name,
+      per_store.products_count as products_count,
+      round(per_store.avg_price::numeric, 0)::text as avg_price,
+      round(per_store.total::numeric, 0)::text as total_basket
+    from per_store
+    join store s on s.id = per_store.store_id
+    order by per_store.total asc
+  `
+    .execute(db)
+    .then((r) => r.rows);
+
+  return rows.map((r) => ({
+    store_slug: r.store_slug,
+    store_name: r.store_name,
+    products_count: Number(r.products_count),
+    avg_price: r.avg_price,
+    total_basket: r.total_basket,
+  }));
 }
 
 /** Per-store competitiveness: how often each store has the best price */

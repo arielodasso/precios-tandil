@@ -1,14 +1,25 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, TrendingUp } from 'lucide-react';
 import { SearchBar } from '@/components/SearchBar';
 import { ProductCard } from '@/components/ProductCard';
 import { apiFetch } from '@/lib/api';
+import { getDb } from '@/lib/db';
+import { getOverview, getBasketByStore } from '@/lib/queries/analytics';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { CategoryNode } from '@/lib/queries/categories';
 import type { DealItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+function formatArs(value: number | string | null | undefined): string {
+  if (value == null) return '—';
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(value));
+}
 
 /**
  * T044 — Home: búsqueda + chips de categorías (navegables a /categoria/[slug])
@@ -17,6 +28,17 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   let categories: CategoryNode[] = [];
   let deals: DealItem[] = [];
+
+  let overview: Awaited<ReturnType<typeof getOverview>> | null = null;
+  let basket: Awaited<ReturnType<typeof getBasketByStore>> = [];
+  try {
+    const db = getDb();
+    [overview, basket] = await Promise.all([getOverview(db), getBasketByStore(db)]);
+  } catch {
+    overview = null;
+    basket = [];
+  }
+
   try {
     const cat = await apiFetch<{ categories: CategoryNode[] }>('/categories', 300);
     categories = cat.categories;
@@ -25,6 +47,9 @@ export default async function HomePage() {
   } catch {
     // API caída: la home sigue funcionando con búsqueda
   }
+
+  const cheapestStore = basket.length > 0 ? basket[0] : null;
+  const dbOk = overview != null;
 
   return (
     <div className="py-8">
@@ -54,6 +79,51 @@ export default async function HomePage() {
           ))}
         </ul>
       </nav>
+
+      {dbOk && (
+        <section aria-labelledby="home-analytics" className="mt-10">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-5 text-alerta" />
+                <h2 id="home-analytics" className="text-lg font-bold">
+                  Panorama de precios
+                </h2>
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/admin/tandilalerta">Ver análisis completo →</Link>
+              </Button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-muted/40 p-3">
+                <p className="text-xs text-muted-foreground">Productos relevados</p>
+                <p className="text-xl font-bold">{overview?.total_products ?? '—'}</p>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <p className="text-xs text-muted-foreground">Tiendas activas</p>
+                <p className="text-xl font-bold">{overview?.active_stores ?? '—'}</p>
+              </div>
+              <div className="rounded-lg bg-muted/40 p-3">
+                <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
+                <p className="text-xl font-bold">{overview?.prices_today ?? '—'}</p>
+              </div>
+            </div>
+
+            {cheapestStore && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                La <span className="font-semibold text-foreground">{cheapestStore.store_name}</span>{' '}
+                arma la canasta de productos comparable más barata ({cheapestStore.products_count}{' '}
+                productos) por{' '}
+                <span className="font-semibold text-foreground">
+                  {formatArs(cheapestStore.total_basket)}
+                </span>
+                .
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="top-deals" className="mt-10">
         <div className="mb-4 flex items-center gap-2">

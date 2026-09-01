@@ -12,6 +12,7 @@
     "@precios/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "html-to-image": "^1.11.13",
     "kysely": "^0.27.5",
     "lucide-react": "^1.34.0",
     "next": "^15.1.0",

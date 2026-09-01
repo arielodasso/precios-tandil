@@ -10,6 +10,7 @@ import {
   getNearHistoricalLow,
   type KyselyDB,
 } from '@/lib/queries/analytics';
+import { CaptureSection } from '@/components/CaptureSection';
 import { titleCase } from '@/lib/utils';
 import type { Metadata } from 'next';
 
@@ -80,27 +81,27 @@ export default async function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">Analíticas</h1>
         <p className="mt-1 text-muted-foreground">
-          Resumen de precios y tendencias de supermercados de Tandil.
+          Resumen de precios y tendencias de supermercados de Tandil. Cada sección se puede
+          descargar como imagen para compartir.
         </p>
       </div>
 
       {/* Overview */}
-      <section className="mb-10">
-        <h2 className="mb-4 text-lg font-bold">Resumen General</h2>
+      <CaptureSection title="Resumen General" fileName="precios-tandil-resumen.png">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Productos" value={overview.total_products} />
           <StatCard label="Tiendas activas" value={overview.active_stores} />
           <StatCard label="Precios hoy" value={overview.prices_today.toLocaleString('es-AR')} />
           <StatCard label="Ofertas activas" value={overview.active_deals} />
         </div>
-      </section>
+      </CaptureSection>
 
       {/* Price Drops */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Bajadas de la semana</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Productos con mayor descuento contra el promedio de 30 días.
-        </p>
+      <CaptureSection
+        title="Bajadas de la semana"
+        description="Productos con mayor descuento contra el promedio de 30 días."
+        fileName="precios-tandil-bajadas.png"
+      >
         {drops.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay bajadas significativas detectadas esta semana.
@@ -145,14 +146,14 @@ export default async function AnalyticsPage() {
             </table>
           </div>
         )}
-      </section>
+      </CaptureSection>
 
       {/* Price Rises */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Subas de la semana</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Productos con mayor aumento contra el promedio de 30 días.
-        </p>
+      <CaptureSection
+        title="Subas de la semana"
+        description="Productos con mayor aumento contra el promedio de 30 días."
+        fileName="precios-tandil-subas.png"
+      >
         {rises.length === 0 ? (
           <p className="text-sm text-muted-foreground">No hay subas significativas esta semana.</p>
         ) : (
@@ -195,14 +196,14 @@ export default async function AnalyticsPage() {
             </table>
           </div>
         )}
-      </section>
+      </CaptureSection>
 
       {/* Price Gaps */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Brechas de precio</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Productos donde más conviene elegir la tienda: mayor diferencia contra el promedio.
-        </p>
+      <CaptureSection
+        title="Brechas de precio"
+        description="Productos donde más conviene elegir la tienda: mayor diferencia contra el promedio."
+        fileName="precios-tandil-brechas.png"
+      >
         {gaps.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay brechas significativas entre tiendas.
@@ -247,14 +248,14 @@ export default async function AnalyticsPage() {
             </table>
           </div>
         )}
-      </section>
+      </CaptureSection>
 
       {/* Basket by Store */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Canasta por tienda</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Costo promedio de la canasta de productos comparables en cada supermercado.
-        </p>
+      <CaptureSection
+        title="Canasta por tienda"
+        description="Costo de la misma canasta de productos (presentes en todas las tiendas) valuada en cada supermercado."
+        fileName="precios-tandil-canasta.png"
+      >
         {basket.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay suficientes datos de canasta por tienda.
@@ -271,24 +272,23 @@ export default async function AnalyticsPage() {
                   {formatArs(b.total_basket)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_count} productos comparables
+                  {b.products_count} productos idénticos valuados en cada tienda
                 </p>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Promedio: {formatArs(b.avg_best_price)}</span>
-                  <span>Mínimo: {formatArs(b.cheapest_product_price)}</span>
+                  <span>Promedio: {formatArs(b.avg_price)}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </CaptureSection>
 
       {/* Store Competitiveness */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Competitividad por tienda</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Cuántas veces cada tienda tiene el mejor precio entre los productos comparables.
-        </p>
+      <CaptureSection
+        title="Competitividad por tienda"
+        description="Cuántas veces cada tienda tiene el mejor precio entre los productos comparables."
+        fileName="precios-tandil-competitividad.png"
+      >
         {competitiveness.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin datos suficientes.</p>
         ) : (
@@ -313,14 +313,14 @@ export default async function AnalyticsPage() {
             })}
           </div>
         )}
-      </section>
+      </CaptureSection>
 
       {/* Near Historical Low */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-bold">Cerca del mínimo histórico</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Productos cuyo precio actual está cerca del más bajo registrado en 90 días.
-        </p>
+      <CaptureSection
+        title="Cerca del mínimo histórico"
+        description="Productos cuyo precio actual está cerca del más bajo registrado en 90 días."
+        fileName="precios-tandil-minimo-historico.png"
+      >
         {nearLow.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay productos cerca del mínimo histórico.
@@ -361,7 +361,7 @@ export default async function AnalyticsPage() {
             </table>
           </div>
         )}
-      </section>
+      </CaptureSection>
     </div>
   );
 }

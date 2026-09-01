@@ -39,27 +39,41 @@ const products = (await db
   .select(['id', 'canonical_name'])
   .execute()) as ProductRow[];
 
-const byCategory = new Map<string, number[]>();
-const unmapped: string[] = [];
+const byCategory = new Map<number, number[]>();
+const unmapped: Array<{ path: string; name: string }> = [];
 let assigned = 0;
 
 for (const p of products) {
   const path = matchCategoryByName(p.canonical_name);
   const id = pathToId.get(path);
   if (id === undefined) {
-    unmapped.push(`${path} (${p.canonical_name})`);
+    unmapped.push({ path, name: p.canonical_name });
     continue;
   }
-  const list = byCategory.get(path) ?? [];
+  const list = byCategory.get(id) ?? [];
   list.push(Number(p.id));
-  byCategory.set(path, list);
-  await db.updateTable('product').set({ category_id: id }).where('id', '=', Number(p.id)).execute();
+  byCategory.set(id, list);
   assigned += 1;
 }
 
+for (const [id, ids] of byCategory) {
+  const batches: number[][] = [];
+  for (let i = 0; i < ids.length; i += 500) batches.push(ids.slice(i, i + 500));
+  for (const batch of batches) {
+    await db
+      .updateTable('product')
+      .set({ category_id: Number(id) })
+      .where('id', 'in', batch)
+      .execute();
+  }
+}
+
 logger.info({ assigned, total: products.length }, 'backfill de categorías completado');
-for (const [path, ids] of byCategory) {
-  logger.info({ path, count: ids.length }, 'categoría asignada');
+for (const [id, ids] of byCategory) {
+  logger.info(
+    { path: categories.find((c) => Number(c.id) === id)?.path, count: ids.length },
+    'categoría asignada',
+  );
 }
 if (unmapped.length > 0) {
   logger.warn({ unmapped }, 'productos/categorías no mapeados');

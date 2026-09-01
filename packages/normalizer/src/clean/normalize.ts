@@ -185,11 +185,45 @@ function guessBrand(tokens: string[], typeKeys: string[]): string | null {
     if (!/^[a-z]{3,}$/.test(token)) continue;
     if (typeKeys.includes(token)) continue;
     if (stopTerms.has(token)) continue;
+    if (NON_BRAND_WORDS.has(token)) continue;
     if (token === 'x') continue;
     return token;
   }
   return null;
 }
+
+/**
+ * Palabras que describen el producto (nunca marcas) pero no alcanzan el umbral
+ * de ser "tipo de producto". Evitan que la heurística las tome como marca
+ * (p.ej. "puré", "tomate", "sal", "postre").
+ */
+const NON_BRAND_WORDS = new Set(
+  `pure pure de tomate tomate salsas salsa pelado enteros clasico clasica clasicas clasicos
+  tradicional suave intenso gourmet especial refinada refinado refinados comun comun
+  polito multiuso multiusos liquido liq liquida liquidos gel crema cremoso cremosa
+  aromatizado aromatizada integral light bajo en sodio cero sin sal sin tacc sin gluten
+  neutro neutra negra negro blanca blanco amarillo verde rojo oro lila violeta super premium
+  max maximo colchon medias fresco fresca dulce dulces salado salados salada saladas condimentado
+  vitaminas proteina frutilla banana manzana uva limon naranja durazno ciruela mora frutos
+  rojos tropical vainilla chocolate coco cereales integrales proteico energizante hidratante
+  rehidratante clasico clasica perform extra vainillas tostados molido molida ristretto pastillas
+  sobres sobre tabletas tabletas solucion gotas frasco frascos pote potes lata latas tarro tarros
+  envase envases saquitos saquito hebras blend mezcla blend mezclas verde negro supersuave
+  resistente antigrasa antibacterial desinfectante perfumado floral citrico herbal suavizante
+  concentrado doypack botella litros mililitros gramos kilogramos pañal pañales toalla toallitas
+  apósito algodon hisopo cepillo pasta cepillado bucal antifrizz reparacion reparador cabello
+  cuerpo higiene hogar limpieza lavanderia aceite alcohol vinagre sal fina entrefina gruesa
+  marinado condimento especias hierbas sabor sabores originales original clasica clasico
+  con aceite arroz molinos ala marolio molinos 3 arroz integral dorado largo fino faribalde
+  fideos tirabuzon coditos mostachol noodles fideo duros espinaca verduras tomates legumbres
+  lentejas arvejas garbanzos porotos choclo atun cerdo vaca pollo lomo pechuga milanesa
+  picada hamburguesas nuggets pan rallado rebozador harina de trigo maiz maicena almidon
+  fecula mandioca prepizza premezcla bollo pan pago bocado pollo ovoides
+  `
+    .split(/\s+/)
+    .map((t) => stripAccents(t.trim().toLowerCase()))
+    .filter(Boolean),
+);
 
 export function normalizeDescription(raw: string, opts: NormalizeOptions = {}): NormalizedProduct {
   const clean = stripAccents(raw.toLowerCase());

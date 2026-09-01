@@ -7,6 +7,10 @@ import { cn } from '@/lib/utils';
  * T054 + T055 — Strip de historial: sparkline SVG ligero (sin librerías),
  * stats de mínimos y badges textuales "Cerca del mínimo histórico" /
  * "+X% esta semana". Regla datos insuficientes (<7 días): aviso textual.
+ *
+ * Se plotean dos series: precio mínimo (primario) y promedio diario (gris).
+ * Se agrega padding vertical para que series casi planas se distingan, y si
+ * el precio no se movió la línea queda centrada (no pegada al borde).
  */
 export function HistoryStrip({ history }: { history: HistoryResponse }) {
   const { series, stats, insufficient_history, window } = history;
@@ -24,21 +28,42 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
     );
   }
 
-  const values = series.map((p) => p.min_price);
+  const values = series
+    .map((p) => p.min_price)
+    .concat(series.map((p) => p.avg_price).filter((v): v is number => v !== null));
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const range = max - min || 1;
+  const range = max - min;
+  // Padding vertical: 12% o, si todo es igual, $1 a cada lado para centrar la línea.
+  const pad = range === 0 ? 1 : Math.max(range * 0.12, 1);
+  const lo = min - pad;
+  const hi = max + pad;
+  const span = hi - lo || 1;
+
   const width = 280;
   const height = 64;
-  const points = series
+  const yFor = (v: number) => height - 4 - ((v - lo) / span) * (height - 8);
+
+  const minPoints = series
+    .map(
+      (point, i) =>
+        `${((i / (series.length - 1)) * width).toFixed(1)},${yFor(point.min_price).toFixed(1)}`,
+    )
+    .join(' ');
+  const avgPoints = series
     .map((point, i) => {
-      const x = (i / (series.length - 1)) * width;
-      const y = height - ((point.min_price - min) / range) * (height - 8) - 4;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+      if (point.avg_price === null) return null;
+      return `${((i / (series.length - 1)) * width).toFixed(1)},${yFor(point.avg_price).toFixed(1)}`;
     })
+    .filter((p): p is string => p !== null)
     .join(' ');
 
   const pctWeek = stats.pct_change_7d;
+  const firstDate = series.length > 0 ? new Date(`${series[0]!.date}T00:00:00Z`) : null;
+  const dayCount =
+    firstDate !== null
+      ? Math.round((Date.now() - firstDate.getTime()) / 86_400_000) + 1
+      : series.length;
 
   return (
     <Card className="mt-4">
@@ -57,14 +82,53 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
           role="img"
           aria-label={`Gráfico: mínimo ${formatArs(min)}, máximo ${formatArs(max)}`}
         >
+          <line
+            x1="0"
+            y1={height - 4}
+            x2={width}
+            y2={height - 4}
+            stroke="var(--color-border)"
+            strokeWidth="1"
+          />
+          <line x1="0" y1="4" x2={width} y2="4" stroke="var(--color-border)" strokeWidth="1" />
+          {avgPoints && (
+            <polyline
+              fill="none"
+              stroke="var(--color-muted-foreground)"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              strokeLinejoin="round"
+              points={avgPoints}
+            />
+          )}
           <polyline
             fill="none"
             stroke="var(--color-primary)"
             strokeWidth="2"
             strokeLinejoin="round"
-            points={points}
+            points={minPoints}
           />
         </svg>
+        <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-0.5 w-4 rounded-full bg-primary" aria-hidden="true" />
+              Mínimo
+            </span>
+            {avgPoints && (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="h-0.5 w-4 rounded-full border-t border-dashed border-muted-foreground"
+                  aria-hidden="true"
+                />
+                Promedio
+              </span>
+            )}
+          </span>
+          <span>
+            {dayCount} día{dayCount === 1 ? '' : 's'} de datos
+          </span>
+        </div>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <Stat
             label={`Mínimo ${window}d`}

@@ -20,11 +20,82 @@ export interface CategoryRule {
 const NAME_RULES: CategoryRule[] = [
   { categoryPath: 'almacen/arroz', prefixes: ['arroz'] },
   { categoryPath: 'almacen/aceite', prefixes: ['aceite'] },
-  { categoryPath: 'almacen/azucar', prefixes: ['azucar', 'edulcorante', 'endulzan', 'stevia'] },
+  {
+    categoryPath: 'almacen/azucar',
+    prefixes: ['azucar', 'edulcorante', 'endulzan', 'stevia', 'sucralosa'],
+  },
   { categoryPath: 'almacen/yerba', prefixes: ['yerba', 'mate cocido'] },
-  { categoryPath: 'bebidas/gaseosas', prefixes: ['gaseosa'] },
-  { categoryPath: 'lacteos', prefixes: ['leche', 'queso'] },
-  { categoryPath: 'frescos', prefixes: ['pan'] },
+  { categoryPath: 'bebidas/gaseosas', prefixes: ['gaseosa', 'cola', 'soda'] },
+  {
+    categoryPath: 'bebidas',
+    prefixes: ['agua', 'jugo', 'bebida', 'cerveza', 'vino', 'fernet', 'whisky', 'gin'],
+  },
+  {
+    categoryPath: 'lacteos',
+    prefixes: ['leche', 'queso', 'yogur', 'yogrt', 'manteca', 'postre', 'flan', 'dulce de leche'],
+  },
+  {
+    categoryPath: 'frescos/carnes',
+    prefixes: [
+      'carne',
+      'cerdo',
+      'pollo',
+      'milanesa',
+      'hamburguesa',
+      'salchicha',
+      'chorizo',
+      'jamon',
+      'fiambre',
+    ],
+  },
+  {
+    categoryPath: 'frescos',
+    prefixes: [
+      'pan',
+      'verdura',
+      'fruta',
+      'huevo',
+      'legumbre',
+      'lechuga',
+      'papa',
+      'cebolla',
+      'banana',
+      'tomate fresco',
+    ],
+  },
+  {
+    categoryPath: 'congelados',
+    prefixes: ['congelado', 'helado', 'prepizza', 'empanada', 'nuggets', 'papas fritas'],
+  },
+  {
+    categoryPath: 'limpieza',
+    prefixes: [
+      'detergente',
+      'lavandina',
+      'suavizante',
+      'limpiador',
+      'limpia',
+      'esponja',
+      'bolsa de residuo',
+      'lavandina',
+    ],
+  },
+  {
+    categoryPath: 'perfumeria',
+    prefixes: [
+      'shampoo',
+      'shampu',
+      'acondicionador',
+      'dentifrico',
+      'pasta dental',
+      'desodorante',
+      'enjuague',
+      'papel higienico',
+      'toallas femeninas',
+      'alcohol en gel',
+      'jabon de tocador',
+    ],
+  },
 ];
 
 const NAME_DEFAULT = 'almacen';
