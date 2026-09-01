@@ -1,6 +1,14 @@
-import type { Kysely } from 'kysely';
+import { sql, type Kysely, type RawBuilder } from 'kysely';
 import type { Logger } from 'pino';
 import type { DB, RunStatus } from '@precios/shared';
+
+/**
+ * pg serializa arrays de JS como literales de array de Postgres, no como JSON,
+ * lo que rompe al insertar en columnas jsonb. Este helper serializa explícitamente.
+ */
+function toJsonb(value: unknown): RawBuilder<unknown[]> {
+  return sql<unknown[]>`${JSON.stringify(value)}::jsonb`;
+}
 
 const QUARANTINE_THRESHOLD = 3;
 const QUARANTINE_HOURS = 24;
@@ -37,7 +45,7 @@ export class RunReporter {
         skus_rejected: 0,
         http_errors: 0,
         quarantined: false,
-        errors_sample: [],
+        errors_sample: toJsonb([]),
         correlation_id: this.info.correlationId,
       })
       .execute();
@@ -102,7 +110,7 @@ export class RunReporter {
         skus_rejected: this.rejected,
         http_errors: this.httpErrors,
         quarantined,
-        errors_sample: this.errorsSample,
+        errors_sample: toJsonb(this.errorsSample),
       })
       .where('run_id', '=', this.info.runId)
       .execute();

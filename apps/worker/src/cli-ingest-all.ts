@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
-import type { StoreSlug } from '@precios/shared';
+import { AppError, type StoreSlug } from '@precios/shared';
 import { loadConfig } from './lib/config.ts';
 import { createDb } from './lib/db.ts';
 import { logger } from './lib/logger.ts';
@@ -74,8 +74,13 @@ try {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error({ store: slug, err }, 'scrape falló');
-      results.push({ store: slug, status: 'error', captured: 0, rejected: 0, error: msg });
+      if (err instanceof AppError && err.code === 'adapter_missing') {
+        logger.warn({ store: slug }, 'adaptador no implementado, saltando');
+        results.push({ store: slug, status: 'skipped', captured: 0, rejected: 0, error: msg });
+      } else {
+        logger.error({ store: slug, err }, 'scrape falló');
+        results.push({ store: slug, status: 'error', captured: 0, rejected: 0, error: msg });
+      }
     } finally {
       await context.close().catch(() => undefined);
     }
