@@ -75,6 +75,48 @@ function containsTypeConflict(
   return { conflict: shared.length === 0, shared };
 }
 
+type UnitScale = 'weight' | 'volume';
+
+/** Escala real de la unidad (peso/volumen); null si no es convertible. */
+function unitScale(unitType: string | null): UnitScale | null {
+  if (unitType === 'kg' || unitType === 'g') return 'weight';
+  if (unitType === 'l' || unitType === 'ml') return 'volume';
+  return null;
+}
+
+/** Convierte una cantidad a su base (gramos / mililitros). */
+function toBaseAmount(unitType: string, amount: number): number | null {
+  if (unitType === 'kg') return amount * 1000;
+  if (unitType === 'g') return amount;
+  if (unitType === 'l') return amount * 1000;
+  if (unitType === 'ml') return amount;
+  return null;
+}
+
+/**
+ * Factor de acuerdo de presentación por unidades. Devuelve null cuando no se
+ * pueden comparar (falta unidad en alguno de los lados o unidad "un" ambigua).
+ * "1 kg" vs "1000 g" es la misma presentación; "500 g" vs "1 kg" no.
+ */
+function unitAgreementFactor(
+  aType: string | null,
+  aAmount: number | null,
+  bType: string | null,
+  bAmount: number | null,
+): number | null {
+  if (aType === null || aAmount === null || bType === null || bAmount === null) return null;
+  const scaleA = unitScale(aType);
+  const scaleB = unitScale(bType);
+  if (scaleA === null || scaleB === null) return null;
+  const aBase = toBaseAmount(aType, aAmount);
+  const bBase = toBaseAmount(bType, bAmount);
+  if (aBase === null || bBase === null) return null;
+  if (scaleA !== scaleB) return 0.6;
+  const ratio = Math.min(aBase, bBase) / Math.max(aBase, bBase);
+  if (ratio >= 0.95) return 1.05;
+  return 0.5;
+}
+
 export function semanticScore(
   norm: NormalizedProduct,
   cand: MatchCandidate,
@@ -96,31 +138,8 @@ export function semanticScore(
     return Math.round(Math.min(score, 0.2) * 0.3 * 10_000) / 10_000;
   }
 
-  const bothUnitsKnown =
-    norm.unitType !== null &&
-    norm.unitAmount !== null &&
-    cand.unitType !== null &&
-    cand.unitAmount !== null;
-
-  if (bothUnitsKnown) {
-    const sameUnit = norm.unitType === cand.unitType;
-    const amountRatio =
-      Math.min(norm.unitAmount!, cand.unitAmount!) / Math.max(norm.unitAmount!, cand.unitAmount!);
-    if (!sameUnit) score *= 0.6;
-    else if (amountRatio < 0.95) score *= 0.7;
-    else score = Math.min(1, score * 1.05);
-  }
-
-  if (shared.length > 0 && norm.primaryType && norm.primaryType === cand.typeKeys[0]) {
-    score = Math.min(1, score * 1.05);
-  }
-
-  if (norm.brandProvided && cand.brand && cand.brand === norm.brand) {
-    score = Math.min(1, score * 1.04);
-  }
-
-  // Marcas declaradas (fuente) y distintas = productos distintos: penalizar
-  // fuerte para no mezclar marca propia de supermercado con marca real.
+  // Marcas declaradas (ambas de la fuente) y distintas = productos distintos:
+  // bloqueo duro para no fusionar "otra marca" bajo un mismo producto.
   if (
     norm.brandProvided &&
     cand.brandProvided &&
@@ -128,7 +147,26 @@ export function semanticScore(
     norm.brand &&
     norm.brand !== cand.brand
   ) {
-    score *= 0.4;
+    return Math.round(Math.min(score, 0.2) * 0.3 * 10_000) / 10_000;
+  }
+
+  // Unidades: se comparan en base equivalente (kg<->g, l<->ml) para no separar
+  // presentaciones que declararon el tamaño de otra forma ("1 kg" vs "1000 g"),
+  // pero sí separar tamaños reales distintos ("500 g" vs "1 kg" -> otro peso).
+  const unitFactor = unitAgreementFactor(
+    norm.unitType,
+    norm.unitAmount,
+    cand.unitType,
+    cand.unitAmount,
+  );
+  if (unitFactor !== null) score *= unitFactor;
+
+  if (shared.length > 0 && norm.primaryType && norm.primaryType === cand.typeKeys[0]) {
+    score = Math.min(1, score * 1.05);
+  }
+
+  if (norm.brandProvided && cand.brand && cand.brand === norm.brand) {
+    score = Math.min(1, score * 1.04);
   }
 
   const normHash = opts.incomingImageHash ?? null;

@@ -91,6 +91,12 @@ export function CaptureSection({ title, description, fileName, children }: Captu
           <p className="shrink-0 text-xs text-muted-foreground">{today}</p>
         </div>
         <div className="p-4">{children}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40 px-4 py-2 text-[11px] text-muted-foreground">
+          <span className="font-semibold">
+            Sigma <span className="text-alerta">Tecnologías</span>
+          </span>
+          <span className="shrink-0">Difundido por Tandil Alerta</span>
+        </div>
       </div>
     </section>
   );

@@ -7,7 +7,6 @@ const DEFAULT_PAGE_SIZE = 10;
 
 export interface CategorySummary {
   total_products: number;
-  multi_store: number;
   avg_best_price: number | null;
   cheapest: { slug: string; name: string; brand: string | null; best_price: number } | null;
   best_savings: {
@@ -37,12 +36,10 @@ export async function getCategorySummary(
 
   const agg = await sql<{
     total_products: string;
-    multi_store: string;
     avg_best_price: string;
   }>`
     select
       count(*)::int as total_products,
-      count(*) filter (where pa.stores_count >= 2)::int as multi_store,
       round(avg(pa.best_price)::numeric, 0)::text as avg_best_price
     from product p
     join category c on c.id = p.category_id
@@ -87,7 +84,6 @@ export async function getCategorySummary(
 
   return {
     total_products: Number(agg.rows[0]?.total_products ?? 0),
-    multi_store: Number(agg.rows[0]?.multi_store ?? 0),
     avg_best_price: agg.rows[0]?.avg_best_price == null ? null : Number(agg.rows[0].avg_best_price),
     cheapest: cheapest.rows[0]
       ? {

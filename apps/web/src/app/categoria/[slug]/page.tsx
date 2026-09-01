@@ -156,15 +156,7 @@ function CategorySummaryBar({ summary }: { summary: CategorySummary | null }) {
     );
   }
   return (
-    <div className="grid gap-3 rounded-lg border border-border bg-card p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-      <div>
-        <p className="text-xs text-muted-foreground">Productos con precio</p>
-        <p className="text-lg font-bold">{summary.total_products}</p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Comparables en varias tiendas</p>
-        <p className="text-lg font-bold">{summary.multi_store}</p>
-      </div>
+    <div className="grid gap-3 rounded-lg border border-border bg-card p-4 text-sm sm:grid-cols-2">
       <div>
         <p className="text-xs text-muted-foreground">Precio promedio</p>
         <p className="text-lg font-bold">{formatArs(summary.avg_best_price)}</p>

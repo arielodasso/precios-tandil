@@ -83,16 +83,11 @@ export default async function HomePage() {
       {dbOk && (
         <section aria-labelledby="home-analytics" className="mt-10">
           <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="size-5 text-alerta" />
-                <h2 id="home-analytics" className="text-lg font-bold">
-                  Panorama de precios
-                </h2>
-              </div>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/admin/tandilalerta">Ver análisis completo →</Link>
-              </Button>
+            <div className="mb-4 flex items-center gap-2">
+              <TrendingUp className="size-5 text-alerta" />
+              <h2 id="home-analytics" className="text-lg font-bold">
+                Panorama de precios
+              </h2>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -112,7 +107,7 @@ export default async function HomePage() {
 
             {cheapestStore && (
               <p className="mt-4 text-sm text-muted-foreground">
-                La <span className="font-semibold text-foreground">{cheapestStore.store_name}</span>{' '}
+                <span className="font-semibold text-foreground">{cheapestStore.store_name}</span>{' '}
                 arma la canasta de productos comparable más barata ({cheapestStore.products_count}{' '}
                 productos) por{' '}
                 <span className="font-semibold text-foreground">

@@ -126,11 +126,10 @@ export async function getPriceGaps(db: KyselyDB, limit = 10) {
 }
 
 /**
- * Canasta comparable: toma el catálogo de productos vendidos en más de una
- * tienda (productos "comparables") y valúa en cada supermercado los productos
- * de ese catálogo que esa tienda comercializa, usando el precio de la tienda.
- * Los totales son comparables porque todos provienen del mismo catálogo; la
- * cantidad por tienda refleja cuántos de esos productos vende cada una.
+ * Canasta comparable: solo se incluyen productos que tienen precio fresco en
+ * TODAS las tiendas activas, por lo que cada tienda valúa exactamente la misma
+ * canasta (misma cantidad de productos) con su propio precio. Si una tienda no
+ * vende alguno de los productos, ese producto queda fuera de la comparación.
  */
 export async function getBasketByStore(db: KyselyDB) {
   const rows = await sql<{
@@ -153,17 +152,21 @@ export async function getBasketByStore(db: KyselyDB) {
       select product_id, count(distinct store_id) as n
       from prices group by product_id
     ),
+    active_stores as (
+      select count(*) as n from store where is_active
+    ),
     comparable as (
-      select product_id from presence where n >= 2
+      select p.product_id
+      from presence p join active_stores a on p.n = a.n
     ),
     per_store as (
-      select p.store_id,
+      select pric.store_id,
              count(*)::int as products_count,
-             avg(p.price) as avg_price,
-             sum(p.price) as total
-      from prices p
-      join comparable c on c.product_id = p.product_id
-      group by p.store_id
+             avg(pric.price) as avg_price,
+             sum(pric.price) as total
+      from prices pric
+      join comparable comp on comp.product_id = pric.product_id
+      group by pric.store_id
     )
     select
       s.slug as store_slug,

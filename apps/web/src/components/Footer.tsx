@@ -24,7 +24,7 @@ export function Footer() {
         </p>
         <p className="mt-2 text-[11px] text-white/40">
           Datos informativos, sin garantía. Los precios corresponden a publicaciones oficiales de
-          cada supermercado.
+          cada supermercado y no incluyen promociones tipo 2x1 ni descuentos por cantidad.
         </p>
       </div>
     </footer>
