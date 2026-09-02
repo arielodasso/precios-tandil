@@ -53,6 +53,7 @@ function normToCandidate(p: ProductRow): MatchCandidate {
     brand: p.brand,
     brandProvided: norm.brandProvided,
     typeKeys: norm.typeKeys,
+    variantFlags: norm.variantFlags,
     imageHash: p.image_hash,
     imageUrl: p.image_url,
     contextText: norm.contextText,

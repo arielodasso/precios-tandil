@@ -20,6 +20,7 @@ const candidates: MatchCandidate[] = [
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
+    variantFlags: [],
     imageHash: '1111111111111111',
     imageUrl: 'https://img.example/arroz.jpg',
     contextText: '',
@@ -33,6 +34,7 @@ const candidates: MatchCandidate[] = [
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
+    variantFlags: [],
     imageHash: null,
     imageUrl: null,
     contextText: '',
@@ -46,6 +48,7 @@ const candidates: MatchCandidate[] = [
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
+    variantFlags: [],
     imageHash: null,
     imageUrl: null,
     contextText: '',
@@ -59,6 +62,7 @@ const candidates: MatchCandidate[] = [
     brand: null,
     brandProvided: false,
     typeKeys: ['arroz'],
+    variantFlags: [],
     imageHash: null,
     imageUrl: null,
     contextText: '',
@@ -101,6 +105,7 @@ describe('semanticScore', () => {
       brand: null,
       brandProvided: false,
       typeKeys: ['harina'],
+      variantFlags: [],
       imageHash: null,
       imageUrl: null,
       contextText: '',
@@ -122,6 +127,7 @@ describe('semanticScore', () => {
       brand: null,
       brandProvided: false,
       typeKeys: ['chocolate', 'leche'],
+      variantFlags: [],
       imageHash: null,
       imageUrl: null,
       contextText: '',
@@ -141,6 +147,7 @@ describe('semanticScore', () => {
       brand: 'gallo',
       brandProvided: true,
       typeKeys: ['arroz'],
+      variantFlags: [],
       imageHash: null,
       imageUrl: null,
       contextText: '',
@@ -162,6 +169,7 @@ describe('semanticScore', () => {
       brand: 'noel',
       brandProvided: true,
       typeKeys: ['legumbre'],
+      variantFlags: [],
       imageHash: null,
       imageUrl: null,
       contextText: '',
@@ -254,6 +262,26 @@ describe('findBestMatch', () => {
     const res = findBestMatch(norm, undefined, candidates);
     expect(res.method).toBe('none');
     if (res.method === 'none') expect(res.bestScore).toBeLessThan(0.82);
+  });
+
+  it('no auto-matchea variantes distintas con misma marca (Max vs Fresh)', () => {
+    const norm = normalizeDescription('Papel higienico Higienol Max hoja simple 100 mts 4 uni');
+    const freshCand: MatchCandidate = {
+      productId: 77,
+      ean: null,
+      normName: 'papel higienico higienol fresh hoja simple 120 mts',
+      unitAmount: 4,
+      unitType: 'un',
+      brand: 'higienol',
+      brandProvided: true,
+      typeKeys: [],
+      variantFlags: ['fresh'],
+      imageHash: null,
+      imageUrl: null,
+      contextText: '',
+    };
+    const res = findBestMatch(norm, undefined, [freshCand]);
+    expect(res.method).toBe('none');
   });
 
   it('descarta semántica candidatos con EAN válido y distinto al entrante', () => {

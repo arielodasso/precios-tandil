@@ -63,10 +63,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       order by latest.price_amount asc
     `.execute(db);
 
-    if (offersResult.rows.length < 2) {
-      return errorResponse('not_found', 'Producto con una sola fuente', 404);
-    }
-
     const now = Date.now();
     const staleThresholdMs = FRESH_WINDOW_DAYS * 24 * 3_600_000;
 

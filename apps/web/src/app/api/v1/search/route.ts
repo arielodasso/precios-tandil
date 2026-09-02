@@ -78,6 +78,10 @@ export async function GET(request: Request) {
       categoryPath !== null
         ? sql`and (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})`
         : sql``;
+    const ilikeClause =
+      q.length > 0
+        ? sql`or p.canonical_name ilike ${`%${q}%`} or p.brand ilike ${`%${q}%`}`
+        : sql``;
 
     const result = await sql<{
       slug: string;
@@ -110,9 +114,9 @@ export async function GET(request: Request) {
       from product p
       join price_aggregate pa on pa.product_id = p.id
       left join category c on c.id = p.category_id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q})
+      where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q}
+             ${ilikeClause})
         and exists (select 1 from avail a where a.product_id = p.id)
-        and pa.stores_count >= 2
         ${categoryFilter}
       order by greatest(
                  ts_rank_cd(p.search_vector, ${tsQuery}),

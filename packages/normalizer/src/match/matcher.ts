@@ -9,6 +9,7 @@ export interface MatchCandidate {
   brand: string | null;
   brandProvided: boolean;
   typeKeys: string[];
+  variantFlags: string[];
   imageHash: string | null;
   imageUrl: string | null;
   contextText: string;
@@ -152,6 +153,19 @@ export function semanticScore(
     norm.brand !== cand.brand
   ) {
     return Math.round(Math.min(score, 0.2) * 0.3 * 10_000) / 10_000;
+  }
+
+  // Variantes de producto distintas (p.ej. "Max" vs "Fresh", "Simple" vs
+  // "Doble Hoja"): si ambas descripciones declaran flags de variante que no
+  // coinciden, es muy probable que sean productos diferentes aunque compartan
+  // marca y texto base. Se aplica una penalización dura.
+  const normFlags = norm.variantFlags ?? [];
+  const candFlags = cand.variantFlags ?? [];
+  if (normFlags.length > 0 && candFlags.length > 0) {
+    const shared = normFlags.filter((f) => candFlags.includes(f));
+    if (shared.length === 0) {
+      return Math.round(Math.min(score, 0.35) * 0.3 * 10_000) / 10_000;
+    }
   }
 
   // Unidades: se comparan en base equivalente (kg<->g, l<->ml) para no separar

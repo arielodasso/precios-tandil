@@ -18,6 +18,8 @@ export interface NormalizedProduct {
   typeKeys: string[];
   /** Primer tipo de producto detectado, o null. */
   primaryType: string | null;
+  /** Palabras variante del producto (p.ej. 'max', 'fresh', 'plus', 'premium'). */
+  variantFlags: string[];
   /** Texto de contexto (descripción + marca) normalizado, usado para similitud en caso de faltar nombre. */
   contextText: string;
   /** Texto completo normalizado (nombre + contexto), usado para detección de tipos. */
@@ -195,6 +197,34 @@ function guessBrand(tokens: string[], typeKeys: string[]): string | null {
 }
 
 /**
+ * Palabras que describen el tipo/variante del producto y que, si difieren entre
+ * dos descripciones, indican que NO son el mismo producto (p.ej. "Max" vs
+ * "Fresh", "Simple" vs "Doble Hoja"). Se usan en el matcher para penalizar
+ * cuando dos candidatos comparten marca pero tienen variantes distintas.
+ */
+export const VARIANT_WORDS: ReadonlySet<string> = new Set(
+  `max maximo mini mini otra fresh fresco fresca frescas clasico clasica clasicas clasicos
+   plus premium super ultra extra ligero ligera light zero cero originales original
+   tradicional suave fuerte rejilla simple doble triple activo activa cuádruple
+   familiar pack xl xxl grande chico chica pequeño pequeña mediano mediana
+   odorless perfumado sin aroma con aroma menta anis clorofila rosas limonaceas
+   caia sin olor citrus florar cedron hierba buena`
+    .split(/\s+/)
+    .map((t) => stripAccents(t.trim().toLowerCase()))
+    .filter(Boolean),
+);
+
+/** Extrae las palabras variante presentes en los tokens (p.ej. 'max', 'fresh'). */
+export function detectVariantFlags(tokens: string[]): string[] {
+  const flags: string[] = [];
+  for (const token of tokens) {
+    const clean = stripAccents(token.trim().toLowerCase());
+    if (VARIANT_WORDS.has(clean) && !flags.includes(clean)) flags.push(clean);
+  }
+  return flags;
+}
+
+/**
  * Palabras que describen el producto (nunca marcas) pero no alcanzan el umbral
  * de ser "tipo de producto". Evitan que la heurística las tome como marca
  * (p.ej. "puré", "tomate", "sal", "postre").
@@ -269,6 +299,7 @@ export function normalizeDescription(raw: string, opts: NormalizeOptions = {}): 
     unitType,
     typeKeys,
     primaryType,
+    variantFlags: detectVariantFlags(tokens),
     contextText,
     fullText,
   };

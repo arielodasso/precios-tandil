@@ -14,6 +14,7 @@ import {
 } from '@/lib/queries/analytics';
 import { CaptureSection } from '@/components/CaptureSection';
 import { ProductHistorySearch } from '@/components/ProductHistorySearch';
+import { BasketSection } from '@/components/BasketSection';
 import { titleCase } from '@/lib/utils';
 import type { Metadata } from 'next';
 
@@ -91,6 +92,15 @@ export default async function AnalyticsPage() {
           descargar como imagen para compartir.
         </p>
       </div>
+
+      {/* Canasta por tienda (al principio del panel) */}
+      <CaptureSection
+        title="Canasta por tienda"
+        description="Costo de la misma canasta de productos (presentes en 2+ tiendas) valuada en cada supermercado. Click en una tienda para ver los productos."
+        fileName="precios-tandil-canasta.png"
+      >
+        <BasketSection basket={basket} />
+      </CaptureSection>
 
       {/* Overview */}
       <CaptureSection title="Resumen General" fileName="precios-tandil-resumen.png">
@@ -364,39 +374,6 @@ export default async function AnalyticsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </CaptureSection>
-
-      {/* Basket by Store */}
-      <CaptureSection
-        title="Canasta por tienda"
-        description="Costo de la misma canasta de productos (presentes en todas las tiendas) valuada en cada supermercado."
-        fileName="precios-tandil-canasta.png"
-      >
-        {basket.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hay suficientes datos de canasta por tienda.
-          </p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {basket.map((b) => (
-              <div
-                key={b.store_slug}
-                className="rounded-lg border border-border bg-card p-4 text-card-foreground"
-              >
-                <p className="text-sm font-bold">{b.store_name}</p>
-                <p className="mt-2 text-2xl font-extrabold tracking-tight text-alerta">
-                  {formatArs(b.total_basket)}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_count} productos idénticos valuados en cada tienda
-                </p>
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Promedio: {formatArs(b.avg_price)}</span>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </CaptureSection>

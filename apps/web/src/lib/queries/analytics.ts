@@ -160,18 +160,22 @@ export async function getPriceGaps(db: KyselyDB, limit = 10) {
 }
 
 /**
- * Canasta comparable: solo se incluyen productos que tienen precio fresco en
- * TODAS las tiendas activas, por lo que cada tienda valúa exactamente la misma
- * canasta (misma cantidad de productos) con su propio precio. Si una tienda no
- * vende alguno de los productos, ese producto queda fuera de la comparación.
+ * Canasta por tienda (metodología "precio medio del producto"):
+ * Se define un conjunto común de productos comparables (presentes en 2+ tiendas
+ * con precio fresco en 7 días). Para cada producto se calcula el precio de
+ * referencia = promedio de los precios de las tiendas que lo venden.
+ * Cada tienda valúa exactamente la MISMA canasta con su propio precio; si la
+ * tienda no vende un producto, se le asigna el precio de referencia. Así todos
+ * los conteos coinciden y se puede comparar verdaderamente quién es más barato.
  */
 export async function getBasketByStore(db: KyselyDB) {
   const rows = await sql<{
     store_slug: string;
     store_name: string;
     products_count: number;
-    avg_price: string;
     total_basket: string;
+    reference_total: string;
+    vs_reference_pct: string;
   }>`
     with prices as (
       select ml.product_id, ss.store_id, min(pr.price_amount) as price
@@ -186,32 +190,43 @@ export async function getBasketByStore(db: KyselyDB) {
       select product_id, count(distinct store_id) as n
       from prices group by product_id
     ),
-    active_stores as (
-      select count(*) as n from store where is_active
-    ),
     comparable as (
-      select p.product_id
-      from presence p
-      join active_stores a on p.n >= greatest(a.n / 2, 2)
+      select product_id from presence where n >= 2
+    ),
+    prod_ref as (
+      select pric.product_id, avg(pric.price) as ref_price
+      from prices pric
+      join comparable c on c.product_id = pric.product_id
+      group by pric.product_id
+    ),
+    all_prices as (
+      select pric.store_id, pric.product_id, pric.price
+      from prices pric
+      join comparable c on c.product_id = pric.product_id
     ),
     per_store as (
-      select pric.store_id,
-             count(*)::int as products_count,
-             avg(pric.price) as avg_price,
-             sum(pric.price) as total
-      from prices pric
-      join comparable comp on comp.product_id = pric.product_id
-      group by pric.store_id
+      select
+        s.id as store_id,
+        s.slug as store_slug,
+        s.name as store_name,
+        count(distinct ap.product_id)::int as products_count,
+        round(sum(coalesce(ap.price, pr.ref_price))::numeric, 0) as total_basket,
+        round(sum(pr.ref_price)::numeric, 0) as reference_total
+      from comparable c
+      cross join store s
+      join prod_ref pr on pr.product_id = c.product_id
+      left join all_prices ap on ap.product_id = c.product_id and ap.store_id = s.id
+      where s.is_active
+      group by s.id, s.slug, s.name
     )
     select
-      s.slug as store_slug,
-      s.name as store_name,
-      per_store.products_count as products_count,
-      round(per_store.avg_price::numeric, 0)::text as avg_price,
-      round(per_store.total::numeric, 0)::text as total_basket
+      store_slug, store_name, products_count,
+      total_basket::text as total_basket,
+      reference_total::text as reference_total,
+      round(((total_basket::numeric - reference_total::numeric) / nullif(reference_total::numeric, 0) * 100), 1)::text as vs_reference_pct
     from per_store
-    join store s on s.id = per_store.store_id
-    order by per_store.total asc
+    where products_count >= 1
+    order by total_basket asc
   `
     .execute(db)
     .then((r) => r.rows);
@@ -220,8 +235,9 @@ export async function getBasketByStore(db: KyselyDB) {
     store_slug: r.store_slug,
     store_name: r.store_name,
     products_count: Number(r.products_count),
-    avg_price: r.avg_price,
     total_basket: r.total_basket,
+    reference_total: r.reference_total,
+    vs_reference_pct: r.vs_reference_pct,
   }));
 }
 
