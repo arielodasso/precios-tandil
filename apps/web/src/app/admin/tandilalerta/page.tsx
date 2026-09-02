@@ -13,6 +13,7 @@ import {
   type KyselyDB,
 } from '@/lib/queries/analytics';
 import { CaptureSection } from '@/components/CaptureSection';
+import { ProductHistorySearch } from '@/components/ProductHistorySearch';
 import { titleCase } from '@/lib/utils';
 import type { Metadata } from 'next';
 
@@ -98,6 +99,15 @@ export default async function AnalyticsPage() {
           <StatCard label="Tiendas activas" value={overview.active_stores} />
           <StatCard label="Precios hoy" value={overview.prices_today.toLocaleString('es-AR')} />
         </div>
+      </CaptureSection>
+
+      {/* Product History Search */}
+      <CaptureSection
+        title="Evolución de precio"
+        description="Buscá un producto por su slug para ver la evolución histórica de precios."
+        fileName="precios-tandil-evolucion.png"
+      >
+        <ProductHistorySearch />
       </CaptureSection>
 
       {/* Price Drops */}
