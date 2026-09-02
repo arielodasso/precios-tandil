@@ -109,7 +109,6 @@ export function toSnapshot(
 
   const brand = str(product.brand);
   const extended = str(product.extended_description);
-  const description = extended && extended !== name ? collapse(extended).slice(0, 2000) : undefined;
 
   const firstImage = product.imagesList
     ? product.imagesList
@@ -129,11 +128,15 @@ export function toSnapshot(
   );
   const finalPath = categoryPath.length > 0 ? categoryPath : undefined;
 
+  const enrichedRaw = extended
+    ? collapse(`${name} ${extended}`.slice(0, 500))
+    : collapse(name).slice(0, 500);
+
   return {
     externalId: foreignId,
     url: `${APP_URL}?action=detail&itemId=${encodeURIComponent(foreignId)}`,
-    rawDescription: collapse(name).slice(0, 500),
-    description,
+    rawDescription: enrichedRaw,
+    description: extended ?? undefined,
     ean,
     brand: brand ? collapse(brand).slice(0, 120) : undefined,
     categoryPath: finalPath,

@@ -44,6 +44,7 @@ export async function GET(request: Request) {
       left join store s on s.id = pa.best_store_id
       where dc.status in ('pending', 'published')
         and (dp.expires_at is null or dp.expires_at > now())
+        and pa.stores_count >= 2
       order by p.id, dc.discount_pct desc, dc.detected_at desc
       limit 50
     `.execute(db);

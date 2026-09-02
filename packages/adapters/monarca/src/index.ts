@@ -121,6 +121,13 @@ export function toSnapshot(
     externalId: String(product.id),
     url: `${BASE_URL}/products/${product.id}`,
     rawDescription: collapse(`${description} ${product.presentation ?? ''}`),
+    description: [
+      product.brand ? collapse(product.brand) : null,
+      description,
+      product.presentation ? collapse(product.presentation) : null,
+    ]
+      .filter(Boolean)
+      .join(' '),
     ean,
     brand: product.brand ? collapse(product.brand).slice(0, 120) : undefined,
     categoryPath: pathFromArg?.map((p) => p.slice(0, 120)),

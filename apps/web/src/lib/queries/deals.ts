@@ -10,6 +10,7 @@ interface DealRow {
   image_url: string | null;
   best_store_slug: string | null;
   best_price: string | number | null;
+  stores_count: number;
   discount_pct: string | number;
   badge: string;
   published_at: Date;
@@ -34,7 +35,7 @@ export async function listPublishedDeals(db: Kysely<DB>): Promise<DealPublicItem
     select distinct on (p.id)
            p.id as product_id, p.slug as product_slug, p.canonical_name as product_name,
            p.image_url,
-           pa.best_store_id, pa.best_price, dc.discount_pct,
+           pa.best_store_id, pa.best_price, pa.stores_count, dc.discount_pct,
            case when dp.badge is not null then dp.badge
                 else case when dc.discount_pct >= 25 then 'gold' else 'green' end
            end as badge,
@@ -47,6 +48,7 @@ export async function listPublishedDeals(db: Kysely<DB>): Promise<DealPublicItem
     left join store s on s.id = pa.best_store_id
     where dc.status in ('pending', 'published')
       and (dp.expires_at is null or dp.expires_at > now())
+      and pa.stores_count >= 2
     order by p.id, dc.discount_pct desc, dc.detected_at desc
     limit 50
   `.execute(db);

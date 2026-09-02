@@ -46,54 +46,88 @@ export async function getOverview(db: KyselyDB) {
   };
 }
 
-/** Products with biggest price drops in 7 days */
+/** Products with biggest price drops in 7 days (falls back to avg_30d when no 7d history) */
 export async function getBiggestDrops(db: KyselyDB, limit = 10) {
   return db
     .selectFrom('price_aggregate as pa')
     .innerJoin('product as p', 'p.id', 'pa.product_id')
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
-    .where('pa.pct_change_7d', 'is not', null)
-    .where('pa.pct_change_7d', '<', sql.lit('0'))
     .where('pa.best_price', 'is not', null)
+    .where((eb) =>
+      eb.or([
+        eb('pa.pct_change_7d', '<', '0'),
+        eb.and([
+          eb('pa.pct_change_7d', 'is', null),
+          eb('pa.avg_30d', '>', '0'),
+          eb('pa.best_price', '<', eb.ref('pa.avg_30d')),
+        ]),
+      ]),
+    )
     .select([
       'p.slug',
       'p.canonical_name as name',
       'p.brand',
       'pa.best_price',
-      'pa.pct_change_7d',
+      'pa.avg_30d',
       'pa.stores_count',
       's.name as best_store',
       's.slug as best_store_slug',
-      'pa.avg_30d',
+      sql<number>`coalesce(
+        pa.pct_change_7d,
+        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
+      )`.as('pct_change_7d'),
     ])
-    .orderBy('pa.pct_change_7d', 'asc')
+    .orderBy(
+      sql`coalesce(
+        pa.pct_change_7d,
+        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
+      )`,
+      'asc',
+    )
     .limit(limit)
     .execute();
 }
 
-/** Products with biggest price increases in 7 days */
+/** Products with biggest price increases in 7 days (falls back to avg_30d when no 7d history) */
 export async function getBiggestRises(db: KyselyDB, limit = 10) {
   return db
     .selectFrom('price_aggregate as pa')
     .innerJoin('product as p', 'p.id', 'pa.product_id')
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
-    .where('pa.pct_change_7d', 'is not', null)
-    .where('pa.pct_change_7d', '>', sql.lit('0'))
     .where('pa.best_price', 'is not', null)
+    .where((eb) =>
+      eb.or([
+        eb('pa.pct_change_7d', '>', '0'),
+        eb.and([
+          eb('pa.pct_change_7d', 'is', null),
+          eb('pa.avg_30d', '>', '0'),
+          eb('pa.best_price', '>', eb.ref('pa.avg_30d')),
+        ]),
+      ]),
+    )
     .select([
       'p.slug',
       'p.canonical_name as name',
       'p.brand',
       'pa.best_price',
-      'pa.pct_change_7d',
+      'pa.avg_30d',
       'pa.stores_count',
       's.name as best_store',
       's.slug as best_store_slug',
-      'pa.avg_30d',
+      sql<number>`coalesce(
+        pa.pct_change_7d,
+        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
+      )`.as('pct_change_7d'),
     ])
-    .orderBy('pa.pct_change_7d', 'desc')
+    .orderBy(
+      sql`coalesce(
+        pa.pct_change_7d,
+        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
+      )`,
+      'desc',
+    )
     .limit(limit)
     .execute();
 }
@@ -157,7 +191,8 @@ export async function getBasketByStore(db: KyselyDB) {
     ),
     comparable as (
       select p.product_id
-      from presence p join active_stores a on p.n = a.n
+      from presence p
+      join active_stores a on p.n >= greatest(a.n / 2, 2)
     ),
     per_store as (
       select pric.store_id,
@@ -240,4 +275,65 @@ export async function getNearHistoricalLow(db: KyselyDB, limit = 10) {
   `
     .execute(db)
     .then((r) => r.rows);
+}
+
+/** Products with most volatility: biggest absolute change vs avg_30d (both up and down) */
+export async function getMostVolatile(db: KyselyDB, limit = 10) {
+  return db
+    .selectFrom('price_aggregate as pa')
+    .innerJoin('product as p', 'p.id', 'pa.product_id')
+    .innerJoin('store as s', 's.id', 'pa.best_store_id')
+    .where('pa.stores_count', '>=', 2)
+    .where('pa.best_price', 'is not', null)
+    .where('pa.avg_30d', '>', '0')
+    .select([
+      'p.slug',
+      'p.canonical_name as name',
+      'p.brand',
+      'pa.best_price',
+      'pa.avg_30d',
+      'pa.stores_count',
+      's.name as best_store',
+      's.slug as best_store_slug',
+      sql<number>`coalesce(
+        pa.pct_change_7d,
+        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
+      )`.as('pct_change_7d'),
+      sql<number>`abs(coalesce(
+        pa.pct_change_7d,
+        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
+      ))`.as('abs_change'),
+    ])
+    .orderBy('abs_change', 'desc')
+    .limit(limit)
+    .execute();
+}
+
+/** Top savings: biggest absolute $ difference between best_price and avg_30d */
+export async function getTopSavings(db: KyselyDB, limit = 10) {
+  return db
+    .selectFrom('price_aggregate as pa')
+    .innerJoin('product as p', 'p.id', 'pa.product_id')
+    .innerJoin('store as s', 's.id', 'pa.best_store_id')
+    .where('pa.stores_count', '>=', 2)
+    .where('pa.best_price', 'is not', null)
+    .where('pa.avg_30d', '>', '0')
+    .where('pa.best_price', '<', (eb) => eb.ref('pa.avg_30d'))
+    .select([
+      'p.slug',
+      'p.canonical_name as name',
+      'p.brand',
+      'pa.best_price',
+      'pa.avg_30d',
+      'pa.stores_count',
+      's.name as best_store',
+      's.slug as best_store_slug',
+      sql<number>`round((pa.avg_30d::numeric - pa.best_price::numeric), 2)`.as('savings_abs'),
+      sql<number>`round(((pa.avg_30d::numeric - pa.best_price::numeric) / pa.avg_30d::numeric * 100), 1)`.as(
+        'savings_pct',
+      ),
+    ])
+    .orderBy(sql`(pa.avg_30d::numeric - pa.best_price::numeric)`, 'desc')
+    .limit(limit)
+    .execute();
 }

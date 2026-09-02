@@ -8,6 +8,8 @@ import {
   getBasketByStore,
   getStoreCompetitiveness,
   getNearHistoricalLow,
+  getMostVolatile,
+  getTopSavings,
   type KyselyDB,
 } from '@/lib/queries/analytics';
 import { CaptureSection } from '@/components/CaptureSection';
@@ -66,15 +68,18 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 export default async function AnalyticsPage() {
   const db = getDb() as KyselyDB;
 
-  const [overview, drops, rises, gaps, basket, competitiveness, nearLow] = await Promise.all([
-    getOverview(db),
-    getBiggestDrops(db, 10),
-    getBiggestRises(db, 10),
-    getPriceGaps(db, 10),
-    getBasketByStore(db),
-    getStoreCompetitiveness(db),
-    getNearHistoricalLow(db, 10),
-  ]);
+  const [overview, drops, rises, gaps, basket, competitiveness, nearLow, volatile, topSavings] =
+    await Promise.all([
+      getOverview(db),
+      getBiggestDrops(db, 10),
+      getBiggestRises(db, 10),
+      getPriceGaps(db, 10),
+      getBasketByStore(db),
+      getStoreCompetitiveness(db),
+      getNearHistoricalLow(db, 10),
+      getMostVolatile(db, 10),
+      getTopSavings(db, 10),
+    ]);
 
   return (
     <div className="py-8">
@@ -88,11 +93,10 @@ export default async function AnalyticsPage() {
 
       {/* Overview */}
       <CaptureSection title="Resumen General" fileName="precios-tandil-resumen.png">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard label="Productos" value={overview.total_products} />
           <StatCard label="Tiendas activas" value={overview.active_stores} />
           <StatCard label="Precios hoy" value={overview.prices_today.toLocaleString('es-AR')} />
-          <StatCard label="Ofertas activas" value={overview.active_deals} />
         </div>
       </CaptureSection>
 
@@ -188,6 +192,110 @@ export default async function AnalyticsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <PctBadge value={p.pct_change_7d} />
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{p.best_store}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CaptureSection>
+
+      {/* Most Volatile Products */}
+      <CaptureSection
+        title="Mayores variaciones"
+        description="Productos con mayor variación de precio (subidas y bajadas) contra el promedio de 30 días."
+        fileName="precios-tandil-variaciones.png"
+      >
+        {volatile.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay suficientes datos de variaciones.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-2.5">Producto</th>
+                  <th className="px-4 py-2.5 text-right">Precio hoy</th>
+                  <th className="px-4 py-2.5 text-right">Prom. 30d</th>
+                  <th className="px-4 py-2.5 text-right">Cambio</th>
+                  <th className="px-4 py-2.5">Tienda</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {volatile.map((p) => (
+                  <tr key={p.slug} className="hover:bg-muted/30">
+                    <td className="px-4 py-2.5">
+                      <Link
+                        href={`/p/${p.slug}`}
+                        className="font-semibold transition-colors hover:text-alerta"
+                      >
+                        {titleCase(p.name)}
+                      </Link>
+                      {p.brand && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">{p.brand}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-bold">{formatArs(p.best_price)}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">
+                      {formatArs(p.avg_30d)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <PctBadge value={p.pct_change_7d} />
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{p.best_store}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CaptureSection>
+
+      {/* Top Savings Opportunities */}
+      <CaptureSection
+        title="Top oportunidades"
+        description="Productos con mayor ahorro absoluto: la diferencia entre el mejor precio y el promedio de 30 días."
+        fileName="precios-tandil-oportunidades.png"
+      >
+        {topSavings.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No hay oportunidades significativas detectadas.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-2.5">Producto</th>
+                  <th className="px-4 py-2.5 text-right">Precio hoy</th>
+                  <th className="px-4 py-2.5 text-right">Prom. 30d</th>
+                  <th className="px-4 py-2.5 text-right">Ahorro</th>
+                  <th className="px-4 py-2.5">Mejor tienda</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {topSavings.map((p) => (
+                  <tr key={p.slug} className="hover:bg-muted/30">
+                    <td className="px-4 py-2.5">
+                      <Link
+                        href={`/p/${p.slug}`}
+                        className="font-semibold transition-colors hover:text-alerta"
+                      >
+                        {titleCase(p.name)}
+                      </Link>
+                      {p.brand && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">{p.brand}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-bold">{formatArs(p.best_price)}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">
+                      {formatArs(p.avg_30d)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        {formatArs(p.savings_abs)} ({p.savings_pct}%)
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">{p.best_store}</td>
                   </tr>

@@ -130,6 +130,9 @@ export function toSnapshot(article: CoopArticle, capturedAt: Date): ProductSnaps
     externalId: code,
     url: `${WWW_BASE}/producto/${productSlug(description)}/${code}`,
     rawDescription: `${description}${unitLabel(article) ? ` ${unitLabel(article)}` : ''}`,
+    description: [collapse(article.marca_desc), description, unitLabel(article)]
+      .filter(Boolean)
+      .join(' '),
     brand: collapse(article.marca_desc) || undefined,
     categoryPath: categoryPath?.map((p) => p.slice(0, 120)),
     unitLabel: unitLabel(article)?.slice(0, 60),

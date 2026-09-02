@@ -58,6 +58,7 @@ export async function getCategorySummary(
     join category c on c.id = p.category_id
     join price_aggregate pa on pa.product_id = p.id
     where ${pathFilter} and pa.best_price is not null
+      and pa.stores_count >= 2
     order by pa.best_price asc
     limit 1
   `.execute(db);
@@ -176,6 +177,7 @@ export async function listCategoryProducts(
     join category c on c.id = p.category_id
     join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
+      and pa.stores_count >= 2
       ${searchClause}
   `.execute(db);
   const total = Number(countRows.rows[0]?.total ?? 0);
@@ -187,6 +189,7 @@ export async function listCategoryProducts(
     join category c on c.id = p.category_id
     join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
+      and pa.stores_count >= 2
       ${searchClause}
     order by pa.best_price asc nulls last, p.canonical_name asc
     limit ${pageSize} offset ${offset}

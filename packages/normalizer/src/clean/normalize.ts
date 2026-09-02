@@ -139,6 +139,8 @@ const UNIT_ALIASES: Record<string, UnitType> = {
   litros: 'l',
   ml: 'ml',
   cc: 'ml',
+  cm3: 'ml',
+  'cm³': 'ml',
   un: 'un',
   unid: 'un',
   unidad: 'un',
@@ -146,7 +148,7 @@ const UNIT_ALIASES: Record<string, UnitType> = {
 };
 
 const UNIT_RE =
-  /(?:x\s*)?(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kgs|k|g|grs?|gramos?|l|lts?|litros?|ml|cc|unid\.?|unidades?)\b/gi;
+  /(?:x\s*)?(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kgs|k|g|grs?|gramos?|l|lts?|litros?|ml|cc|cm[³3]|unid\.?|unidades?)\b/gi;
 
 const UNITLESS_X_RE = /\bx\s*(\d{1,3})\b/gi;
 

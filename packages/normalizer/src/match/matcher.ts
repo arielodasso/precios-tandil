@@ -95,8 +95,9 @@ function toBaseAmount(unitType: string, amount: number): number | null {
 
 /**
  * Factor de acuerdo de presentación por unidades. Devuelve null cuando no se
- * pueden comparar (falta unidad en alguno de los lados o unidad "un" ambigua).
+ * pueden comparar (falta unidad en ambos lados o unidad "un" ambigua).
  * "1 kg" vs "1000 g" es la misma presentación; "500 g" vs "1 kg" no.
+ * Si solo uno de los dos declara unidad, devuelve 0.8 (penalización leve).
  */
 function unitAgreementFactor(
   aType: string | null,
@@ -104,7 +105,9 @@ function unitAgreementFactor(
   bType: string | null,
   bAmount: number | null,
 ): number | null {
-  if (aType === null || aAmount === null || bType === null || bAmount === null) return null;
+  if (aType === null && bType === null) return null;
+  if (aType === 'un' || bType === 'un') return null;
+  if (aType === null || aAmount === null || bType === null || bAmount === null) return 0.8;
   const scaleA = unitScale(aType);
   const scaleB = unitScale(bType);
   if (scaleA === null || scaleB === null) return null;
@@ -113,7 +116,8 @@ function unitAgreementFactor(
   if (aBase === null || bBase === null) return null;
   if (scaleA !== scaleB) return 0.6;
   const ratio = Math.min(aBase, bBase) / Math.max(aBase, bBase);
-  if (ratio >= 0.95) return 1.05;
+  if (ratio >= 0.9) return 1.05;
+  if (ratio < 0.5) return 0.05;
   return 0.5;
 }
 

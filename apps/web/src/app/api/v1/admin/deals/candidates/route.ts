@@ -50,7 +50,9 @@ export async function GET(request: Request) {
       from deal_candidate dc
       join product p on p.id = dc.product_id
       left join deal_publication dp on dp.candidate_id = dc.id
+      left join price_aggregate pa on pa.product_id = p.id
       where dc.status in ('pending', 'published')
+        and pa.stores_count >= 2
       order by case when dc.status = 'pending' then 0 else 1 end, dc.discount_pct desc
       limit 100
     `.execute(db);

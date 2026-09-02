@@ -92,24 +92,26 @@ export default async function HomePage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Productos relevados</p>
-                <p className="text-xl font-bold">{overview?.total_products ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">Productos comparables</p>
+                <p className="text-xl font-bold">
+                  {cheapestStore?.products_count ?? overview?.total_products ?? '—'}
+                </p>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Tiendas activas</p>
+                <p className="text-xs text-muted-foreground">Tiendas comparadas</p>
                 <p className="text-xl font-bold">{overview?.active_stores ?? '—'}</p>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
-                <p className="text-xl font-bold">{overview?.prices_today ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">Tienda más barata</p>
+                <p className="text-xl font-bold truncate">{cheapestStore?.store_name ?? '—'}</p>
               </div>
             </div>
 
             {cheapestStore && (
               <p className="mt-4 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">{cheapestStore.store_name}</span>{' '}
-                arma la canasta de productos comparable más barata ({cheapestStore.products_count}{' '}
-                productos) por{' '}
+                ofrece la canasta comparable más barata ({cheapestStore.products_count} productos)
+                por{' '}
                 <span className="font-semibold text-foreground">
                   {formatArs(cheapestStore.total_basket)}
                 </span>
