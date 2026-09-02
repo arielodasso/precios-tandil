@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { titleCase } from '@/lib/utils';
 import type { SearchResultItem, SearchResponse } from '@/lib/types';
 
 /**
  * T041 — Barra de búsqueda con debounce de 150 ms y sugerencias.
- * Estados: loading textual y sin resultados con sugerencias (T074).
+ * Al presionar Enter o el botón, navega a la página /buscar con el texto
+ * completo para ver todos los resultados que contienen ese término.
  */
 export function SearchBar() {
   const [query, setQuery] = useState('');
@@ -43,24 +45,44 @@ export function SearchBar() {
     };
   }, [query]);
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const term = query.trim();
+    if (term.length < 2) return;
+    setOpen(false);
+    router.push(`/buscar?q=${encodeURIComponent(term)}`);
+  }
+
+  function goToAll() {
+    const term = query.trim();
+    if (term.length < 2) return;
+    setOpen(false);
+    router.push(`/buscar?q=${encodeURIComponent(term)}`);
+  }
+
   return (
     <div role="search" className="relative">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          aria-label="Buscar producto"
-          placeholder="Buscar producto…"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          className="h-11 rounded-lg pl-9 text-base"
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="relative flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Buscar producto"
+            placeholder="Buscar producto…"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            className="h-11 rounded-lg pl-9 text-base"
+          />
+        </div>
+        <Button type="submit" className="h-11 shrink-0">
+          Buscar
+        </Button>
+      </form>
       {status === 'loading' && (
         <p
           role="status"
@@ -94,6 +116,16 @@ export function SearchBar() {
               </li>
             ))
           )}
+          <li>
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-1 border-t border-border bg-muted/50 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-accent hover:text-accent-foreground"
+              onMouseDown={goToAll}
+            >
+              <Search className="size-4" />
+              Ver todos los resultados para “{query}”
+            </button>
+          </li>
         </ul>
       )}
       {status === 'error' && (

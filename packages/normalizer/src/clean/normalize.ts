@@ -225,6 +225,29 @@ export function detectVariantFlags(tokens: string[]): string[] {
 }
 
 /**
+ * Palabras variante de "línea de producto" que son mutuamente excluyentes:
+ * un mismo producto no puede ser "Max" y "Fresh", ni "Original" y "Plus" a la
+ * vez. Si dos descripciones declaran flags exclusivos distintos, NO pueden ser
+ * el mismo artículo aunque compartan otros flags estructurales (p.ej. "hoja
+ * simple"). A diferencia de flags estructurales/de medida (simple, doble, con
+ * aroma, grande...), una diferencia aquí es motivo de bloqueo duro.
+ */
+export const EXCLUSIVE_VARIANT_WORDS: ReadonlySet<string> = new Set(
+  `max maximo minimo mini fresh fresca frescas fresco clasico clasica clasicas clasicos
+   plus premium super ultra extra ligero ligera light zero cero originales original
+   tradicional fuerte suave activo activa familiar economico economica recargable
+   eco sustentable cero`
+    .split(/\s+/)
+    .map((t) => stripAccents(t.trim().toLowerCase()))
+    .filter(Boolean),
+);
+
+/** Devuelve solo los flags de línea exclusivos presentes entre los flags dados. */
+export function exclusiveVariantFlags(flags: string[]): string[] {
+  return flags.filter((f) => EXCLUSIVE_VARIANT_WORDS.has(f));
+}
+
+/**
  * Palabras que describen el producto (nunca marcas) pero no alcanzan el umbral
  * de ser "tipo de producto". Evitan que la heurística las tome como marca
  * (p.ej. "puré", "tomate", "sal", "postre").

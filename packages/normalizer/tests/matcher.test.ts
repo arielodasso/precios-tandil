@@ -264,7 +264,7 @@ describe('findBestMatch', () => {
     if (res.method === 'none') expect(res.bestScore).toBeLessThan(0.82);
   });
 
-  it('no auto-matchea variantes distintas con misma marca (Max vs Fresh)', () => {
+  it('no auto-matchea variantes distintas con misma marca (Max vs Fresh), aunque compartan flag estructural', () => {
     const norm = normalizeDescription('Papel higienico Higienol Max hoja simple 100 mts 4 uni');
     const freshCand: MatchCandidate = {
       productId: 77,
@@ -275,13 +275,34 @@ describe('findBestMatch', () => {
       brand: 'higienol',
       brandProvided: true,
       typeKeys: [],
-      variantFlags: ['fresh'],
+      variantFlags: ['fresh', 'simple'],
       imageHash: null,
       imageUrl: null,
       contextText: '',
     };
     const res = findBestMatch(norm, undefined, [freshCand]);
     expect(res.method).toBe('none');
+  });
+
+  it('sí auto-matchea la MIA variante cuando comparte flags exclusivos (Max vs Max hoja simple)', () => {
+    const norm = normalizeDescription('Papel higienico Higienol Max hoja simple 100 mts 4 uni');
+    const maxCand: MatchCandidate = {
+      productId: 78,
+      ean: null,
+      normName: 'papel higienico higienol max hoja simple 120 mts',
+      unitAmount: 4,
+      unitType: 'un',
+      brand: 'higienol',
+      brandProvided: true,
+      typeKeys: [],
+      variantFlags: ['max', 'simple'],
+      imageHash: null,
+      imageUrl: null,
+      contextText: '',
+    };
+    const res = findBestMatch(norm, undefined, [maxCand]);
+    expect(res.method).toBe('semantic');
+    if (res.method === 'semantic') expect(res.productId).toBe(78);
   });
 
   it('descarta semántica candidatos con EAN válido y distinto al entrante', () => {

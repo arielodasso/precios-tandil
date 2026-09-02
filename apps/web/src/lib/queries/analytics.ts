@@ -173,6 +173,7 @@ export async function getBasketByStore(db: KyselyDB) {
     store_slug: string;
     store_name: string;
     products_count: number;
+    products_present: number;
     total_basket: string;
     reference_total: string;
     vs_reference_pct: string;
@@ -204,28 +205,33 @@ export async function getBasketByStore(db: KyselyDB) {
       from prices pric
       join comparable c on c.product_id = pric.product_id
     ),
+    set_size as (
+      select count(*)::int as n from comparable
+    ),
     per_store as (
       select
         s.id as store_id,
         s.slug as store_slug,
         s.name as store_name,
-        count(distinct ap.product_id)::int as products_count,
+        ss2.n as products_count,
+        count(distinct ap.product_id)::int as products_present,
         round(sum(coalesce(ap.price, pr.ref_price))::numeric, 0) as total_basket,
         round(sum(pr.ref_price)::numeric, 0) as reference_total
       from comparable c
       cross join store s
+      cross join set_size ss2
       join prod_ref pr on pr.product_id = c.product_id
       left join all_prices ap on ap.product_id = c.product_id and ap.store_id = s.id
       where s.is_active
-      group by s.id, s.slug, s.name
+      group by s.id, s.slug, s.name, ss2.n
     )
     select
-      store_slug, store_name, products_count,
+      store_slug, store_name, products_count, products_present,
       total_basket::text as total_basket,
       reference_total::text as reference_total,
       round(((total_basket::numeric - reference_total::numeric) / nullif(reference_total::numeric, 0) * 100), 1)::text as vs_reference_pct
     from per_store
-    where products_count >= 1
+    where products_present >= 1
     order by total_basket asc
   `
     .execute(db)
@@ -235,6 +241,7 @@ export async function getBasketByStore(db: KyselyDB) {
     store_slug: r.store_slug,
     store_name: r.store_name,
     products_count: Number(r.products_count),
+    products_present: Number(r.products_present),
     total_basket: r.total_basket,
     reference_total: r.reference_total,
     vs_reference_pct: r.vs_reference_pct,

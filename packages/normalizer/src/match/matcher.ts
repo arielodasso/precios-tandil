@@ -1,4 +1,5 @@
 import type { NormalizedProduct } from '../clean/normalize.ts';
+import { exclusiveVariantFlags } from '../clean/normalize.ts';
 
 export interface MatchCandidate {
   productId: number;
@@ -155,12 +156,24 @@ export function semanticScore(
     return Math.round(Math.min(score, 0.2) * 0.3 * 10_000) / 10_000;
   }
 
-  // Variantes de producto distintas (p.ej. "Max" vs "Fresh", "Simple" vs
-  // "Doble Hoja"): si ambas descripciones declaran flags de variante que no
+  // Variantes de producto distintas (p.ej. "Max" vs "Fresh", "Original" vs
+  // "Plus"): si ambas descripciones declaran flags de línea exclusivos que no
   // coinciden, es muy probable que sean productos diferentes aunque compartan
-  // marca y texto base. Se aplica una penalización dura.
+  // marca, texto base y otros flags estructurales (p.ej. "hoja simple"). Se
+  // aplica una penalización dura.
   const normFlags = norm.variantFlags ?? [];
   const candFlags = cand.variantFlags ?? [];
+  // Conflicto por vars exclusivas de línea (Max/Fresh/Original/...): bloqueo duro
+  // aunque compartan flags estructurales.
+  const normExcl = exclusiveVariantFlags(normFlags);
+  const candExcl = exclusiveVariantFlags(candFlags);
+  if (normExcl.length > 0 && candExcl.length > 0) {
+    const sharedExcl = normExcl.filter((f) => candExcl.includes(f));
+    if (sharedExcl.length === 0) {
+      return Math.round(Math.min(score, 0.35) * 0.3 * 10_000) / 10_000;
+    }
+  }
+  // Conflicto por variantes estructurales que no comparten NINGÚN flag.
   if (normFlags.length > 0 && candFlags.length > 0) {
     const shared = normFlags.filter((f) => candFlags.includes(f));
     if (shared.length === 0) {

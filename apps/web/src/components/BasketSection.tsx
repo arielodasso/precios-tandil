@@ -9,6 +9,7 @@ interface BasketRow {
   store_slug: string;
   store_name: string;
   products_count: number;
+  products_present: number;
   total_basket: string;
   reference_total: string;
   vs_reference_pct: string;
@@ -75,7 +76,8 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   {formatArs(b.total_basket)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_count} productos comparados · base {formatArs(b.reference_total)}
+                  {b.products_count} productos comparados · {b.products_present} disponibles en esta
+                  tienda · base {formatArs(b.reference_total)}
                 </p>
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <span
