@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { BackButton } from '@/components/BackButton';
 
 interface Run {
   run_id: string;
@@ -58,6 +59,16 @@ export default function AdminPage() {
     }
   }, [load]);
 
+  useEffect(() => {
+    if (!authed) return;
+    const id = window.setInterval(() => {
+      void load(token).catch(() => {
+        // si el token caduca, detener el polling; el usuario puede reingresar
+      });
+    }, 15000);
+    return () => window.clearInterval(id);
+  }, [authed, token, load]);
+
   async function retryStore(slug: string): Promise<void> {
     setMessage('');
     const res = await fetch(`/api/v1/admin/ingest/${slug}/retry`, {
@@ -87,7 +98,10 @@ export default function AdminPage() {
   if (!authed) {
     return (
       <div className="py-10">
-        <h1 className="mb-4 text-xl font-bold">Acceso admin</h1>
+        <div className="mb-4 flex items-center gap-3">
+          <BackButton />
+          <h1 className="text-xl font-bold">Acceso admin</h1>
+        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -117,7 +131,10 @@ export default function AdminPage() {
 
   return (
     <div className="py-6">
-      <h1 className="mb-4 text-xl font-bold">Panel admin</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-xl font-bold">Panel admin</h1>
+      </div>
       <p role="status" className="mb-3 text-sm">
         {message}
       </p>

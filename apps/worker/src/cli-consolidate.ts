@@ -332,6 +332,12 @@ async function run() {
               .execute();
             counts.movedDeals += movableIds.length;
           }
+          // Eliminar deals restantes que no se pudieron mover (colisión de fecha)
+          // para no violar la FK al borrar el producto secondary.
+          const remainingIds = dealRows.filter((d) => !movableIds.includes(d.id)).map((d) => d.id);
+          if (remainingIds.length > 0) {
+            await trx.deleteFrom('deal_candidate').where('id', 'in', remainingIds).execute();
+          }
         }
 
         await trx.deleteFrom('price_aggregate').where('product_id', 'in', secondaries).execute();

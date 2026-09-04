@@ -13,6 +13,8 @@ import {
   type KyselyDB,
 } from '@/lib/queries/analytics';
 import { CaptureSection } from '@/components/CaptureSection';
+import { BackButton } from '@/components/BackButton';
+import { AutoRefresh } from '@/components/AutoRefresh';
 import { ProductHistorySearch } from '@/components/ProductHistorySearch';
 import { BasketSection } from '@/components/BasketSection';
 import { titleCase } from '@/lib/utils';
@@ -85,8 +87,12 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="py-8">
+      <AutoRefresh intervalMs={30000} />
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">Analíticas</h1>
+        <div className="flex items-center gap-3">
+          <BackButton />
+          <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">Analíticas</h1>
+        </div>
         <p className="mt-1 text-muted-foreground">
           Resumen de precios y tendencias de supermercados de Tandil. Cada sección se puede
           descargar como imagen para compartir.

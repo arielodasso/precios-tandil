@@ -2,22 +2,8 @@ import type { ProductSnapshot } from '@precios/shared';
 import { type AdapterContext, type ListingRef, type ScraperAdapter } from '@precios/scraper-core';
 
 const BASE_URL = 'https://web.monarcadigital.com.ar';
-const MAX_PAGES_PER_CATEGORY = 10;
+const MAX_PAGES_PER_CATEGORY = 200;
 const PAGE_SIZE = 50;
-
-const LISTING_CATEGORIES = [
-  { categoryId: '10043', label: 'Arroz' },
-  { categoryId: '5020', label: 'Yerba' },
-  { categoryId: '10028', label: 'Aceite de girasol' },
-  { categoryId: '15315', label: 'Fideos largos' },
-  { categoryId: '5022', label: 'Azúcar' },
-  { categoryId: '5027', label: 'Leches' },
-  { categoryId: '5008', label: 'Harinas' },
-  { categoryId: '5055', label: 'Cuidado e higiene cabello' },
-  { categoryId: '5057', label: 'Cuidado e higiene bucal' },
-  { categoryId: '5072', label: 'Detergentes' },
-  { categoryId: '15160', label: 'Lavandinas' },
-] as const;
 
 export interface MonarcaPromotion {
   totalPrice?: string | null;
@@ -53,6 +39,7 @@ export interface MonarcaCategoryNode {
   id: number;
   parentId?: number | null;
   description?: string | null;
+  childs?: number[] | null;
 }
 
 export interface MonarcaStructResponse {
@@ -194,8 +181,33 @@ function searchUrl(categoryId: string, page: number): string {
   return `${BASE_URL}/api/products/search?page=${page}&query=&size=${PAGE_SIZE}&categoryId=${categoryId}`;
 }
 
-async function* discoverListings(): AsyncGenerator<ListingRef, void, void> {
-  for (const cat of LISTING_CATEGORIES) {
+interface MonarcaCategoryRef {
+  categoryId: string;
+  label: string;
+}
+
+/** Descubre todas las categorías hoja del árbol de monarca. */
+async function fetchMonarcaLeaves(ctx: AdapterContext): Promise<MonarcaCategoryRef[]> {
+  const struct = await ctx.http.fetchJson<MonarcaStructResponse>(
+    `${BASE_URL}/api/categories/struct?version=0`,
+    ctx.signal,
+  );
+  const leaves: MonarcaCategoryRef[] = [];
+  for (const node of struct.categories ?? []) {
+    if (typeof node.id !== 'number') continue;
+    if ((node.childs?.length ?? 0) === 0) {
+      leaves.push({
+        categoryId: String(node.id),
+        label: node.description ? collapse(node.description) : String(node.id),
+      });
+    }
+  }
+  return leaves;
+}
+
+async function* discoverListings(ctx: AdapterContext): AsyncGenerator<ListingRef, void, void> {
+  const leaves = await fetchMonarcaLeaves(ctx);
+  for (const cat of leaves) {
     yield { url: searchUrl(cat.categoryId, 0), externalId: cat.categoryId };
   }
 }
@@ -209,8 +221,9 @@ const adapter: ScraperAdapter = {
     let yielded = 0;
     let lastError: unknown;
     const paths = await fetchCategoryPaths(ctx);
+    const leaves = await fetchMonarcaLeaves(ctx);
 
-    for (const cat of LISTING_CATEGORIES) {
+    for (const cat of leaves) {
       try {
         for (let page = 0; page < MAX_PAGES_PER_CATEGORY; page++) {
           ctx.signal.throwIfAborted();

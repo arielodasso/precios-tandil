@@ -1,27 +1,18 @@
 import type { ProductSnapshot } from '@precios/shared';
 import {
   extractVtexApolloItems,
+  fetchVtexCategoryPage,
+  fetchVtexLeafCategories,
   type AdapterContext,
   type ListingRef,
   type ScraperAdapter,
   type VtexItemRecord,
+  VTEX_PAGE_SIZE,
 } from '@precios/scraper-core';
 
 const BASE_URL = 'https://www.vea.com.ar';
-const LISTING_PATHS = [
-  '/almacen',
-  '/almacen/arroz-y-legumbres/arroz',
-  '/almacen/yerba-y-infusiones/yerbas',
-  '/almacen/aceites/aceite-girasol',
-  '/almacen/fideos',
-  '/almacen/azucar',
-  '/lacteos/leche',
-  '/almacen/harinas',
-  '/perfumeria',
-  '/limpieza',
-];
-const PAGE_TIMEOUT_MS = 30_000;
-const CACHE_WAIT_MS = 15_000;
+
+/** Sin filtro de raíces: se captura el catálogo completo de la tienda. */
 
 function toSnapshot(rec: VtexItemRecord, capturedAt: Date): ProductSnapshot {
   return {
@@ -47,26 +38,53 @@ export function parseListing(html: string, capturedAt: Date = new Date()): Produ
   return items.map((rec) => toSnapshot(rec, capturedAt)).filter((s) => s.price.amount > 0);
 }
 
-async function fetchListingHtml(ctx: AdapterContext, url: string): Promise<string> {
-  ctx.signal.throwIfAborted();
-  const page = await ctx.browser.newPage();
-  try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT_MS });
-    await page
-      .locator('script')
-      .filter({ hasText: '{"Product' })
-      .first()
-      .waitFor({ timeout: CACHE_WAIT_MS })
-      .catch(() => undefined);
-    return await page.content();
-  } finally {
-    await page.close().catch(() => undefined);
+async function* discoverListings(ctx: AdapterContext): AsyncGenerator<ListingRef, void, void> {
+  const leaves = await fetchVtexLeafCategories(BASE_URL, ctx.http, ctx.signal);
+  for (const leaf of leaves) {
+    yield { url: leaf.url, externalId: leaf.relativePath };
   }
 }
 
-async function* discoverListings(): AsyncGenerator<ListingRef, void, void> {
-  for (const path of LISTING_PATHS) {
-    yield { url: `${BASE_URL}${path}` };
+async function* crawlCatalog(ctx: AdapterContext): AsyncGenerator<ProductSnapshot, void, void> {
+  const leaves = await fetchVtexLeafCategories(BASE_URL, ctx.http, ctx.signal);
+  let yielded = 0;
+  let lastError: unknown;
+
+  for (const leaf of leaves) {
+    ctx.signal.throwIfAborted();
+    let from = 0;
+    try {
+      while (true) {
+        const page = await fetchVtexCategoryPage(
+          BASE_URL,
+          leaf.relativePath,
+          from,
+          ctx.http,
+          ctx.signal,
+        );
+        if (page.length === 0) break;
+        const capturedAt = new Date();
+        for (const rec of page) {
+          const snap = toSnapshot(rec, capturedAt);
+          if (snap.price.amount > 0) {
+            yielded++;
+            yield snap;
+          }
+        }
+        if (page.length < VTEX_PAGE_SIZE) break;
+        from += VTEX_PAGE_SIZE;
+      }
+    } catch (err) {
+      lastError = err;
+      ctx.logger.warn(
+        { event: 'adapter.listing.failed', category: leaf.relativePath, err },
+        'categoría falló',
+      );
+    }
+  }
+
+  if (yielded === 0 && lastError !== undefined) {
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 }
 
@@ -75,35 +93,31 @@ const adapter: ScraperAdapter = {
 
   discover: discoverListings,
 
-  async *scrapeCatalog(ctx: AdapterContext): AsyncGenerator<ProductSnapshot, void, void> {
-    let yielded = 0;
-    let lastError: unknown;
-    for await (const ref of discoverListings()) {
-      try {
-        const html = await fetchListingHtml(ctx, ref.url);
-        const snapshots = parseListing(html);
-        yielded += snapshots.length;
-        for (const snap of snapshots) yield snap;
-      } catch (err) {
-        lastError = err;
-        ctx.logger.warn({ event: 'adapter.listing.failed', url: ref.url, err }, 'listado falló');
-      }
-    }
-    if (yielded === 0 && lastError !== undefined) {
-      throw lastError instanceof Error ? lastError : new Error(String(lastError));
-    }
-  },
+  scrapeCatalog: crawlCatalog,
 
   async scrapeProduct(ref: ListingRef, ctx: AdapterContext): Promise<ProductSnapshot | null> {
     ctx.signal.throwIfAborted();
-    const html = await fetchListingHtml(ctx, ref.url);
-    const snapshots = parseListing(html);
-    if (snapshots.length === 0) return null;
-    if (ref.externalId) {
-      return snapshots.find((s) => s.externalId === ref.externalId) ?? null;
+    const externalId = ref.externalId ?? /\/p\/(\w+)/.exec(new URL(ref.url).pathname)?.[1];
+    const leaves = await fetchVtexLeafCategories(BASE_URL, ctx.http, ctx.signal);
+    for (const leaf of leaves) {
+      let from = 0;
+      while (true) {
+        const page = await fetchVtexCategoryPage(
+          BASE_URL,
+          leaf.relativePath,
+          from,
+          ctx.http,
+          ctx.signal,
+        );
+        if (page.length === 0) break;
+        for (const rec of page) {
+          if (externalId && rec.itemId === externalId) return toSnapshot(rec, new Date());
+        }
+        if (page.length < VTEX_PAGE_SIZE) break;
+        from += VTEX_PAGE_SIZE;
+      }
     }
-    const target = new URL(ref.url).pathname.replace(/\/$/, '');
-    return snapshots.find((s) => new URL(s.url).pathname.replace(/\/$/, '') === target) ?? null;
+    return null;
   },
 };
 

@@ -73,6 +73,40 @@ export function extractProducts(html: string): GolopolisProduct[] {
   }
 }
 
+/**
+ * Descubre todas las categorías del menú (`?action=products&superItemId=N&itemId=M`).
+ * Devuelve combinaciones únicas (si la misma categoría aparece en varios
+ * superItems se conserva cada una; el pipeline ya deduplica por externalId).
+ */
+export function discoverCategories(html: string): GolopolisCategoryRef[] {
+  const re = /action=products&(?:amp;)?superItemId=(\d+)&(?:amp;)?itemId=(\d+)/g;
+  const seen = new Set<string>();
+  const out: GolopolisCategoryRef[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const key = `${m[1]}:${m[2]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ superItemId: Number(m[1]), itemId: Number(m[2]), label: '' });
+  }
+  return out;
+}
+
+/** Descubre categorías desde el menú; si falla o queda vacío, usa la lista fija. */
+async function resolveCategories(ctx: AdapterContext): Promise<GolopolisCategoryRef[]> {
+  try {
+    const html = await fetchListingHtml(ctx, APP_URL);
+    const discovered = discoverCategories(html);
+    if (discovered.length > 0) return discovered;
+  } catch (err) {
+    ctx.logger.warn(
+      { event: 'adapter.golopolis.discover.failed', err },
+      'fallo al descubrir categorías',
+    );
+  }
+  return LISTING_CATEGORIES;
+}
+
 function str(v: unknown): string | null {
   return typeof v === 'string' && v.trim().length > 0 ? v.trim() : null;
 }
@@ -177,8 +211,9 @@ async function fetchListingHtml(ctx: AdapterContext, url: string): Promise<strin
   });
 }
 
-async function* discoverListings(): AsyncGenerator<ListingRef, void, void> {
-  for (const cat of LISTING_CATEGORIES) {
+async function* discoverListings(ctx: AdapterContext): AsyncGenerator<ListingRef, void, void> {
+  const cats = await resolveCategories(ctx);
+  for (const cat of cats) {
     yield { url: createListingUrl(cat), externalId: String(cat.itemId) };
   }
 }
@@ -191,8 +226,9 @@ const adapter: ScraperAdapter = {
   async *scrapeCatalog(ctx: AdapterContext): AsyncGenerator<ProductSnapshot, void, void> {
     let yielded = 0;
     let lastError: unknown;
+    const cats = await resolveCategories(ctx);
 
-    for (const cat of LISTING_CATEGORIES) {
+    for (const cat of cats) {
       try {
         const html = await fetchListingHtml(ctx, createListingUrl(cat));
         const snapshots = parseListing(html, new Date(), cat.label);

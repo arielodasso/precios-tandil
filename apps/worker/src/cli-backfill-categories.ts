@@ -6,13 +6,18 @@ import { matchCategoryByName } from './lib/category-map.ts';
 /**
  * Backfill de categorías por nombre.
  *
- * Los productos existentes quedaron sin `category_id` porque el pipeline
- * intentaba matchear el path de categoría de la tienda (ej: "Almacén/Arroz")
- * contra la taxonomía propia (ej: "almacen/arroz") y nunca coincidía.
+ * El pipeline anterior dejaba `category_id = null` porque intentaba matchear
+ * el path de categoría de la tienda (ej: "Almacén/Arroz") contra la taxonomía
+ * propia (ej: "almacen/arroz") y nunca coincidía, y además el guard
+ * `category_id is null` impedía reasignar categorías en rescrapes.
  *
- * Este script asigna cada producto a la categoría de la taxonomía local que
- * mejor lo describe, a partir de su nombre canónico. Es un arreglo de datos
- * (no sustituye el fix del pipeline, solo corrige los productos ya scrapeados).
+ * El `category_path` de la tienda NO se persiste en la DB, así que para
+ * productos ya scrapeados este script cataloga por el nombre: usa el
+ * `canonical_name` del producto y, como mejor señal, el `raw_description`
+ * original más largo de sus SKUs (el nombre de origen suele empezar con la
+ * categoría, ej: "Arroz parboil Gallo oro 1 kg").
+ *
+ * Es un arreglo de datos (no sustituye el fix del pipeline).
  */
 
 interface CategoryRow {
@@ -23,6 +28,11 @@ interface CategoryRow {
 interface ProductRow {
   id: number;
   canonical_name: string;
+}
+
+interface SkuNameRow {
+  product_id: number;
+  raw_description: string;
 }
 
 const config = loadConfig();
@@ -39,15 +49,38 @@ const products = (await db
   .select(['id', 'canonical_name'])
   .execute()) as ProductRow[];
 
+// Recolecta el raw_description original más largo por producto (join store_sku -> match_link).
+const skuRows = (await db
+  .selectFrom('store_sku as ss')
+  .innerJoin('match_link as ml', 'ml.store_sku_id', 'ss.id')
+  .select(['ml.product_id as product_id', 'ss.raw_description'])
+  .where('ml.status', 'in', ['auto', 'confirmed'])
+  .execute()) as SkuNameRow[];
+
+const nameByProduct = new Map<number, string>();
+for (const row of skuRows) {
+  const pid = Number(row.product_id);
+  const cur = nameByProduct.get(pid);
+  if (!cur || row.raw_description.length > cur.length) {
+    nameByProduct.set(pid, row.raw_description);
+  }
+}
+
 const byCategory = new Map<number, number[]>();
 const unmapped: Array<{ path: string; name: string }> = [];
 let assigned = 0;
 
 for (const p of products) {
-  const path = matchCategoryByName(p.canonical_name);
-  const id = pathToId.get(path);
+  const pid = Number(p.id);
+  const signal = nameByProduct.get(pid) ?? p.canonical_name;
+  const taxPath = matchCategoryByName(signal);
+  if (!taxPath) {
+    unmapped.push({ path: taxPath, name: p.canonical_name });
+    continue;
+  }
+  const id = pathToId.get(taxPath);
   if (id === undefined) {
-    unmapped.push({ path, name: p.canonical_name });
+    unmapped.push({ path: taxPath, name: p.canonical_name });
     continue;
   }
   const list = byCategory.get(id) ?? [];

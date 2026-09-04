@@ -8,5 +8,8 @@ export function createDb(databaseUrl: string): Kysely<DB> {
     max: 5,
     ssl: databaseUrl.includes('sslmode') ? { rejectUnauthorized: false } : undefined,
   });
+  pool.on('error', (err) => {
+    console.error('pg pool error (ignorado):', err.message);
+  });
   return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 }

@@ -76,8 +76,8 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   {formatArs(b.total_basket)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_count} productos comparados · {b.products_present} disponibles en esta
-                  tienda · base {formatArs(b.reference_total)}
+                  {b.products_present} de {b.products_count} productos de la canasta con precio
+                  propio · el resto valuado al promedio
                 </p>
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <span
@@ -87,7 +87,9 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   >
                     {diff > 0 ? `+${diff}%` : `${diff}%`} vs. promedio
                   </span>
-                  <span className="text-muted-foreground">Ver canasta →</span>
+                  <span className="text-muted-foreground" data-capture-exclude="true">
+                    Ver canasta →
+                  </span>
                 </div>
               </button>
             );

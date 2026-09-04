@@ -8,6 +8,7 @@ import {
   type CategorySummary,
 } from '@/lib/queries/category-products';
 import { ProductCard } from '@/components/ProductCard';
+import { BackButton } from '@/components/BackButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -66,7 +67,10 @@ export default async function CategoryPage({
 
   return (
     <div className="py-6">
-      <h1 className="mb-1 text-2xl font-bold">{match.name}</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-2xl font-bold">{match.name}</h1>
+      </div>
       <p className="mb-5 text-sm text-muted-foreground">
         {q
           ? `${total} resultados para “${q}”`

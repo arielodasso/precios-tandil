@@ -1,4 +1,5 @@
 import { ProductCard } from '@/components/ProductCard';
+import { BackButton } from '@/components/BackButton';
 import { apiFetch } from '@/lib/api';
 import type { DealItem } from '@/lib/types';
 
@@ -19,7 +20,10 @@ export default async function OfertasPage() {
 
   return (
     <div className="py-6">
-      <h1 className="mb-4 text-2xl font-bold">Oportunidades detectadas</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-2xl font-bold">Oportunidades detectadas</h1>
+      </div>
       {deals.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No hay oportunidades detectadas en este momento.

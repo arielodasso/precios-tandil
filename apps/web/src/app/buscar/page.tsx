@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
+import { BackButton } from '@/components/BackButton';
+import { loadOffersByProduct } from '@/lib/queries/offers';
+import type { CardOffer } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -27,12 +30,14 @@ export default async function BuscarPage({
   const db = getDb();
 
   const items: Array<{
+    id: number;
     slug: string;
     name: string;
     brand: string | null;
     best_price: number | null;
     stores_count: number | null;
     image_url: string | null;
+    offers: CardOffer[];
   }> = [];
   let total = 0;
   let totalPages = 1;
@@ -59,6 +64,7 @@ export default async function BuscarPage({
 
     const offset = (page - 1) * PAGE_SIZE;
     const rows = await sql<{
+      id: string | number;
       slug: string;
       name: string;
       brand: string | null;
@@ -66,7 +72,8 @@ export default async function BuscarPage({
       stores_count: number | null;
       image_url: string | null;
     }>`
-      select p.slug,
+      select p.id,
+             p.slug,
              p.canonical_name as name,
              p.brand,
              pa.best_price::float8 as best_price,
@@ -91,14 +98,21 @@ export default async function BuscarPage({
                pa.best_price asc nulls last
       limit ${PAGE_SIZE} offset ${offset}
     `.execute(db);
+
+    const ids = rows.rows.map((r) => Number(r.id));
+    const offersByProduct = await loadOffersByProduct(db, ids);
+
     for (const r of rows.rows) {
+      const id = Number(r.id);
       items.push({
+        id,
         slug: r.slug,
         name: r.name,
         brand: r.brand,
         best_price: r.best_price === null ? null : Math.round(Number(r.best_price) * 100) / 100,
         stores_count: r.stores_count,
         image_url: r.image_url,
+        offers: offersByProduct.get(id) ?? [],
       });
     }
   }
@@ -113,7 +127,10 @@ export default async function BuscarPage({
 
   return (
     <div className="py-6">
-      <h1 className="mb-1 text-2xl font-bold">Buscar productos</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-2xl font-bold">Buscar productos</h1>
+      </div>
       <p className="mb-5 text-sm text-muted-foreground">
         {q
           ? `${total} resultados para “${q}”`
@@ -153,6 +170,7 @@ export default async function BuscarPage({
                   best_price: p.best_price,
                   stores_count: p.stores_count,
                   image_url: p.image_url,
+                  offers: p.offers,
                 }}
               />
             </li>

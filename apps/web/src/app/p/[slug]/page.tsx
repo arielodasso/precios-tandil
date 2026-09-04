@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ProductComparisonCard, type OfferView } from '@/components/ProductComparisonCard';
 import { HistoryStrip } from '@/components/HistoryStrip';
+import { BackButton } from '@/components/BackButton';
 import { apiFetch } from '@/lib/api';
 import type { HistoryResponse, ProductDetail } from '@/lib/types';
 
@@ -80,6 +81,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="py-6">
+      <div className="mb-3 flex items-center gap-3">
+        <BackButton />
+      </div>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

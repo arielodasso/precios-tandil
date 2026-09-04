@@ -39,6 +39,12 @@ export function CaptureSection({ title, description, fileName, children }: Captu
         backgroundColor: '#ffffff',
         pixelRatio: 2,
         cacheBust: true,
+        filter: (node) => {
+          if (!(node instanceof HTMLElement)) return true;
+          if (node.dataset.captureExclude === 'true') return false;
+          if (node.closest('[data-capture-exclude="true"]')) return false;
+          return true;
+        },
       });
       const link = document.createElement('a');
       link.download = fileName;

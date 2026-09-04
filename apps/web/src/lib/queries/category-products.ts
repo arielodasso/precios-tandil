@@ -43,7 +43,7 @@ export async function getCategorySummary(
       round(avg(pa.best_price)::numeric, 0)::text as avg_best_price
     from product p
     join category c on c.id = p.category_id
-    join price_aggregate pa on pa.product_id = p.id
+    left join price_aggregate pa on pa.product_id = p.id
     where ${pathFilter}
   `.execute(db);
 
@@ -174,7 +174,7 @@ export async function listCategoryProducts(
     select count(*)::int as total
     from product p
     join category c on c.id = p.category_id
-    join price_aggregate pa on pa.product_id = p.id
+    left join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
       ${searchClause}
   `.execute(db);
@@ -185,7 +185,7 @@ export async function listCategoryProducts(
            pa.best_price::float8 as best_price, pa.stores_count
     from product p
     join category c on c.id = p.category_id
-    join price_aggregate pa on pa.product_id = p.id
+    left join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
       ${searchClause}
     order by pa.best_price asc nulls last, p.canonical_name asc

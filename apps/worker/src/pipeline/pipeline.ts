@@ -24,7 +24,11 @@ import {
   type MatchCandidate,
 } from '@precios/normalizer';
 import { RunReporter, resolveStatus } from './run-reporter.ts';
-import { matchCategoryByName, matchCategoryByStorePath } from '../lib/category-map.ts';
+import {
+  matchCategoryByName,
+  matchCategoryByStorePath,
+  normalizeToken,
+} from '../lib/category-map.ts';
 import { computeImageHash } from '../lib/image-hash.ts';
 
 const UA_POOL = [
@@ -37,7 +41,7 @@ const UA_POOL = [
 const AUTO_MATCH_THRESHOLD = 0.82;
 const REVIEW_THRESHOLD = 0.65;
 const EAN_CONFLICT_SIMILARITY = 0.75;
-const CANDIDATE_POOL_SIZE = 8000;
+const CANDIDATE_POOL_SIZE = 30000;
 
 export interface PipelineRunOptions {
   runId: string;
@@ -350,9 +354,11 @@ export class IngestPipeline {
         'match dudoso enviado a revisión',
       );
     } else {
-      const createdHash = snap.imageUrl
-        ? (incomingHash ?? (await this.hashImage(snap.imageUrl)))
-        : null;
+      // Producto nuevo: se omite el hasheo de imagen (page de Playwright por
+      // producto) en el scrape masivo porque es el cuello de botella. El EAN y
+      // el nombre alcanzan para deduplicar; la imagen se guarda igual para
+      // refinamientos posteriores de matching.
+      const createdHash = null;
       productId = await this.createProduct(norm, snap, createdHash);
       method = 'semantic';
       score = null;
@@ -412,7 +418,6 @@ export class IngestPipeline {
         .updateTable('product')
         .set({ category_id: productCategoryId })
         .where('id', '=', productId)
-        .where('category_id', 'is', null)
         .execute();
     }
 
@@ -506,7 +511,7 @@ export class IngestPipeline {
       if (byPath) return Number(byPath.id);
     }
     if (!categoryPath || categoryPath.length === 0) return null;
-    const fullPath = categoryPath.join('/');
+    const fullPath = categoryPath.map(normalizeToken).filter(Boolean).join('/');
     const exact = await this.db
       .selectFrom('category')
       .select('id')
@@ -517,7 +522,7 @@ export class IngestPipeline {
     const root = await this.db
       .selectFrom('category')
       .select('id')
-      .where('path', '=', categoryPath[0]!)
+      .where('path', '=', normalizeToken(categoryPath[0]!))
       .limit(1)
       .executeTakeFirst();
     return root ? Number(root.id) : null;

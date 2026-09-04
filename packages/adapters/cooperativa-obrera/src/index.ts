@@ -11,6 +11,7 @@ const LISTING_CATEGORIES = [
   { categoryId: '4', label: 'Bebidas' },
   { categoryId: '5', label: 'Perfumería' },
   { categoryId: '6', label: 'Limpieza' },
+  { categoryId: '7', label: 'Casa y Jardín' },
 ] as const;
 
 interface CoopArticle {
