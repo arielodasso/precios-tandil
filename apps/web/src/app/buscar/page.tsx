@@ -131,11 +131,11 @@ export default async function BuscarPage({
         <BackButton />
         <h1 className="text-2xl font-bold">Buscar productos</h1>
       </div>
-      <p className="mb-5 text-sm text-muted-foreground">
-        {q
-          ? `${total} resultados para “${q}”`
-          : 'Ingresá un término para buscar en todos los productos.'}
-      </p>
+      {!q && (
+        <p className="mb-5 text-sm text-muted-foreground">
+          Ingresá un término para buscar en todos los productos.
+        </p>
+      )}
 
       <form method="get" action="/buscar" className="mb-6">
         <div className="flex gap-2">

@@ -5,13 +5,14 @@ import {
   getBiggestDrops,
   getBiggestRises,
   getPriceGaps,
-  getBasketByStore,
+  getCbaBasketByStore,
   getStoreCompetitiveness,
   getNearHistoricalLow,
   getMostVolatile,
   getTopSavings,
   type KyselyDB,
 } from '@/lib/queries/analytics';
+import { resolveCbaBasket } from '@/lib/cba';
 import { CaptureSection } from '@/components/CaptureSection';
 import { BackButton } from '@/components/BackButton';
 import { AutoRefresh } from '@/components/AutoRefresh';
@@ -72,13 +73,14 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 export default async function AnalyticsPage() {
   const db = getDb() as KyselyDB;
 
+  const cbaItems = await resolveCbaBasket(db);
   const [overview, drops, rises, gaps, basket, competitiveness, nearLow, volatile, topSavings] =
     await Promise.all([
       getOverview(db),
       getBiggestDrops(db, 10),
       getBiggestRises(db, 10),
       getPriceGaps(db, 10),
-      getBasketByStore(db),
+      getCbaBasketByStore(db, cbaItems),
       getStoreCompetitiveness(db),
       getNearHistoricalLow(db, 10),
       getMostVolatile(db, 10),
@@ -102,7 +104,7 @@ export default async function AnalyticsPage() {
       {/* Canasta por tienda (al principio del panel) */}
       <CaptureSection
         title="Canasta por tienda"
-        description="Costo de la misma canasta de productos (presentes en 2+ tiendas) valuada en cada supermercado. Click en una tienda para ver los productos."
+        description="Canasta fija inspirada en la Canasta Básica Alimentaria (INDEC): un conjunto fijo de productos por rubro, valuado en cada supermercado. Los productos que una tienda no vende se valúan al precio promedio. Click en una tienda para ver los productos."
         fileName="precios-tandil-canasta.png"
       >
         <BasketSection basket={basket} />

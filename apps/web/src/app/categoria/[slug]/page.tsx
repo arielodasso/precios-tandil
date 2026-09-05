@@ -71,14 +71,6 @@ export default async function CategoryPage({
         <BackButton />
         <h1 className="text-2xl font-bold">{match.name}</h1>
       </div>
-      <p className="mb-5 text-sm text-muted-foreground">
-        {q
-          ? `${total} resultados para “${q}”`
-          : total > 0
-            ? `${total} productos`
-            : 'Productos de la categoría'}
-      </p>
-
       <CategorySummaryBar summary={summary} />
 
       <form method="get" action={`/categoria/${slug}`} className="mb-6 mt-8">

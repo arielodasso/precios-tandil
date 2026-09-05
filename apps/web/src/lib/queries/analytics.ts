@@ -1,5 +1,6 @@
 import { sql, type Kysely, type SqlBool } from 'kysely';
 import type { DB } from '@precios/shared';
+import type { CbaResolvedProduct } from '@/lib/cba';
 
 /**
  * Analytics panel queries for Tandil Alerta.
@@ -229,6 +230,90 @@ export async function getBasketByStore(db: KyselyDB) {
       left join all_prices ap on ap.product_id = c.product_id and ap.store_id = s.id
       where s.is_active
       group by s.id, s.slug, s.name, ss2.n
+    )
+    select
+      store_slug, store_name, products_count, products_present,
+      total_basket::text as total_basket,
+      reference_total::text as reference_total,
+      round(((total_basket::numeric - reference_total::numeric) / nullif(reference_total::numeric, 0) * 100), 1)::text as vs_reference_pct
+    from per_store
+    where products_present >= 1
+    order by total_basket asc
+  `
+    .execute(db)
+    .then((r) => r.rows);
+
+  return rows.map((r) => ({
+    store_slug: r.store_slug,
+    store_name: r.store_name,
+    products_count: Number(r.products_count),
+    products_present: Number(r.products_present),
+    total_basket: r.total_basket,
+    reference_total: r.reference_total,
+    vs_reference_pct: r.vs_reference_pct,
+  }));
+}
+
+/**
+ * Canasta fija por tienda (canasta CBA, INDEC):
+ * Igual metodología de valuación que getBasketByStore (mismo conjunto valuado,
+ * con productos faltantes al precio de referencia) pero restringida al conjunto
+ * FIJO de productos de la canasta básica alimentaria resuelto en lib/cba.
+ */
+export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduct[]) {
+  if (items.length === 0) return [];
+
+  const payload = JSON.stringify(items.map((i) => ({ productId: i.productId })));
+
+  const rows = await sql<{
+    store_slug: string;
+    store_name: string;
+    products_count: number;
+    products_present: number;
+    total_basket: string;
+    reference_total: string;
+    vs_reference_pct: string;
+  }>`
+    with sel as (
+      select (i.value->>'productId')::int as product_id
+      from jsonb_array_elements(${payload}::jsonb) as i(value)
+    ),
+    prices as (
+      select ml.product_id, ss.store_id, min(pr.price_amount::numeric) as price
+      from match_link ml
+      join store_sku ss on ss.id = ml.store_sku_id and ss.is_active
+      join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+        and pr.price_amount::numeric >= 500
+        and pr.captured_at >= now() - interval '7 days'
+      where ml.status in ('auto', 'confirmed')
+        and ml.product_id in (select product_id from sel)
+      group by ml.product_id, ss.store_id
+    ),
+    prod_ref as (
+      select product_id, avg(price) as ref_price
+      from prices group by product_id
+    ),
+    basket_size as (
+      select count(*)::int as n from prod_ref
+    ),
+    store_rows as (
+      select distinct store_id from prices
+    ),
+    per_store as (
+      select
+        s.id as store_id,
+        s.slug as store_slug,
+        s.name as store_name,
+        bs.n as products_count,
+        count(distinct ap.product_id)::int as products_present,
+        round(sum(coalesce(ap.price, pr.ref_price))::numeric, 0) as total_basket,
+        round(sum(pr.ref_price)::numeric, 0) as reference_total
+      from store_rows sr
+      join store s on s.id = sr.store_id and s.is_active
+      cross join basket_size bs
+      join prod_ref pr on true
+      left join prices ap on ap.store_id = sr.store_id and ap.product_id = pr.product_id
+      group by s.id, s.slug, s.name, bs.n
     )
     select
       store_slug, store_name, products_count, products_present,

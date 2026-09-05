@@ -16,11 +16,14 @@ interface BasketRow {
 }
 
 interface BasketProduct {
+  key: string;
+  label: string;
+  rubric: string;
   slug: string;
   name: string;
   brand: string | null;
   price: number | null;
-  ref_price: number;
+  ref_price: number | null;
   is_missing: boolean;
 }
 
@@ -164,9 +167,10 @@ function BasketModal({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <h3 className="text-lg font-bold">Canasta · {store.store_name}</h3>
+            <h3 className="text-lg font-bold">Canasta CBA · {store.store_name}</h3>
             <p className="text-xs text-muted-foreground">
-              {products.length} productos comparados · Total {formatArs(store.total_basket)}
+              Canasta fija (INDEC) · {products.length} productos · Total{' '}
+              {formatArs(store.total_basket)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -216,8 +220,9 @@ function BasketModal({
               {present.map((p) => (
                 <tr key={p.slug}>
                   <td className="px-4 py-2">
-                    <span className="font-medium">{p.name}</span>
+                    <span className="font-medium">{p.label}</span>
                     {p.brand && <span className="ml-1 text-xs text-gray-500">{p.brand}</span>}
+                    <div className="text-xs text-gray-500">{p.name}</div>
                   </td>
                   <td className="px-4 py-2 text-right font-semibold">{formatArs(p.price)}</td>
                   <td className="px-4 py-2 text-right text-gray-500">{formatArs(p.ref_price)}</td>
@@ -225,7 +230,7 @@ function BasketModal({
               ))}
               {missing.map((p) => (
                 <tr key={p.slug}>
-                  <td className="px-4 py-2 text-gray-400">{p.name}</td>
+                  <td className="px-4 py-2 text-gray-400">{p.label}</td>
                   <td className="px-4 py-2 text-right text-gray-400">No disponible</td>
                   <td className="px-4 py-2 text-right text-gray-500">{formatArs(p.ref_price)}</td>
                 </tr>
