@@ -67,13 +67,13 @@ export default async function CategoryPage({
 
   return (
     <div className="py-6">
-      <div className="mb-1 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <BackButton />
         <h1 className="text-2xl font-bold">{match.name}</h1>
       </div>
       <CategorySummaryBar summary={summary} />
 
-      <form method="get" action={`/categoria/${slug}`} className="mb-6 mt-8">
+      <form method="get" action={`/categoria/${slug}`} className="mb-8 mt-8">
         <div className="flex gap-2">
           <Input
             type="search"

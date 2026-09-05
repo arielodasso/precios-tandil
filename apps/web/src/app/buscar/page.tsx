@@ -127,17 +127,17 @@ export default async function BuscarPage({
 
   return (
     <div className="py-6">
-      <div className="mb-1 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <BackButton />
         <h1 className="text-2xl font-bold">Buscar productos</h1>
       </div>
       {!q && (
-        <p className="mb-5 text-sm text-muted-foreground">
+        <p className="mb-6 text-sm text-muted-foreground">
           Ingresá un término para buscar en todos los productos.
         </p>
       )}
 
-      <form method="get" action="/buscar" className="mb-6">
+      <form method="get" action="/buscar" className="mb-8">
         <div className="flex gap-2">
           <Input
             type="search"
