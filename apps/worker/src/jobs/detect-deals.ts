@@ -88,6 +88,7 @@ export async function detectDeals(
       select product_id, store_id, price_amount, captured_at
       from latest
       where rn = 1
+        and price_amount::numeric >= 500
         and captured_at >= ${now}::timestamptz - interval '${sql.raw(String(FRESH_WINDOW_DAYS))} days'
     ),
     stats as (

@@ -178,6 +178,7 @@ export async function searchProducts(
     where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q})
       and exists (select 1 from avail a where a.product_id = p.id)
       and pa.stores_count >= 2
+      and pa.best_price::numeric >= 500
       ${categoryFilter}
     order by greatest(
                ts_rank_cd(p.search_vector, ${tsQuery}),

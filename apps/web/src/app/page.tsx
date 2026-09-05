@@ -12,13 +12,9 @@ import type { DealItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-function formatArs(value: number | string | null | undefined): string {
+function formatInt(value: number | null | undefined): string {
   if (value == null) return '—';
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(Number(value));
+  return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(value);
 }
 
 /**
@@ -50,6 +46,10 @@ export default async function HomePage() {
 
   const cheapestStore = basket.length > 0 ? basket[0] : null;
   const dbOk = overview != null;
+  const cheapestSavingsPct =
+    cheapestStore && cheapestStore.vs_reference_pct !== null
+      ? Math.abs(Number(cheapestStore.vs_reference_pct))
+      : null;
 
   return (
     <div className="py-8">
@@ -90,30 +90,28 @@ export default async function HomePage() {
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Productos comparables</p>
-                <p className="text-xl font-bold">
-                  {cheapestStore?.products_count ?? overview?.total_products ?? '—'}
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Tiendas comparadas</p>
-                <p className="text-xl font-bold">{overview?.active_stores ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
+                <p className="text-xl font-bold">{formatInt(overview?.prices_today)}</p>
               </div>
               <div className="rounded-lg bg-muted/40 p-3">
                 <p className="text-xs text-muted-foreground">Tienda más barata</p>
                 <p className="text-xl font-bold truncate">{cheapestStore?.store_name ?? '—'}</p>
+                {cheapestSavingsPct !== null && (
+                  <p className="text-sm text-muted-foreground">
+                    {cheapestSavingsPct}% más barata que el promedio
+                  </p>
+                )}
               </div>
             </div>
 
-            {cheapestStore && (
+            {cheapestStore && cheapestSavingsPct !== null && (
               <p className="mt-4 text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{cheapestStore.store_name}</span>{' '}
-                ofrece la canasta comparable más barata ({cheapestStore.products_count} productos)
-                por{' '}
+                <span className="font-semibold text-foreground">{cheapestStore.store_name}</span> es
+                la tienda más barata de la canasta comparable:{' '}
                 <span className="font-semibold text-foreground">
-                  {formatArs(cheapestStore.total_basket)}
+                  {cheapestSavingsPct}% por debajo del promedio
                 </span>
                 .
               </p>

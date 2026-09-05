@@ -9,6 +9,7 @@ import { IngestPipeline } from './pipeline/pipeline.ts';
 import { refreshAggregates } from './jobs/refresh-aggregates.ts';
 import { refreshDailySeries } from './jobs/refresh-daily-series.ts';
 import { detectDeals } from './jobs/detect-deals.ts';
+import { purgeSingleSource } from './jobs/purge-single-source.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL);
@@ -97,6 +98,11 @@ try {
     { rowsAffected: Number((fixed as { numUpdatedRows: bigint }).numUpdatedRows) },
     'run_reports arreglados',
   );
+
+  // --- Post-scrape: purga de productos de una sola fuente y precios < mínimo ---
+  logger.info('purgando productos de una sola fuente');
+  const purgeResult = await purgeSingleSource(db, logger);
+  logger.info({ ...purgeResult }, 'purga completada');
 
   // --- Post-scrape: refresh aggregates ---
   logger.info('refrescando agregados');

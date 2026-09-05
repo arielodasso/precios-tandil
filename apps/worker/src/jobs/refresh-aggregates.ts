@@ -6,6 +6,9 @@ import type { DB } from '@precios/shared';
 /** Ventana de frescura: >7 días excluye la tienda del ranking de mejor precio (data-model.md). */
 export const FRESH_WINDOW_DAYS = 7;
 
+/** Precio mínimo de venta al público (ARS). Precios menores se consideran datos inválidos. */
+export const MIN_SHELF_PRICE = 500;
+
 export interface RefreshAggregatesResult {
   refreshedAt: Date;
   /** Productos con ofertas frescas cuyo agregado fue escrito/actualizado. */
@@ -51,6 +54,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+          and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
         where ml.status in ('auto', 'confirmed')
       ),
       fresh as (
@@ -88,6 +92,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+          and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
         where ml.status in ('auto', 'confirmed')
         group by ml.product_id
       ),
@@ -97,6 +102,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+          and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
         where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '24 hours'
         order by ml.product_id, pr.captured_at desc
@@ -107,6 +113,7 @@ export async function refreshAggregates(
         from match_link ml
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+          and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
         where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '7 days'
         order by ml.product_id, pr.captured_at desc

@@ -39,6 +39,7 @@ export async function loadOffersByProduct(
       join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
       where ml.product_id in (${sql.raw(idList)})
         and pr.is_suspect = false
+        and pr.price_amount::numeric >= 500
       order by ml.product_id, ss.store_id, pr.captured_at desc
     ) latest
     join store s on s.id = latest.store_id and s.is_active = true

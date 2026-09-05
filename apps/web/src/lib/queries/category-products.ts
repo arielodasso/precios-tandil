@@ -43,8 +43,9 @@ export async function getCategorySummary(
       round(avg(pa.best_price)::numeric, 0)::text as avg_best_price
     from product p
     join category c on c.id = p.category_id
-    left join price_aggregate pa on pa.product_id = p.id
+    join price_aggregate pa on pa.product_id = p.id
     where ${pathFilter}
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
   `.execute(db);
 
   const cheapest = await sql<{
@@ -57,7 +58,8 @@ export async function getCategorySummary(
     from product p
     join category c on c.id = p.category_id
     join price_aggregate pa on pa.product_id = p.id
-    where ${pathFilter} and pa.best_price is not null
+    where ${pathFilter}
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
     order by pa.best_price asc
     limit 1
   `.execute(db);
@@ -77,7 +79,8 @@ export async function getCategorySummary(
     join category c on c.id = p.category_id
     join price_aggregate pa on pa.product_id = p.id
     where ${pathFilter}
-      and pa.best_price is not null and pa.avg_30d is not null and pa.avg_30d > 0
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
+      and pa.avg_30d is not null and pa.avg_30d > 0
     order by (pa.avg_30d::numeric - pa.best_price::numeric) desc
     limit 1
   `.execute(db);
@@ -174,8 +177,9 @@ export async function listCategoryProducts(
     select count(*)::int as total
     from product p
     join category c on c.id = p.category_id
-    left join price_aggregate pa on pa.product_id = p.id
+    join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
       ${searchClause}
   `.execute(db);
   const total = Number(countRows.rows[0]?.total ?? 0);
@@ -185,8 +189,9 @@ export async function listCategoryProducts(
            pa.best_price::float8 as best_price, pa.stores_count
     from product p
     join category c on c.id = p.category_id
-    left join price_aggregate pa on pa.product_id = p.id
+    join price_aggregate pa on pa.product_id = p.id
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
       ${searchClause}
     order by pa.best_price asc nulls last, p.canonical_name asc
     limit ${pageSize} offset ${offset}

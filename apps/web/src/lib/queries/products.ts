@@ -1,4 +1,4 @@
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type SqlBool } from 'kysely';
 import type { DB } from '@precios/shared';
 import { AppError } from '@precios/shared';
 
@@ -11,6 +11,7 @@ export async function getProductDetail(db: Kysely<DB>, slug: string) {
   const product = await db
     .selectFrom('product')
     .leftJoin('category', 'category.id', 'product.category_id')
+    .innerJoin('price_aggregate as pa', 'pa.product_id', 'product.id')
     .select([
       'product.id',
       'product.slug',
@@ -23,6 +24,8 @@ export async function getProductDetail(db: Kysely<DB>, slug: string) {
       'category.path as category_path',
     ])
     .where('product.slug', '=', slug)
+    .where('pa.stores_count', '>=', 2)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .executeTakeFirst();
 
   if (!product) throw new AppError('not_found', `Producto no encontrado: ${slug}`);
@@ -46,7 +49,7 @@ export async function getProductDetail(db: Kysely<DB>, slug: string) {
       from price_record pr
       join store_sku ss on ss.id = pr.store_sku_id
       join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
-      where ml.product_id = ${product.id} and pr.is_suspect = false
+      where ml.product_id = ${product.id} and pr.is_suspect = false and pr.price_amount::numeric >= 500
       order by ss.store_id, pr.captured_at desc,
                case when pr.list_or_promo = 'promo' then 0 else 1 end,
                pr.price_amount asc

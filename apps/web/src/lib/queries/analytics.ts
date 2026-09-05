@@ -1,4 +1,4 @@
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type SqlBool } from 'kysely';
 import type { DB } from '@precios/shared';
 
 /**
@@ -26,6 +26,7 @@ export async function getOverview(db: KyselyDB) {
       .innerJoin('match_link as ml', 'ml.store_sku_id', 'ss.id')
       .where('ml.status', 'in', ['auto', 'confirmed'])
       .where('pr.is_suspect', '=', false)
+      .where(sql<SqlBool>`pr.price_amount::numeric >= 500`)
       .where('pr.captured_at', '>=', sql<Date>`now() - interval '24 hours'`)
       .select((eb) => eb.fn.count('pr.id').as('count'))
       .executeTakeFirst(),
@@ -54,6 +55,7 @@ export async function getBiggestDrops(db: KyselyDB, limit = 10) {
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where((eb) =>
       eb.or([
         eb('pa.pct_change_7d', '<', '0'),
@@ -97,6 +99,7 @@ export async function getBiggestRises(db: KyselyDB, limit = 10) {
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where((eb) =>
       eb.or([
         eb('pa.pct_change_7d', '>', '0'),
@@ -140,6 +143,7 @@ export async function getPriceGaps(db: KyselyDB, limit = 10) {
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.avg_30d', '>', sql.lit('0'))
     .select([
       'p.slug',
@@ -183,6 +187,7 @@ export async function getBasketByStore(db: KyselyDB) {
       from match_link ml
       join store_sku ss on ss.id = ml.store_sku_id and ss.is_active
       join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+        and pr.price_amount::numeric >= 500
         and pr.captured_at >= now() - interval '7 days'
       where ml.status in ('auto', 'confirmed')
       group by ml.product_id, ss.store_id
@@ -259,6 +264,7 @@ export async function getStoreCompetitiveness(db: KyselyDB) {
       sql<number>`count(*)::int`.as('best_price_count'),
     ])
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.stores_count', '>=', 2)
     .groupBy(['s.slug', 's.name'])
     .orderBy(sql`count(*)`, 'desc')
@@ -290,6 +296,7 @@ export async function getNearHistoricalLow(db: KyselyDB, limit = 10) {
     join product p on p.id = pa.product_id
     join store s on s.id = pa.best_store_id
     where pa.best_price is not null
+      and pa.best_price::numeric >= 500
       and pa.min_90d is not null
       and pa.stores_count >= 2
       and pa.best_price::numeric <= pa.min_90d::numeric * 1.05
@@ -308,6 +315,7 @@ export async function getMostVolatile(db: KyselyDB, limit = 10) {
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.avg_30d', '>', '0')
     .select([
       'p.slug',
@@ -340,6 +348,7 @@ export async function getTopSavings(db: KyselyDB, limit = 10) {
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.avg_30d', '>', '0')
     .where('pa.best_price', '<', (eb) => eb.ref('pa.avg_30d'))
     .select([

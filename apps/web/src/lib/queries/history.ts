@@ -16,7 +16,12 @@ export async function getProductHistory(
   const window = windowRaw as '30' | '90' | 'all';
 
   const product = await sql<{ id: string }>`
-    select id::text as id from product where slug = ${slug} limit 1
+    select p.id::text as id
+    from product p
+    join price_aggregate pa on pa.product_id = p.id
+    where p.slug = ${slug}
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
+    limit 1
   `.execute(db);
   const productId = product.rows[0]?.id;
   if (!productId) throw new AppError('not_found', `Producto '${slug}' no encontrado`);

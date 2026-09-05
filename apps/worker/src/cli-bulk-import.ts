@@ -452,6 +452,10 @@ async function main(slug: string): Promise<void> {
     for await (const snap of adapter.scrapeCatalog(ctx)) {
       if (processed >= limit) break;
       processed++;
+      if (!(snap.price.amount >= 500)) {
+        reporter.countRejected('below_min_price', snap.externalId);
+        continue;
+      }
       reporter.countCaptured();
       const norm = normalizeDescription(snap.rawDescription, {
         brand: snap.brand,

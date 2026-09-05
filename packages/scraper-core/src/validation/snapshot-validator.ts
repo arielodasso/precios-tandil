@@ -1,7 +1,12 @@
 import { productSnapshotSchema, type ProductSnapshot } from '@precios/shared';
 
 export type RejectionReason =
-  'invalid_snapshot' | 'invalid_price' | 'invalid_currency' | 'invalid_source_url';
+  | 'invalid_snapshot'
+  | 'invalid_price'
+  | 'invalid_currency'
+  | 'invalid_source_url'
+  | 'below_min_price'
+  | 'single_source';
 
 export interface ValidationOptions {
   allowedHosts: string[];
@@ -10,6 +15,9 @@ export interface ValidationOptions {
 export type ValidationResult =
   | { ok: true; value: ProductSnapshot; warnings: string[] }
   | { ok: false; reason: RejectionReason; issues: string[] };
+
+/** Precio mínimo de venta al público (ARS) para aceptar un snapshot. */
+export const MIN_SHELF_PRICE = 500;
 
 export function isValidEan13(ean: string): boolean {
   if (!/^\d{13}$/.test(ean)) return false;
@@ -38,6 +46,14 @@ export function validateSnapshot(raw: unknown, opts: ValidationOptions): Validat
 
   if (!(snap.price.amount > 0) || !Number.isFinite(snap.price.amount)) {
     return { ok: false, reason: 'invalid_price', issues: [`amount=${snap.price.amount}`] };
+  }
+
+  if (snap.price.amount < MIN_SHELF_PRICE) {
+    return {
+      ok: false,
+      reason: 'below_min_price',
+      issues: [`amount=${snap.price.amount} < ${MIN_SHELF_PRICE}`],
+    };
   }
 
   let url: URL;

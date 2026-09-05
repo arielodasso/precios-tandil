@@ -44,9 +44,10 @@ export async function listPublishedDeals(db: Kysely<DB>): Promise<DealPublicItem
     from deal_candidate dc
     join product p on p.id = dc.product_id
     left join deal_publication dp on dp.candidate_id = dc.id
-    left join price_aggregate pa on pa.product_id = p.id
-    left join store s on s.id = pa.best_store_id
+    join price_aggregate pa on pa.product_id = p.id
+    join store s on s.id = pa.best_store_id
     where dc.status in ('pending', 'published')
+      and pa.stores_count >= 2 and pa.best_price::numeric >= 500
       and (dp.expires_at is null or dp.expires_at > now())
     order by p.id, dc.discount_pct desc, dc.detected_at desc
     limit 50

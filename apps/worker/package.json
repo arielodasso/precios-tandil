@@ -15,6 +15,8 @@
     "unconflict": "tsx src/cli-unconflict.ts",
     "consolidate": "tsx src/cli-consolidate.ts",
     "merge-by-ean": "tsx src/cli-merge-by-ean.ts",
+    "purge": "tsx src/cli-purge.ts",
+    "refresh": "tsx src/cli-refresh.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type SqlBool } from 'kysely';
 import { AppError, type DB } from '@precios/shared';
 import { FRESH_WINDOW_DAYS } from './freshness.ts';
 import { cachedJson } from '../../plugins/cache.ts';
@@ -55,6 +55,7 @@ export async function getProductDetail(
   const product = await db
     .selectFrom('product')
     .leftJoin('category', 'category.id', 'product.category_id')
+    .innerJoin('price_aggregate as pa', 'pa.product_id', 'product.id')
     .select([
       'product.id',
       'product.slug',
@@ -67,6 +68,8 @@ export async function getProductDetail(
       'category.path as category_path',
     ])
     .where('product.slug', '=', slug)
+    .where('pa.stores_count', '>=', 2)
+    .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .executeTakeFirst();
 
   if (!product) {
