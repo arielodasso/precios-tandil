@@ -167,10 +167,9 @@ function BasketModal({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <h3 className="text-lg font-bold">Canasta CBA · {store.store_name}</h3>
+            <h3 className="text-lg font-bold">Canasta · {store.store_name}</h3>
             <p className="text-xs text-muted-foreground">
-              Canasta fija (INDEC) · {products.length} productos · Total{' '}
-              {formatArs(store.total_basket)}
+              Canasta fija · {products.length} productos · Total {formatArs(store.total_basket)}
             </p>
           </div>
           <div className="flex items-center gap-2">

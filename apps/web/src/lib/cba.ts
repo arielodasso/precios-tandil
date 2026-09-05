@@ -2,8 +2,8 @@ import { sql } from 'kysely';
 import type { KyselyDB } from '@/lib/queries/analytics';
 
 /**
- * Canasta fija inspirada en la Canasta Básica Alimentaria (INDEC),
- * adaptada a los productos que realmente se venden en el catálogo.
+ * Canasta fija de productos esenciales, adaptada a los productos que
+ * realmente se venden en el catálogo.
  *
  * Cada rubro define UN producto representativo utilizando un patrón sobre
  * canonical_name. El representante se elige con mayor cobertura de tiendas y,
@@ -140,7 +140,7 @@ async function fetchCandidates(db: KyselyDB): Promise<CandidateRow[]> {
 }
 
 /**
- * Resuelve la canasta fija CBA a productos concretos del catálogo.
+ * Resuelve la canasta fija a productos concretos del catálogo.
  * Por cada rubro elige el representante con mayor cobertura de tiendas
  * (y a igual cobertura, el más barato).
  */

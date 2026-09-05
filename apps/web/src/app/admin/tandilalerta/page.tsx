@@ -6,6 +6,7 @@ import {
   getBiggestRises,
   getPriceGaps,
   getCbaBasketByStore,
+  getCbaBasketDetail,
   getStoreCompetitiveness,
   getNearHistoricalLow,
   getMostVolatile,
@@ -13,6 +14,7 @@ import {
   type KyselyDB,
 } from '@/lib/queries/analytics';
 import { resolveCbaBasket } from '@/lib/cba';
+import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { CaptureSection } from '@/components/CaptureSection';
 import { BackButton } from '@/components/BackButton';
 import { AutoRefresh } from '@/components/AutoRefresh';
@@ -74,18 +76,29 @@ export default async function AnalyticsPage() {
   const db = getDb() as KyselyDB;
 
   const cbaItems = await resolveCbaBasket(db);
-  const [overview, drops, rises, gaps, basket, competitiveness, nearLow, volatile, topSavings] =
-    await Promise.all([
-      getOverview(db),
-      getBiggestDrops(db, 10),
-      getBiggestRises(db, 10),
-      getPriceGaps(db, 10),
-      getCbaBasketByStore(db, cbaItems),
-      getStoreCompetitiveness(db),
-      getNearHistoricalLow(db, 10),
-      getMostVolatile(db, 10),
-      getTopSavings(db, 10),
-    ]);
+  const [
+    overview,
+    drops,
+    rises,
+    gaps,
+    basket,
+    cbaDetails,
+    competitiveness,
+    nearLow,
+    volatile,
+    topSavings,
+  ] = await Promise.all([
+    getOverview(db),
+    getBiggestDrops(db, 10),
+    getBiggestRises(db, 10),
+    getPriceGaps(db, 10),
+    getCbaBasketByStore(db, cbaItems),
+    getCbaBasketDetail(db, cbaItems),
+    getStoreCompetitiveness(db),
+    getNearHistoricalLow(db, 10),
+    getMostVolatile(db, 10),
+    getTopSavings(db, 10),
+  ]);
 
   return (
     <div className="py-8">
@@ -104,10 +117,19 @@ export default async function AnalyticsPage() {
       {/* Canasta por tienda (al principio del panel) */}
       <CaptureSection
         title="Canasta por tienda"
-        description="Canasta fija inspirada en la Canasta Básica Alimentaria (INDEC): un conjunto fijo de productos por rubro, valuado en cada supermercado. Los productos que una tienda no vende se valúan al precio promedio. Click en una tienda para ver los productos."
+        description="Costo de una canasta fija de productos esenciales, valuada en cada supermercado. Los productos que una tienda no vende se valúan al precio promedio. Click en una tienda para ver los productos."
         fileName="precios-tandil-canasta.png"
       >
         <BasketSection basket={basket} />
+      </CaptureSection>
+
+      {/* Canasta para difusión (mismo bloque que la home, con exportación) */}
+      <CaptureSection
+        title="Canasta para difusión"
+        description="El mismo detalle de la home: elegí la tienda, armá la comparación y descargala como imagen para difundir."
+        fileName="precios-tandil-canasta-detalle.png"
+      >
+        <CbaBasketCard basket={basket} details={cbaDetails} exportable />
       </CaptureSection>
 
       {/* Overview */}

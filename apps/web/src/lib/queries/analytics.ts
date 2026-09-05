@@ -255,10 +255,10 @@ export async function getBasketByStore(db: KyselyDB) {
 }
 
 /**
- * Canasta fija por tienda (canasta CBA, INDEC):
+ * Canasta fija por tienda:
  * Igual metodología de valuación que getBasketByStore (mismo conjunto valuado,
  * con productos faltantes al precio de referencia) pero restringida al conjunto
- * FIJO de productos de la canasta básica alimentaria resuelto en lib/cba.
+ * FIJO de productos esenciales resuelto en lib/cba.
  */
 export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduct[]) {
   if (items.length === 0) return [];
@@ -357,7 +357,7 @@ export interface CbaStoreDetail {
 }
 
 /**
- * Detalle por tienda de la canasta fija CBA: para cada tienda, todos los
+ * Detalle por tienda de la canasta fija: para cada tienda, todos los
  * productos de la canasta con su precio en esa tienda, el promedio de las
  * demás tiendas que lo venden y si está disponible o se valuó al promedio.
  */
