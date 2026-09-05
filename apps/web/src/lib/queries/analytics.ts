@@ -338,7 +338,114 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
   }));
 }
 
-/** Per-store competitiveness: how often each store has the best price */
+export interface CbaStoreProduct {
+  key: string;
+  label: string;
+  rubric: string;
+  slug: string;
+  name: string;
+  brand: string | null;
+  price: number | null;
+  ref_price: number | null;
+  is_missing: boolean;
+}
+
+export interface CbaStoreDetail {
+  store_slug: string;
+  store_name: string;
+  products: CbaStoreProduct[];
+}
+
+/**
+ * Detalle por tienda de la canasta fija CBA: para cada tienda, todos los
+ * productos de la canasta con su precio en esa tienda, el promedio de las
+ * demás tiendas que lo venden y si está disponible o se valuó al promedio.
+ */
+export async function getCbaBasketDetail(db: KyselyDB, items: CbaResolvedProduct[]) {
+  if (items.length === 0) return [];
+
+  const payload = JSON.stringify(
+    items.map((r) => ({ productId: r.productId, key: r.key, label: r.label, rubric: r.rubric })),
+  );
+
+  const rows = await sql<{
+    store_slug: string;
+    store_name: string;
+    key: string;
+    label: string;
+    rubric: string;
+    slug: string;
+    name: string;
+    brand: string | null;
+    price: string | null;
+    ref_price: string | null;
+    is_missing: boolean;
+  }>`
+    with sel as (
+      select (i.value->>'productId')::int as product_id,
+             i.value->>'key' as key,
+             i.value->>'label' as label,
+             i.value->>'rubric' as rubric
+      from jsonb_array_elements(${payload}::jsonb) as i(value)
+    ),
+    prices as (
+      select ml.product_id, ss.store_id, min(pr.price_amount::numeric) as price
+      from match_link ml
+      join store_sku ss on ss.id = ml.store_sku_id and ss.is_active
+      join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
+        and pr.price_amount::numeric >= 500
+        and pr.captured_at >= now() - interval '7 days'
+      where ml.status in ('auto', 'confirmed')
+        and ml.product_id in (select product_id from sel)
+      group by ml.product_id, ss.store_id
+    ),
+    prod_ref as (
+      select product_id, avg(price) as ref_price
+      from prices group by product_id
+    ),
+    store_rows as (
+      select distinct store_id from prices
+    )
+    select
+      s.slug as store_slug,
+      s.name as store_name,
+      it.key, it.label, it.rubric,
+      p.slug, p.canonical_name as name, p.brand,
+      st.price::numeric::text as price,
+      pr.ref_price::numeric::text as ref_price,
+      (st.price is null) as is_missing
+    from sel it
+    join product p on p.id = it.product_id
+    join prod_ref pr on pr.product_id = p.id
+    cross join store_rows sr
+    join store s on s.id = sr.store_id and s.is_active
+    left join prices st on st.product_id = p.id and st.store_id = s.id
+    order by s.id asc, it.rubric asc, it.label asc
+  `
+    .execute(db)
+    .then((r) => r.rows);
+
+  const byStore = new Map<string, CbaStoreDetail>();
+  for (const r of rows) {
+    let d = byStore.get(r.store_slug);
+    if (!d) {
+      d = { store_slug: r.store_slug, store_name: r.store_name, products: [] };
+      byStore.set(r.store_slug, d);
+    }
+    d.products.push({
+      key: r.key,
+      label: r.label,
+      rubric: r.rubric,
+      slug: r.slug,
+      name: r.name,
+      brand: r.brand,
+      price: r.price === null ? null : Number(r.price),
+      ref_price: r.ref_price === null ? null : Number(r.ref_price),
+      is_missing: r.is_missing,
+    });
+  }
+  return [...byStore.values()];
+}
 export async function getStoreCompetitiveness(db: KyselyDB) {
   return db
     .selectFrom('price_aggregate as pa')

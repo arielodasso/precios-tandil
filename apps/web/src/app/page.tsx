@@ -4,7 +4,14 @@ import { SearchBar } from '@/components/SearchBar';
 import { ProductCard } from '@/components/ProductCard';
 import { apiFetch } from '@/lib/api';
 import { getDb } from '@/lib/db';
-import { getOverview, getBasketByStore } from '@/lib/queries/analytics';
+import {
+  getOverview,
+  getBasketByStore,
+  getCbaBasketByStore,
+  getCbaBasketDetail,
+} from '@/lib/queries/analytics';
+import { resolveCbaBasket } from '@/lib/cba';
+import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { CategoryNode } from '@/lib/queries/categories';
@@ -27,12 +34,22 @@ export default async function HomePage() {
 
   let overview: Awaited<ReturnType<typeof getOverview>> | null = null;
   let basket: Awaited<ReturnType<typeof getBasketByStore>> = [];
+  let cbaBasket: Awaited<ReturnType<typeof getCbaBasketByStore>> = [];
+  let cbaDetails: Awaited<ReturnType<typeof getCbaBasketDetail>> = [];
   try {
     const db = getDb();
-    [overview, basket] = await Promise.all([getOverview(db), getBasketByStore(db)]);
+    const cbaItems = await resolveCbaBasket(db);
+    [overview, basket, cbaBasket, cbaDetails] = await Promise.all([
+      getOverview(db),
+      getBasketByStore(db),
+      getCbaBasketByStore(db, cbaItems),
+      getCbaBasketDetail(db, cbaItems),
+    ]);
   } catch {
     overview = null;
     basket = [];
+    cbaBasket = [];
+    cbaDetails = [];
   }
 
   try {
@@ -90,7 +107,7 @@ export default async function HomePage() {
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg bg-muted/40 p-3">
                 <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
                 <p className="text-xl font-bold">{formatInt(overview?.prices_today)}</p>
@@ -104,6 +121,7 @@ export default async function HomePage() {
                   </p>
                 )}
               </div>
+              <CbaBasketCard basket={cbaBasket} details={cbaDetails} />
             </div>
 
             {cheapestStore && cheapestSavingsPct !== null && (
