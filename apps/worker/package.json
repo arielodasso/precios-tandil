@@ -14,6 +14,7 @@
     "rematch": "tsx src/cli-rematch.ts",
     "unconflict": "tsx src/cli-unconflict.ts",
     "consolidate": "tsx src/cli-consolidate.ts",
+    "merge-by-ean": "tsx src/cli-merge-by-ean.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

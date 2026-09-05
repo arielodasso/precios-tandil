@@ -41,7 +41,7 @@ const UA_POOL = [
 const AUTO_MATCH_THRESHOLD = 0.82;
 const REVIEW_THRESHOLD = 0.65;
 const EAN_CONFLICT_SIMILARITY = 0.75;
-const CANDIDATE_POOL_SIZE = 30000;
+const CANDIDATE_POOL_SIZE = 100000;
 
 export interface PipelineRunOptions {
   runId: string;
