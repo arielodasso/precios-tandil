@@ -4,7 +4,7 @@ import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { loadOffersByProduct } from '@/lib/queries/offers';
-import type { CardOffer } from '@/lib/types';
+import type { CardOffer, ProductUnit } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -34,6 +34,7 @@ export default async function BuscarPage({
     slug: string;
     name: string;
     brand: string | null;
+    unit: ProductUnit | null;
     best_price: number | null;
     stores_count: number | null;
     image_url: string | null;
@@ -68,6 +69,8 @@ export default async function BuscarPage({
       slug: string;
       name: string;
       brand: string | null;
+      unit_amount: string | null;
+      unit_type: string | null;
       best_price: number | null;
       stores_count: number | null;
       image_url: string | null;
@@ -76,6 +79,8 @@ export default async function BuscarPage({
              p.slug,
              p.canonical_name as name,
              p.brand,
+             p.unit_amount,
+             p.unit_type,
              pa.best_price::float8 as best_price,
              pa.stores_count,
              p.image_url
@@ -109,6 +114,10 @@ export default async function BuscarPage({
         slug: r.slug,
         name: r.name,
         brand: r.brand,
+        unit:
+          r.unit_amount != null && r.unit_type != null
+            ? { amount: Number(r.unit_amount), type: r.unit_type as ProductUnit['type'] }
+            : null,
         best_price: r.best_price === null ? null : Math.round(Number(r.best_price) * 100) / 100,
         stores_count: r.stores_count,
         image_url: r.image_url,
@@ -167,6 +176,7 @@ export default async function BuscarPage({
                   slug: p.slug,
                   name: p.name,
                   brand: p.brand,
+                  unit: p.unit,
                   best_price: p.best_price,
                   stores_count: p.stores_count,
                   image_url: p.image_url,

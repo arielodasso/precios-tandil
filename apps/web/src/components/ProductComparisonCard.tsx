@@ -2,8 +2,10 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { DealBadge } from './DealBadge';
 import { ProductImage } from './ProductImage';
+import { AddToListButton } from './AddToListButton';
 import { formatArs } from './HistoryStrip';
-import { cn, titleCase } from '@/lib/utils';
+import { cn, formatUnit, titleCase } from '@/lib/utils';
+import type { ProductUnit } from '@/lib/types';
 
 export interface OfferView {
   store: string;
@@ -19,14 +21,18 @@ export interface OfferView {
  * porcentual contra el mínimo (FR-014). Estados T074: stale, sin ofertas.
  */
 export function ProductComparisonCard({
+  slug,
   name,
   brand,
+  unit,
   imageUrl,
   offers,
   dealBadge,
 }: {
+  slug: string;
   name: string;
   brand: string | null;
+  unit?: ProductUnit | null;
   imageUrl?: string | null;
   offers: OfferView[];
   dealBadge?: { badge: 'gold' | 'green' } | null;
@@ -45,6 +51,29 @@ export function ProductComparisonCard({
           <div>
             <h1 className="text-xl font-bold tracking-tight">{titleCase(name)}</h1>
             {brand && <p className="mt-1 text-sm text-muted-foreground">{brand}</p>}
+            {unit && (
+              <p className="mt-0.5 text-xs font-medium text-muted-foreground/80">
+                {formatUnit(unit)}
+              </p>
+            )}
+            <AddToListButton
+              className="mt-2"
+              item={{
+                slug,
+                name,
+                brand: brand ?? null,
+                unit: unit ?? null,
+                image_url: imageUrl ?? null,
+                offers: offers
+                  .filter((o) => o.price != null)
+                  .map((o) => ({
+                    store: o.store,
+                    store_name: o.store_name,
+                    price: o.price,
+                    source_url: o.source_url ?? null,
+                  })),
+              }}
+            />
           </div>
         </div>
         {dealBadge && <DealBadge variant={dealBadge.badge} />}

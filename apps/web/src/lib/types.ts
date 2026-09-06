@@ -39,7 +39,7 @@ export interface ProductDetail {
   name: string;
   brand: string | null;
   ean: number | null;
-  unit: { amount: number; type: string } | null;
+  unit: ProductUnit | null;
   category: string | null;
   image_url: string | null;
   offers: ProductOffer[];
@@ -82,4 +82,11 @@ export interface CardOffer {
   store_name: string;
   price: number | null;
   source_url: string | null;
+}
+
+export type UnitType = 'kg' | 'g' | 'l' | 'ml' | 'un';
+
+export interface ProductUnit {
+  amount: number;
+  type: UnitType;
 }

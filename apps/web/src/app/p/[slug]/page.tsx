@@ -89,8 +89,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ProductComparisonCard
+        slug={product.slug}
         name={product.name}
         brand={product.brand}
+        unit={product.unit}
         imageUrl={product.image_url}
         offers={offers}
         dealBadge={product.deal_badge ? { badge: product.deal_badge } : null}

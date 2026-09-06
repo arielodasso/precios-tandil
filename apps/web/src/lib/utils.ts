@@ -1,8 +1,26 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { ProductUnit } from '@/lib/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Formatea la unidad de un producto para mostrar en la UI.
+ * "1 kg", "500 ml", "6 uds", etc.
+ */
+export function formatUnit(unit: ProductUnit | null | undefined): string | null {
+  if (!unit) return null;
+  const typeLabels: Record<string, string> = {
+    kg: 'kg',
+    g: 'g',
+    l: 'L',
+    ml: 'ml',
+    un: 'uds',
+  };
+  const displayType = typeLabels[unit.type] ?? unit.type;
+  return `${unit.amount} ${displayType}`;
 }
 
 /**

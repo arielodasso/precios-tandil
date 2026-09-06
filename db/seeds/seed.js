@@ -23,6 +23,7 @@ const CATEGORIES = [
   { slug: 'perfumeria', name: 'Perfumería', parent: null },
   { slug: 'congelados', name: 'Congelados', parent: null },
   { slug: 'mascotas', name: 'Mascotas', parent: null },
+  { slug: 'electrodomesticos', name: 'Electrodomésticos y Tecnología', parent: null },
   // ── Almacén children ──
   { slug: 'arroz', name: 'Arroz', parent: 'almacen' },
   { slug: 'aceite', name: 'Aceite', parent: 'almacen' },

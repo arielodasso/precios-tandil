@@ -2,14 +2,16 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { formatArs } from './HistoryStrip';
 import { ProductImage } from './ProductImage';
+import { AddToListButton } from './AddToListButton';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn, titleCase } from '@/lib/utils';
-import type { CardOffer } from '@/lib/types';
+import { cn, formatUnit, titleCase } from '@/lib/utils';
+import type { CardOffer, ProductUnit } from '@/lib/types';
 
 export interface ProductCardData {
   slug: string;
   name: string;
   brand?: string | null;
+  unit?: ProductUnit | null;
   best_price?: number | null;
   stores_count?: number | null;
   store_slug?: string | null;
@@ -24,7 +26,16 @@ export interface ProductCardData {
  * de las fuentes (no solo el mejor), cada uno con su link de origen.
  */
 export function ProductCard({ product }: { product: ProductCardData }) {
-  const { slug, name, brand, image_url: imageUrl, offers, discount_pct, stores_count } = product;
+  const {
+    slug,
+    name,
+    brand,
+    unit,
+    image_url: imageUrl,
+    offers,
+    discount_pct,
+    stores_count,
+  } = product;
 
   const fallbackBest = product.best_price;
   const sortedOffers =
@@ -52,6 +63,11 @@ export function ProductCard({ product }: { product: ProductCardData }) {
               {titleCase(name)}
             </Link>
             {brand ? <p className="mt-0.5 text-sm text-muted-foreground">{brand}</p> : null}
+            {unit && (
+              <p className="mt-0.5 text-xs font-medium text-muted-foreground/80">
+                {formatUnit(unit)}
+              </p>
+            )}
 
             {typeof discount_pct === 'number' && (
               <p className="mt-0.5 text-sm font-semibold text-emerald-600">
@@ -61,13 +77,28 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </div>
 
           {showBest && bestPrice != null ? (
-            <div className="shrink-0 text-right">
-              <p className="text-lg font-bold leading-none text-primary">{formatArs(bestPrice)}</p>
-              {stores_count != null ? (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <div className="text-right">
+                <p className="text-lg font-bold leading-none text-primary">
+                  {formatArs(bestPrice)}
                 </p>
-              ) : null}
+                {stores_count != null ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
+                  </p>
+                ) : null}
+              </div>
+              <AddToListButton
+                className="px-1.5 py-0.5 text-[11px]"
+                item={{
+                  slug,
+                  name,
+                  brand: brand ?? null,
+                  unit: unit ?? null,
+                  image_url: imageUrl ?? null,
+                  offers: offers ?? [],
+                }}
+              />
             </div>
           ) : null}
         </div>

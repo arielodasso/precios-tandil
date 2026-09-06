@@ -44,7 +44,7 @@ describe('matchCategoryByName', () => {
   });
 
   it('sin match devuelve almacen (default)', () => {
-    expect(matchCategoryByName('campana extractora 90cm')).toBe('almacen');
+    expect(matchCategoryByName('malteada quemada premium')).toBe('almacen');
   });
 
   it('colisiones que generaban regresiones en el retag', () => {
@@ -135,5 +135,81 @@ describe('matchCategoryByStorePath', () => {
 
   it('path genérico almacen se mapea a la raíz', () => {
     expect(matchCategoryByStorePath(['almacen'])).toBe('almacen');
+  });
+
+  it('paths de electrodomésticos/tecnología se mapean a su categoría', () => {
+    expect(matchCategoryByStorePath(['Electrodomésticos'])).toBe('electrodomesticos');
+    expect(matchCategoryByStorePath(['Electro', 'Cocina'])).toBe('electrodomesticos');
+    expect(matchCategoryByStorePath(['Tecnología', 'Celulares'])).toBe('electrodomesticos');
+    expect(matchCategoryByStorePath(['Linea Blanca'])).toBe('electrodomesticos');
+    expect(matchCategoryByStorePath(['Electro Hogar'])).toBe('electrodomesticos');
+    expect(matchCategoryByStorePath(['Pequeños Electrodomésticos'])).toBe('electrodomesticos');
+  });
+
+  it('"hogar" solitario sigue siendo limpieza, no electrodomésticos', () => {
+    expect(matchCategoryByStorePath(['Hogar'])).toBe('limpieza');
+  });
+});
+
+describe('matchCategoryByName - electrodomesticos', () => {
+  it('clasifica heladeras, freezers y lavado en electrodomesticos', () => {
+    expect(matchCategoryByName('heladera no frost 400lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('freezer horizontal 220lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('lavarropas automatico 8kg')).toBe('electrodomesticos');
+    expect(matchCategoryByName('lavavajillas 12 cubiertos')).toBe('electrodomesticos');
+    expect(matchCategoryByName('secarropas centrifuga')).toBe('electrodomesticos');
+  });
+
+  it('clasifica cocción: anafes, microondas, hornos eléctricos', () => {
+    expect(matchCategoryByName('anafe electrico vitroceramico 60cm')).toBe('electrodomesticos');
+    expect(matchCategoryByName('microondas 20lt digital')).toBe('electrodomesticos');
+    expect(matchCategoryByName('horno electrico 36lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('campana extractora 90cm')).toBe('electrodomesticos');
+  });
+
+  it('clasifica pequeños electrodomésticos de cocina', () => {
+    expect(matchCategoryByName('licuadora 450w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('batidora de mano 250w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('minipimer 200w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('sandwichera doble')).toBe('electrodomesticos');
+    expect(matchCategoryByName('tostadora 4 rebanadas')).toBe('electrodomesticos');
+    expect(matchCategoryByName('pava electrica 1.5lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('balanza cocina digital 5kg')).toBe('electrodomesticos');
+    expect(matchCategoryByName('freidora de aire 3.5lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('airfryer philco 5lt')).toBe('electrodomesticos');
+  });
+
+  it('cafeteras (máquinas) van a electrodomesticos, no a almacen/cafe', () => {
+    expect(matchCategoryByName('cafetera express philco')).toBe('electrodomesticos');
+    expect(matchCategoryByName('cafetera nespresso inissia')).toBe('electrodomesticos');
+    expect(matchCategoryByName('cafetera dolce gusto genio')).toBe('electrodomesticos');
+    expect(matchCategoryByName('espresso ariete moderna')).toBe('electrodomesticos');
+  });
+
+  it('el café envasado NO va a electrodomesticos', () => {
+    expect(matchCategoryByName('cafe molido premium')).toBe('almacen/cafe');
+    expect(matchCategoryByName('cafe premium suave')).toBe('almacen/cafe');
+    expect(matchCategoryByName('capsulas nespresso x8')).toBe('almacen');
+  });
+
+  it('clasifica clima: ventiladores, calefactores, aire acondicionado', () => {
+    expect(matchCategoryByName('ventilador de pie')).toBe('electrodomesticos');
+    expect(matchCategoryByName('calefactor turbo')).toBe('electrodomesticos');
+    expect(matchCategoryByName('aire acondicionado 3000 frigorias')).toBe('electrodomesticos');
+    expect(matchCategoryByName('caloventor 2000w')).toBe('electrodomesticos');
+  });
+
+  it('clasifica electrónica: tv, tablets, celulares, audio', () => {
+    expect(matchCategoryByName('televisor smart 43 pulgadas')).toBe('electrodomesticos');
+    expect(matchCategoryByName('apple ipad a16 128gb')).toBe('electrodomesticos');
+    expect(matchCategoryByName('celular samsung galaxy a15')).toBe('electrodomesticos');
+    expect(matchCategoryByName('parlante bluetooth portatil')).toBe('electrodomesticos');
+    expect(matchCategoryByName('auriculares inalambricos tws')).toBe('electrodomesticos');
+  });
+
+  it('no clasifica alimentos ni limpieza que contengan palabras parecidas', () => {
+    expect(matchCategoryByName('bolsa horno barbacoa')).toBe('almacen');
+    expect(matchCategoryByName('bizcochuelo mama cocina')).toBe('almacen');
+    expect(matchCategoryByName('pan de campo')).toBe('frescos/panaderia');
   });
 });

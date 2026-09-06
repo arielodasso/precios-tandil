@@ -103,6 +103,7 @@ export default async function CategoryPage({
                   slug: p.slug,
                   name: p.name,
                   brand: p.brand,
+                  unit: p.unit,
                   best_price: p.best_price,
                   stores_count: p.stores_count,
                   image_url: p.image_url,

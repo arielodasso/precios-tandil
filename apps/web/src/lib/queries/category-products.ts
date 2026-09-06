@@ -1,7 +1,7 @@
 import { sql, type Kysely } from 'kysely';
 import type { DB } from '@precios/shared';
 import { loadOffersByProduct } from './offers';
-import type { CardOffer } from '@/lib/types';
+import type { CardOffer, ProductUnit } from '@/lib/types';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -114,6 +114,8 @@ interface CategoryProductRow {
   slug: string;
   name: string;
   brand: string | null;
+  unit_amount: string | null;
+  unit_type: string | null;
   image_url: string | null;
   best_price: string | number | null;
   stores_count: string | number | null;
@@ -124,6 +126,7 @@ export interface CategoryProductItem {
   slug: string;
   name: string;
   brand: string | null;
+  unit: ProductUnit | null;
   image_url: string | null;
   best_price: number | null;
   stores_count: number | null;
@@ -185,7 +188,9 @@ export async function listCategoryProducts(
   const total = Number(countRows.rows[0]?.total ?? 0);
 
   const rows = await sql<CategoryProductRow>`
-    select p.id, p.slug, p.canonical_name as name, p.brand, p.image_url,
+    select p.id, p.slug, p.canonical_name as name, p.brand,
+           p.unit_amount, p.unit_type,
+           p.image_url,
            pa.best_price::float8 as best_price, pa.stores_count
     from product p
     join category c on c.id = p.category_id
@@ -207,6 +212,10 @@ export async function listCategoryProducts(
       slug: r.slug,
       name: r.name,
       brand: r.brand,
+      unit:
+        r.unit_amount != null && r.unit_type != null
+          ? { amount: Number(r.unit_amount), type: r.unit_type as ProductUnit['type'] }
+          : null,
       image_url: r.image_url,
       best_price: r.best_price == null ? null : Number(r.best_price),
       stores_count: r.stores_count == null ? null : Number(r.stores_count),
