@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
+import { jsonWithCache } from '@/lib/http';
 
 export async function GET() {
   try {
@@ -33,7 +34,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ stores });
+    return jsonWithCache({ stores });
   } catch (err) {
     console.error('[stores]', err);
     return NextResponse.json(

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getDb } from '@/lib/db';
 import { getCategoryTree, type CategoryNode } from '@/lib/queries/categories';
 import {
@@ -11,10 +12,9 @@ import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { siteUrl } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
-
-export const metadata = { title: 'Categoría' };
 
 const PAGE_SIZE = 10;
 
@@ -25,6 +25,44 @@ function formatArs(value: number | null | undefined): string {
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const db = getDb();
+  const tree = await getCategoryTree(db);
+  const match = findCategory(tree, slug);
+  if (!match) return { title: 'Categoría' };
+
+  const summary = await getCategorySummary(db, slug);
+  const avg = summary?.avg_best_price ?? null;
+  const description =
+    avg !== null && avg !== undefined
+      ? `${match.name}: compará precios entre supermercados de Tandil. Precio promedio ${formatArs(avg)}.`
+      : `${match.name}: compará precios entre supermercados de Tandil.`;
+
+  return {
+    title: match.name,
+    description,
+    alternates: { canonical: siteUrl(`/categoria/${slug}`) },
+    openGraph: {
+      title: `${match.name} — precios en supermercados de Tandil`,
+      description,
+      url: siteUrl(`/categoria/${slug}`),
+      type: 'website',
+      locale: 'es_AR',
+      siteName: 'Precios Tandil',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${match.name} — precios en supermercados de Tandil`,
+      description,
+    },
+  };
 }
 
 export default async function CategoryPage({
@@ -65,8 +103,37 @@ export default async function CategoryPage({
     return `/categoria/${slug}?${params.toString()}`;
   };
 
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: siteUrl('/') },
+      { '@type': 'ListItem', position: 2, name: match.name, item: siteUrl(`/categoria/${slug}`) },
+    ],
+  };
+
+  const itemListLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: match.name,
+    itemListElement: items.map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: p.name,
+      url: siteUrl(`/p/${p.slug}`),
+    })),
+  };
+
   return (
     <div className="py-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
+      />
       <div className="mb-6 flex items-center gap-3">
         <BackButton />
         <h1 className="text-2xl font-bold">{match.name}</h1>

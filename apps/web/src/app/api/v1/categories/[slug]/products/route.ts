@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { listCategoryProducts } from '@/lib/queries/category-products';
+import { jsonWithCache } from '@/lib/http';
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -22,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     }
     const legacy = Number.isInteger(legacyLimit) && legacyLimit > 0 ? legacyLimit : 10;
     const products = legacy === 10 ? result.items : result.items.slice(0, legacy);
-    return NextResponse.json({
+    return jsonWithCache({
       products,
       total: result.total,
       page: result.page,

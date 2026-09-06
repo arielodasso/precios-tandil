@@ -14,6 +14,7 @@ import { resolveCbaBasket } from '@/lib/cba';
 import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { siteUrl } from '@/lib/site';
 import type { CategoryNode } from '@/lib/queries/categories';
 import type { DealItem } from '@/lib/types';
 
@@ -68,8 +69,44 @@ export default async function HomePage() {
       ? Math.abs(Number(cheapestStore.vs_reference_pct))
       : null;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': siteUrl('/#organization'),
+        name: 'Precios Tandil',
+        url: siteUrl('/'),
+        logo: siteUrl('/sigma-market.png'),
+        description:
+          'Comparador de precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto.',
+        sameAs: ['https://sigmatecnologiasarg.com', 'https://www.instagram.com/tandilalerta/'],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': siteUrl('/#website'),
+        url: siteUrl('/'),
+        name: 'Precios Tandil',
+        inLanguage: 'es-AR',
+        publisher: { '@id': siteUrl('/#organization') },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${siteUrl('/')}buscar?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+
   return (
     <div className="py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <h1 className="mb-2 text-3xl font-extrabold tracking-tight lg:text-4xl">
         ¿Dónde conviene comprar hoy?
       </h1>

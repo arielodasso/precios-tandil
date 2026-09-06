@@ -1,10 +1,11 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Montserrat } from 'next/font/google';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Footer } from '@/components/Footer';
 import { ProductListProvider } from '@/components/ProductListContext';
 import { ProductListToggle } from '@/components/ProductListSidebar';
+import { SITE_BASE_URL } from '@/lib/site';
 import './globals.css';
 
 const montserrat = Montserrat({
@@ -14,17 +15,56 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_BASE_URL),
   title: {
     default: 'Precios Tandil — compará supermercados',
     template: '%s | Precios Tandil',
   },
   description:
     'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto. Historial de precios y oportunidades.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_AR',
+    url: '/',
+    siteName: 'Precios Tandil',
+    title: 'Precios Tandil — compará precios de supermercados',
+    description:
+      'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto. Historial de precios y oportunidades detectadas.',
+    images: [{ url: '/sigma-market.png', width: 512, height: 512, alt: 'Precios Tandil' }],
+  },
+  twitter: {
+    card: 'summary',
+    site: '@tandilalerta',
+    creator: '@tandilalerta',
+    title: 'Precios Tandil — compará precios de supermercados',
+    description: 'Compará precios de supermercados de Tandil y encontrá las mejores oportunidades.',
+    images: ['/sigma-market.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: '/sigma-market.png',
     shortcut: '/sigma-market.png',
     apple: '/sigma-market.png',
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
 };
 
 const themeScript = `

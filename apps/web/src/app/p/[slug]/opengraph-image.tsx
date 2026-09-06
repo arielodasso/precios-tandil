@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { siteUrl } from '@/lib/site';
 
 export const alt = 'Precio en supermercados de Tandil';
 export const size = { width: 1200, height: 630 };
@@ -13,10 +14,10 @@ export default async function OpengraphImage({ params }: { params: Promise<{ slu
   let name = slug;
   let price: string | null = null;
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'}/products/${slug}`,
-      { cache: 'no-store' },
-    );
+    const res = await fetch(`${siteUrl('/')}api/v1/products/${slug}`, {
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    });
     if (res.ok) {
       const data = (await res.json()) as {
         name: string;

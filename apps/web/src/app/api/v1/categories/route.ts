@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
+import { jsonWithCache } from '@/lib/http';
 
 interface CategoryCountRow {
   id: number;
@@ -57,7 +58,7 @@ export async function GET() {
     };
     for (const root of roots) aggregateTotals(root);
 
-    return NextResponse.json({ categories: roots });
+    return jsonWithCache({ categories: roots });
   } catch (err) {
     console.error('[categories]', err);
     return NextResponse.json(

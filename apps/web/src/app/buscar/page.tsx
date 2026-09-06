@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { sql } from 'kysely';
+import type { Metadata } from 'next';
 import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
@@ -10,7 +11,12 @@ import { Input } from '@/components/ui/input';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: 'Buscar productos' };
+export const metadata: Metadata = {
+  title: 'Buscar productos',
+  description: 'Buscá productos y compará precios entre los supermercados de Tandil.',
+  alternates: { canonical: '/buscar' },
+  robots: { index: false, follow: true },
+};
 
 const PAGE_SIZE = 12;
 const FRESH_WINDOW_DAYS = 7;

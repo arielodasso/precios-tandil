@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
+import { jsonWithCache, SEARCH_JSON_CACHE } from '@/lib/http';
 
 const FRESH_WINDOW_DAYS = 7;
 const freshWindowInterval = sql.raw(`interval '${FRESH_WINDOW_DAYS} days'`);
@@ -141,10 +142,13 @@ export async function GET(request: Request) {
         : null,
     }));
 
-    return NextResponse.json({
-      results,
-      next_cursor: results.length === limit ? encodeCursor(offset + limit) : null,
-    });
+    return jsonWithCache(
+      {
+        results,
+        next_cursor: results.length === limit ? encodeCursor(offset + limit) : null,
+      },
+      SEARCH_JSON_CACHE,
+    );
   } catch (err) {
     console.error('[search]', err);
     return errorResponse('internal_error', 'Error interno', 500);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
+import { jsonWithCache } from '@/lib/http';
 
 const FRESH_WINDOW_DAYS = 7;
 
@@ -150,7 +151,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       response.stale_notice = 'Este producto no tiene precios actualizados en las ultimas tiendas.';
     }
 
-    return NextResponse.json(response);
+    return jsonWithCache(response);
   } catch (err) {
     console.error('[product]', err);
     return errorResponse('internal_error', 'Error interno', 500);
