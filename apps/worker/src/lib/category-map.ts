@@ -22,6 +22,52 @@ export interface CategoryRule {
 // ---- Match por nombre de producto (fallback) ----
 // Orden importa: el primero que matchea gana. Reglas más específicas primero.
 const NAME_RULES: CategoryRule[] = [
+  // ── Desambiguaciones que ganan sobre electrodomésticos ──
+  // "tableta", "lavavajillas" y "dolce gusto" son ambiguos: la máquina vs el consumible.
+  {
+    categoryPath: 'limpieza/detergentes',
+    prefixes: [
+      'lavavajillas concentrado',
+      'lavavajillas limon',
+      'lavavajillas tabletas',
+      'sun lavavajillas',
+      'tableta lavavajillas',
+      'tabletas lavavajillas',
+    ],
+  },
+  {
+    categoryPath: 'almacen/cafe',
+    prefixes: [
+      'dolce gusto chocochino',
+      'dolce gusto lungo',
+      'dolce gusto decafeinado',
+      'dolce gusto descafeinado',
+      'dolce gusto frappe',
+      'dolce gusto latte',
+    ],
+  },
+  {
+    categoryPath: 'limpieza/higiene-del-hogar',
+    prefixes: [
+      'tabletas insecticidas',
+      'tabletas insecticida',
+      'tabletas raid',
+      'tabletas ahuyenta',
+      'tableta fuyi',
+      'raid aparato tab',
+      'raid aparato',
+    ],
+  },
+  {
+    categoryPath: 'perfumeria/higiene-bucal',
+    prefixes: [
+      'tableta limpiadora',
+      'tabletas limpiadoras',
+      'tabletitas limpiadoras',
+      'limpiador protesis',
+      'tab limpiador protesis',
+    ],
+  },
   // ── Electrodomésticos y tecnología ──
   // Van antes que todo: 'cafetera'/'espresso' deben ganar sobre 'almacen/cafe',
   // y evitan que estos productos caigan en 'almacen' (default) o 'almacen/infusiones'.
@@ -72,7 +118,9 @@ const NAME_RULES: CategoryRule[] = [
       'fryer',
       'balanza cocina digital',
       'balanza digital cocina',
-      // Cafeteras (máquinas), no el café envasado
+      // Cafeteras (máquinas). SIN 'cafetera', 'dolce gusto'/'nespresso'/'espresso'
+      // puede ser café o cápsulas → las desambiguaciones de arriba se encargan
+      // (ej. 'dolce gusto chocochino x10u capsula' → almacen/cafe).
       'cafetera',
       'cafeteras',
       'espresso',
@@ -107,7 +155,13 @@ const NAME_RULES: CategoryRule[] = [
       'televicion',
       'lcd',
       'led tv',
-      'tablet',
+      // 'tablet ' (con espacio): los dispositivos se escriben con la forma inglesa
+      // ("Tablet Samsung Galaxy Tab..."). 'tableta'/'tabletas' (femenino) es casi
+      // siempre chocolate o insecticida → va a almacen/chocolates o limpieza.
+      'tablet ',
+      'tableta grafica',
+      'tableta graficas',
+      'tableta digitalizadora',
       'ipad',
       'apple ipad',
       'apple iphone',
@@ -139,6 +193,13 @@ const NAME_RULES: CategoryRule[] = [
     ],
   },
   // ── Desambiguaciones de alto riesgo (van antes que todo) ──
+  // "tableta(s)" en femenino casi siempre es chocolate/tableta de repostería.
+  // El único electro femenino real es la tableta gráfica (ya resuelto arriba) y
+  // las tabletas insecticidas/dentales/lavavajillas (resueltas al inicio).
+  {
+    categoryPath: 'almacen/chocolates',
+    prefixes: ['tableta', 'tabletas', 'tabletitas'],
+  },
   { categoryPath: 'perfumeria/cuidado-corporal', prefixes: ['agua micelar'] },
   { categoryPath: 'almacen/condimentos', prefixes: ['nuez moscada'] },
   { categoryPath: 'mascotas', prefixes: ['snack para gato', 'snack para perro'] },

@@ -192,6 +192,41 @@ describe('matchCategoryByName - electrodomesticos', () => {
     expect(matchCategoryByName('capsulas nespresso x8')).toBe('almacen');
   });
 
+  it('café en cápsulas "dolce gusto" no va a electrodomesticos', () => {
+    expect(matchCategoryByName('dolce gusto chocochino x10u capsula')).toBe('almacen/cafe');
+    expect(matchCategoryByName('dolce gusto lungo decafeinado x16u')).toBe('almacen/cafe');
+  });
+
+  it('tablets (dispositivos) van a electrodomesticos, tabletas NO', () => {
+    expect(matchCategoryByName('tablet samsung galaxy tab s10 lite')).toBe('electrodomesticos');
+    expect(matchCategoryByName('tablet amazon fire hd 8')).toBe('electrodomesticos');
+    expect(matchCategoryByName('tableta grafica gadnic niveles presion')).toBe('electrodomesticos');
+    expect(matchCategoryByName('tableta vauquita')).toBe('almacen/chocolates');
+    expect(matchCategoryByName('tableta dulce de leche chocolate')).toBe('almacen/chocolates');
+    expect(matchCategoryByName('tableta bon o bon 160g')).toBe('almacen/chocolates');
+    expect(matchCategoryByName('tabletitas chocolatier aguila')).toBe('almacen/chocolates');
+  });
+
+  it('tabletas insecticidas / de limpieza / dentales no van a electrodomesticos', () => {
+    expect(matchCategoryByName('tabletas insecticidas raid moscas mosquitos')).toBe(
+      'limpieza/higiene-del-hogar',
+    );
+    expect(matchCategoryByName('tabletas ahuyenta mosquitos dia')).toBe(
+      'limpieza/higiene-del-hogar',
+    );
+    expect(matchCategoryByName('tableta fuyi x12u')).toBe('limpieza/higiene-del-hogar');
+    expect(matchCategoryByName('sun lavavajillas tabletas x20u')).toBe('limpieza/detergentes');
+    expect(matchCategoryByName('tabletas lavavajillas sun todo en 1 20pc')).toBe(
+      'limpieza/detergentes',
+    );
+    expect(matchCategoryByName('lavavajillas concentrado diluir limon dia')).toBe(
+      'limpieza/detergentes',
+    );
+    expect(matchCategoryByName('limpiador protesis tab blanqueador 30uds')).toBe(
+      'perfumeria/higiene-bucal',
+    );
+  });
+
   it('clasifica clima: ventiladores, calefactores, aire acondicionado', () => {
     expect(matchCategoryByName('ventilador de pie')).toBe('electrodomesticos');
     expect(matchCategoryByName('calefactor turbo')).toBe('electrodomesticos');
