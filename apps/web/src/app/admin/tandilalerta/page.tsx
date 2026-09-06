@@ -144,7 +144,7 @@ export default async function AnalyticsPage() {
       {/* Product History Search */}
       <CaptureSection
         title="Evolución de precio"
-        description="Buscá un producto por su slug para ver la evolución histórica de precios."
+        description="Buscá un producto por su nombre o slug para ver la evolución histórica de precios."
         fileName="precios-tandil-evolucion.png"
       >
         <ProductHistorySearch />

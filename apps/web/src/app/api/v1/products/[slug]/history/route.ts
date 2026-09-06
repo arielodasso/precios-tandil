@@ -18,25 +18,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     }
 
     const nameLike = slug.replace(/-/g, ' ');
-    const likePattern = `%${nameLike}%`;
-    const prefixPattern = `${slug}-%`;
+    const tokens = slug.split('-').filter(Boolean);
+    const tokenConditions = tokens.map(
+      (t) =>
+        sql`(p.canonical_name ilike ${`%${t}%`} or p.slug ilike ${`%${t}%`} or p.brand ilike ${`%${t}%`})`,
+    );
     const product = await sql<{ id: string; name: string }>`
       select id::text as id, canonical_name::text as name
       from product p
       join price_aggregate pa on pa.product_id = p.id
-      where (
-        p.slug = ${slug}
-        or p.canonical_name = ${nameLike}
-        or p.slug like ${prefixPattern}
-        or p.canonical_name like ${likePattern}
-      )
-        and pa.stores_count >= 2 and pa.best_price::numeric >= 500
+      where pa.stores_count >= 2 and pa.best_price::numeric >= 500
+        and ${sql.join(tokenConditions, sql` and `)}
       order by case
         when p.slug = ${slug} then 0
         when p.canonical_name = ${nameLike} then 1
-        when p.slug like ${prefixPattern} then 2
+        when p.slug like ${`${slug}-%`} then 2
         else 3
-      end, length(p.slug) asc
+      end, length(p.canonical_name) - length(${nameLike}) asc, length(p.slug) asc
       limit 1
     `.execute(db);
     const productRow = product.rows[0];

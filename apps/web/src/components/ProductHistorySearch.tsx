@@ -98,7 +98,7 @@ export function ProductHistorySearch() {
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && search()}
-          placeholder="nombre del producto (ej. leche serenisima clase)"
+          placeholder="nombre del producto (ej. leche serenisima)"
           className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-alerta"
         />
         <button
