@@ -17,11 +17,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       return errorResponse('invalid_query', "Parámetro window inválido (usar 30, 90 o 'all')", 400);
     }
 
-    const product = await sql<{ id: string }>`
-      select id::text as id from product where slug = ${slug} limit 1
+    const nameLike = slug.replace(/-/g, ' ');
+    const likePattern = `%${nameLike}%`;
+    const prefixPattern = `${slug}-%`;
+    const product = await sql<{ id: string; name: string }>`
+      select id::text as id, canonical_name::text as name
+      from product p
+      join price_aggregate pa on pa.product_id = p.id
+      where (
+        p.slug = ${slug}
+        or p.canonical_name = ${nameLike}
+        or p.slug like ${prefixPattern}
+        or p.canonical_name like ${likePattern}
+      )
+        and pa.stores_count >= 2 and pa.best_price::numeric >= 500
+      order by case
+        when p.slug = ${slug} then 0
+        when p.canonical_name = ${nameLike} then 1
+        when p.slug like ${prefixPattern} then 2
+        else 3
+      end, length(p.slug) asc
+      limit 1
     `.execute(db);
-    const productId = product.rows[0]?.id;
-    if (!productId) return errorResponse('not_found', `Producto '${slug}' no encontrado`, 404);
+    const productRow = product.rows[0];
+    if (!productRow) {
+      return errorResponse('not_found', `Producto '${slug}' no encontrado`, 404);
+    }
+    const productId = productRow.id;
 
     const since =
       window === 'all' ? null : sql.raw(`now() - interval '${window === '30' ? 30 : 90} days'`);
@@ -70,6 +92,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 
     return NextResponse.json({
       product_slug: slug,
+      product_name: productRow.name,
       window,
       insufficient_history: insufficientHistory,
       series,

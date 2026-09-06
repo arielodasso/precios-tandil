@@ -50,6 +50,7 @@ export interface ProductDetail {
 
 export interface HistoryResponse {
   product_slug: string;
+  product_name?: string;
   window: '30' | '90' | 'all';
   insufficient_history: boolean;
   series: Array<{ date: string; min_price: number; avg_price: number | null }>;

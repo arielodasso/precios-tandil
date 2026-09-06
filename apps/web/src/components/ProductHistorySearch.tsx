@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { HistoryResponse } from '@/lib/types';
+import { titleCase } from '@/lib/utils';
 
 function formatArs(v: number): string {
   return new Intl.NumberFormat('es-AR', {
@@ -97,7 +98,7 @@ export function ProductHistorySearch() {
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && search()}
-          placeholder="slug del producto (ej. leche-serenisima-1l)"
+          placeholder="nombre del producto (ej. leche serenisima clase)"
           className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-alerta"
         />
         <button
@@ -114,7 +115,9 @@ export function ProductHistorySearch() {
       {data && (
         <div className="mt-4 rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold">{data.product_slug}</h4>
+            <h4 className="text-sm font-bold">
+              {titleCase(data.product_name ?? data.product_slug)}
+            </h4>
             <span className="text-xs text-muted-foreground">
               {data.series.length} días de datos
             </span>
