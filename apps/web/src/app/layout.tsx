@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${montserrat.className} min-h-dvh antialiased`}>
         <ProductListProvider>
-          <header className="border-b border-border bg-background/80 backdrop-blur-sm">
+          <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-sm">
             <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
               <Link href="/" className="flex items-center gap-2.5">
                 <img

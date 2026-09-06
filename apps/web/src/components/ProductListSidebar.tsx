@@ -44,20 +44,20 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[100] flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative flex h-full w-full max-w-md flex-col bg-amber-100 text-stone-900 shadow-2xl animate-slide-in-right dark:bg-amber-950 dark:text-amber-50"
+        className="relative flex h-full w-full max-w-md flex-col bg-yellow-100 text-stone-900 shadow-2xl animate-slide-in-right dark:bg-[#2E2A12] dark:text-[#F2E9C4]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Mi lista"
       >
         {/* Encabezado */}
-        <div className="flex items-center justify-between border-b-2 border-amber-300 px-4 py-3 dark:border-amber-800">
+        <div className="flex items-center justify-between border-b-2 border-yellow-300 px-4 py-3 dark:border-[#56502E]">
           <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-stone-900 text-amber-100 dark:bg-amber-100 dark:text-stone-900">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-stone-900 text-yellow-100 dark:bg-[#FDEC20] dark:text-[#1F1B07]">
               <ShoppingCart className="size-4" />
             </span>
             <h2 className="text-lg font-bold">Mi lista</h2>
             {items.length > 0 && (
-              <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-bold text-amber-100 dark:bg-amber-100 dark:text-stone-900">
+              <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-bold text-yellow-100 dark:bg-[#FDEC20] dark:text-[#1F1B07]">
                 {items.length}
               </span>
             )}
@@ -65,7 +65,7 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-stone-600 transition-colors hover:bg-amber-200 hover:text-stone-900 dark:text-amber-300 dark:hover:bg-amber-900 dark:hover:text-amber-50"
+            className="rounded-md p-1.5 text-stone-600 transition-colors hover:bg-yellow-200 hover:text-stone-900 dark:text-[#C9BE90] dark:hover:bg-[#3D3820] dark:hover:text-[#FDEC20]"
             aria-label="Cerrar"
           >
             <X className="size-5" />
@@ -75,30 +75,30 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
         {/* Agrupado por fuente elegida */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {items.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-stone-600 dark:text-amber-200">
+            <p className="px-4 py-8 text-center text-sm text-stone-600 dark:text-[#B8AE82]">
               Tu lista está vacía. Agregá productos tocando el botón que aparece al lado del precio
               de cada fuente en los listados.
             </p>
           ) : (
-            <div className="divide-y divide-amber-200 dark:divide-amber-800">
+            <div className="divide-y divide-yellow-200 dark:divide-[#3B3620]">
               {groups.map((group) => {
                 const subtotal = group.entries.reduce((s, e) => s + e.price, 0);
                 return (
                   <div key={group.name}>
-                    <div className="flex items-center justify-between bg-amber-200/70 px-4 py-2 dark:bg-amber-900">
+                    <div className="flex items-center justify-between bg-yellow-200/70 px-4 py-2 dark:bg-[#3D3820]">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-amber-100">
+                        <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-[#F2E9C4]">
                           {group.name}
                         </span>
-                        <span className="rounded bg-stone-900/10 px-1.5 py-0.5 text-[10px] font-bold text-stone-700 dark:bg-amber-100/10 dark:text-amber-200">
+                        <span className="rounded bg-stone-900/10 px-1.5 py-0.5 text-[10px] font-bold text-stone-700 dark:bg-black/20 dark:text-[#C9BE90]">
                           {group.entries.length} {group.entries.length === 1 ? 'item' : 'items'}
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-stone-900 dark:text-amber-50">
+                      <span className="text-xs font-bold text-stone-900 dark:text-[#FFE97A]">
                         {formatArs(subtotal)}
                       </span>
                     </div>
-                    <ul className="divide-y divide-amber-200 bg-amber-100 dark:divide-amber-800 dark:bg-amber-950">
+                    <ul className="divide-y divide-yellow-200 bg-yellow-100 dark:divide-[#3B3620] dark:bg-[#2E2A12]">
                       {group.entries.map((entry) => (
                         <EntryRow key={`${entry.slug}-${entry.store}`} entry={entry} />
                       ))}
@@ -112,12 +112,12 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
 
         {/* Pie: total + ahorro */}
         {items.length > 0 && (
-          <div className="border-t-2 border-amber-300 bg-amber-200/60 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/60">
+          <div className="border-t-2 border-yellow-300 bg-yellow-200/60 px-4 py-3 dark:border-[#56502E] dark:bg-[#3B3620]/60">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium text-stone-700 dark:text-amber-200">
+              <span className="text-sm font-medium text-stone-700 dark:text-[#C9BE90]">
                 Total de tu lista
               </span>
-              <span className="text-lg font-extrabold text-stone-900 dark:text-amber-50">
+              <span className="text-lg font-extrabold text-stone-900 dark:text-[#FFE97A]">
                 {formatArs(totalSelected)}
               </span>
             </div>
@@ -132,7 +132,7 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={clear}
-              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-400/60 px-3 py-1.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-700 hover:text-white dark:border-amber-700 dark:text-red-400 dark:hover:bg-red-700 dark:hover:text-white"
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-400/60 px-3 py-1.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-700 hover:text-white dark:border-[#6B633C] dark:text-red-400 dark:hover:bg-red-700 dark:hover:text-white"
             >
               <Trash2 className="size-3.5" />
               Limpiar lista
@@ -154,7 +154,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
 
   return (
     <li className="flex items-start gap-3 px-4 py-3">
-      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-amber-300 bg-white/80 dark:border-amber-800 dark:bg-amber-900">
+      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-yellow-300 bg-white/80 dark:border-[#56502E] dark:bg-[#3A3523]">
         <ProductImage src={entry.image_url} alt={titleCase(entry.name)} />
       </div>
       <div className="min-w-0 flex-1">
@@ -163,7 +163,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
             href={entry.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-start gap-1 text-sm font-semibold leading-snug transition-colors hover:text-amber-700 dark:hover:text-amber-300"
+            className="inline-flex items-start gap-1 text-sm font-semibold leading-snug text-stone-800 transition-colors hover:text-yellow-600 dark:text-[#F2E9C4] dark:hover:text-[#FDEC20]"
           >
             <span className="line-clamp-2">{titleCase(entry.name)}</span>
             <ExternalLink className="mt-0.5 size-3 shrink-0 opacity-60" />
@@ -171,7 +171,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
         ) : (
           <p className="line-clamp-2 text-sm font-semibold leading-snug">{titleCase(entry.name)}</p>
         )}
-        <p className="mt-0.5 text-xs text-stone-600 dark:text-amber-200/80">
+        <p className="mt-0.5 text-xs text-stone-600 dark:text-[#C9BE90]/80">
           {[entry.brand, entry.unit ? formatUnit(entry.unit) : null].filter(Boolean).join(' · ')}
         </p>
         {best != null && !isBestPick && bestStore && (
@@ -186,7 +186,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
             'whitespace-nowrap text-sm font-bold',
             isBestPick
               ? 'text-emerald-700 dark:text-emerald-400'
-              : 'text-stone-900 dark:text-amber-50',
+              : 'text-stone-900 dark:text-[#FFE97A]',
           )}
         >
           {formatArs(entry.price)}
@@ -194,7 +194,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
         <button
           type="button"
           onClick={() => remove(entry.slug, entry.store)}
-          className="rounded p-1 text-stone-500 transition-colors hover:bg-red-700 hover:text-white"
+          className="rounded p-1 text-stone-500 transition-colors hover:bg-red-700 hover:text-white dark:text-[#C9BE90]"
           aria-label={`Quitar ${entry.name} de la lista`}
         >
           <X className="size-3.5" />
