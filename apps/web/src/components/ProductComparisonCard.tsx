@@ -56,24 +56,6 @@ export function ProductComparisonCard({
                 {formatUnit(unit)}
               </p>
             )}
-            <AddToListButton
-              className="mt-2"
-              item={{
-                slug,
-                name,
-                brand: brand ?? null,
-                unit: unit ?? null,
-                image_url: imageUrl ?? null,
-                offers: offers
-                  .filter((o) => o.price != null)
-                  .map((o) => ({
-                    store: o.store,
-                    store_name: o.store_name,
-                    price: o.price,
-                    source_url: o.source_url ?? null,
-                  })),
-              }}
-            />
           </div>
         </div>
         {dealBadge && <DealBadge variant={dealBadge.badge} />}
@@ -122,10 +104,34 @@ export function ProductComparisonCard({
                         </Badge>
                       )}
                     </span>
-                    <span className="text-right font-semibold">
-                      {offer.price !== null && formatArs(offer.price)}
-                      {diff !== null && (
-                        <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="text-right font-semibold">
+                        {offer.price !== null && formatArs(offer.price)}
+                        {diff !== null && (
+                          <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
+                        )}
+                      </span>
+                      {offer.price !== null && (
+                        <AddToListButton
+                          className="px-1.5 py-1 text-[11px]"
+                          entry={{
+                            slug,
+                            name,
+                            brand: brand ?? null,
+                            unit: unit ?? null,
+                            image_url: imageUrl ?? null,
+                            offers: fresh.map((o) => ({
+                              store: o.store,
+                              store_name: o.store_name,
+                              price: o.price,
+                              source_url: o.source_url ?? null,
+                            })),
+                            store: offer.store,
+                            store_name: offer.store_name,
+                            price: offer.price,
+                            source_url: offer.source_url ?? null,
+                          }}
+                        />
                       )}
                     </span>
                   </li>

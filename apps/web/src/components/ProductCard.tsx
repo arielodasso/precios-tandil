@@ -77,28 +77,13 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </div>
 
           {showBest && bestPrice != null ? (
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <div className="text-right">
-                <p className="text-lg font-bold leading-none text-primary">
-                  {formatArs(bestPrice)}
+            <div className="shrink-0 text-right">
+              <p className="text-lg font-bold leading-none text-primary">{formatArs(bestPrice)}</p>
+              {stores_count != null ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
                 </p>
-                {stores_count != null ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
-                  </p>
-                ) : null}
-              </div>
-              <AddToListButton
-                className="px-1.5 py-0.5 text-[11px]"
-                item={{
-                  slug,
-                  name,
-                  brand: brand ?? null,
-                  unit: unit ?? null,
-                  image_url: imageUrl ?? null,
-                  offers: offers ?? [],
-                }}
-              />
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -125,21 +110,45 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                       </span>
                     )}
                   </span>
-                  {offer.source_url ? (
-                    <a
-                      href={offer.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary transition-colors hover:text-alerta"
-                    >
-                      {offer.price != null ? formatArs(offer.price) : '—'}
-                      <ExternalLink className="size-3" />
-                    </a>
-                  ) : (
-                    <span className="shrink-0 font-semibold">
-                      {offer.price != null ? formatArs(offer.price) : '—'}
-                    </span>
-                  )}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {offer.source_url ? (
+                      <a
+                        href={offer.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary transition-colors hover:text-alerta"
+                      >
+                        {offer.price != null ? formatArs(offer.price) : '—'}
+                        <ExternalLink className="size-3" />
+                      </a>
+                    ) : (
+                      <span className="shrink-0 font-semibold">
+                        {offer.price != null ? formatArs(offer.price) : '—'}
+                      </span>
+                    )}
+                    {offer.price != null ? (
+                      <AddToListButton
+                        className="px-1.5 py-1 text-[11px]"
+                        entry={{
+                          slug,
+                          name,
+                          brand: brand ?? null,
+                          unit: unit ?? null,
+                          image_url: imageUrl ?? null,
+                          offers: sortedOffers.map((o) => ({
+                            store: o.store,
+                            store_name: o.store_name,
+                            price: o.price,
+                            source_url: o.source_url ?? null,
+                          })),
+                          store: offer.store,
+                          store_name: offer.store_name,
+                          price: offer.price,
+                          source_url: offer.source_url ?? null,
+                        }}
+                      />
+                    ) : null}
+                  </span>
                 </li>
               );
             })}
