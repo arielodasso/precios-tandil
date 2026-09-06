@@ -146,11 +146,28 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
 }
 
 function EntryRow({ entry }: { entry: ListEntry }) {
-  const { remove } = useProductList();
+  const { remove, replace } = useProductList();
   const prices = entry.offers.map((o) => o.price).filter((p): p is number => p != null && p > 0);
   const best = prices.length > 0 ? Math.min(...prices) : null;
   const bestStore = best != null ? entry.offers.find((o) => o.price === best)?.store_name : null;
+  const bestOffer = best != null ? entry.offers.find((o) => o.price === best) : null;
   const isBestPick = best != null && entry.price === best;
+
+  const handleSwitch = () => {
+    if (!bestOffer) return;
+    replace(entry.slug, entry.store, {
+      slug: entry.slug,
+      name: entry.name,
+      brand: entry.brand,
+      unit: entry.unit,
+      image_url: entry.image_url,
+      offers: entry.offers,
+      store: bestOffer.store,
+      store_name: bestOffer.store_name,
+      price: bestOffer.price!,
+      source_url: bestOffer.source_url ?? null,
+    });
+  };
 
   return (
     <li className="flex items-start gap-3 px-4 py-3">
@@ -174,10 +191,16 @@ function EntryRow({ entry }: { entry: ListEntry }) {
         <p className="mt-0.5 text-xs text-stone-600 dark:text-[#C9BE90]/80">
           {[entry.brand, entry.unit ? formatUnit(entry.unit) : null].filter(Boolean).join(' · ')}
         </p>
-        {best != null && !isBestPick && bestStore && (
-          <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-            Mejor: {formatArs(best)} en {bestStore}
-          </p>
+        {best != null && !isBestPick && bestStore && bestOffer && (
+          <button
+            type="button"
+            onClick={handleSwitch}
+            className="mt-1.5 block w-full rounded bg-emerald-800/10 px-2 py-1 text-left text-[11px] leading-snug font-medium text-emerald-700 transition-colors hover:bg-emerald-800/20 dark:bg-emerald-400/10 dark:text-emerald-400 dark:hover:bg-emerald-400/20"
+            aria-label={`Cambiar a la mejor fuente: ${bestStore}`}
+          >
+            Mejor: <span className="font-bold underline underline-offset-2">{formatArs(best)}</span>{' '}
+            en <span className="font-bold underline underline-offset-2">{bestStore}</span>
+          </button>
         )}
       </div>
       <div className="flex shrink-0 items-start gap-1">

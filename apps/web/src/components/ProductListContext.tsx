@@ -52,6 +52,8 @@ interface ProductListState {
   remove: (slug: string, store: string) => void;
   has: (slug: string, store: string) => boolean;
   clear: () => void;
+  /** Reemplaza la fuente elegida de una entrada por otra del mismo producto. */
+  replace: (slug: string, store: string, next: Omit<ListEntry, 'added_at'>) => void;
   /** Total si comprás cada producto único a su mejor precio. */
   totalBest: number;
   /** Total si comprás cada producto único al promedio de las otras fuentes. */
@@ -152,6 +154,24 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
     notify('cleared', 'Mi lista fue vaciada');
   }, [items, notify]);
 
+  const replace = useCallback(
+    (slug: string, store: string, next: Omit<ListEntry, 'added_at'>) => {
+      setItems((prev) => {
+        const idx = prev.findIndex((i) => i.slug === slug && i.store === store);
+        if (idx === -1) return prev;
+        // Si la fuente nueva ya está en la lista, solo se quita la vieja.
+        if (prev.some((i) => i.slug === next.slug && i.store === next.store)) {
+          return prev.filter((_, k) => k !== idx);
+        }
+        const arr = [...prev];
+        arr[idx] = { ...next, added_at: Date.now() };
+        return arr;
+      });
+      notify('added', `Fuente cambiada a ${next.store_name}: ${next.name}`);
+    },
+    [notify],
+  );
+
   const state = useMemo(() => {
     // Ahorro por producto único: usa la unión de sus ofertas.
     const bySlug = new Map<string, ListEntry[]>();
@@ -196,6 +216,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
       remove,
       has,
       clear,
+      replace,
       totalBest,
       totalAvgOthers,
       totalSelected,
@@ -203,7 +224,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
       groupedByStore: [...groups.values()],
       toast,
     };
-  }, [items, add, remove, has, clear, toast]);
+  }, [items, add, remove, has, clear, replace, toast]);
 
   const noop = () => {};
 
@@ -227,6 +248,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
           remove: noop,
           has: () => false,
           clear: noop,
+          replace: noop,
           totalBest: 0,
           totalAvgOthers: 0,
           totalSelected: 0,
