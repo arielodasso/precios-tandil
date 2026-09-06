@@ -123,6 +123,27 @@ function CbaBasketModal({
     const root = document.documentElement;
     const wasDark = root.classList.contains('dark');
     if (wasDark) root.classList.remove('dark');
+
+    // Expandir temporalmente cualquier contenedor con scroll para que la
+    // captura incluya TODAS las filas (sin bars de scroll ni recortes).
+    const expandable: HTMLElement[] = [];
+    if (el.scrollHeight > el.clientHeight + 2) expandable.push(el);
+    el.querySelectorAll('div').forEach((node) => {
+      if (node instanceof HTMLElement && node.scrollHeight > node.clientHeight + 2) {
+        expandable.push(node);
+      }
+    });
+    const backups = expandable.map((n) => ({
+      el: n,
+      maxHeight: n.style.maxHeight,
+      overflow: n.style.overflow,
+      overflowY: n.style.overflowY,
+    }));
+    expandable.forEach((n) => {
+      n.style.maxHeight = 'none';
+      n.style.overflow = 'visible';
+    });
+
     try {
       const dataUrl = await toPng(el, {
         width: el.scrollWidth,
@@ -138,6 +159,11 @@ function CbaBasketModal({
     } catch {
       setError('No se pudo generar la imagen.');
     } finally {
+      backups.forEach(({ el: n, maxHeight, overflow, overflowY }) => {
+        n.style.maxHeight = maxHeight;
+        n.style.overflow = overflow;
+        n.style.overflowY = overflowY;
+      });
       if (wasDark) root.classList.add('dark');
       setBusy(false);
     }
