@@ -10,6 +10,7 @@
     "bulk-import": "tsx src/cli-bulk-import.ts",
     "ingest-all": "tsx src/cli-ingest-all.ts",
     "backfill-categories": "tsx src/cli-backfill-categories.ts",
+    "retag-categories": "tsx src/cli-retag-categories.ts",
     "reconcile": "tsx src/cli-reconcile.ts",
     "rematch": "tsx src/cli-rematch.ts",
     "unconflict": "tsx src/cli-unconflict.ts",

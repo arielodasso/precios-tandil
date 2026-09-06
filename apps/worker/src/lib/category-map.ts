@@ -22,6 +22,80 @@ export interface CategoryRule {
 // ---- Match por nombre de producto (fallback) ----
 // Orden importa: el primero que matchea gana. Reglas más específicas primero.
 const NAME_RULES: CategoryRule[] = [
+  // ── Desambiguaciones de alto riesgo (van antes que todo) ──
+  { categoryPath: 'perfumeria/cuidado-corporal', prefixes: ['agua micelar'] },
+  { categoryPath: 'almacen/condimentos', prefixes: ['nuez moscada'] },
+  { categoryPath: 'mascotas', prefixes: ['snack para gato', 'snack para perro'] },
+  {
+    categoryPath: 'perfumeria/cuidado-cabello',
+    prefixes: ['mousse para el cabello', 'mousse cabello', 'mousse ondas'],
+  },
+  { categoryPath: 'almacen/chocolates', prefixes: ['huevo rosa', 'huevo kinder'] },
+  {
+    categoryPath: 'congelados/congelados-preparados',
+    prefixes: ['milanesa de carne rebozada congelada', 'milanesa de carne congelada'],
+  },
+  {
+    categoryPath: 'congelados/congelados-preparados',
+    prefixes: ['bocadito de pollo', 'bocaditos de pollo'],
+  },
+  { categoryPath: 'almacen/chocolates', prefixes: ['bocadito', 'bocaditos'] },
+  // Papas marca/snack vs papa fresca
+  { categoryPath: 'almacen/snacks', prefixes: ['papas pringles', 'papas lays', 'papas ruffles'] },
+  {
+    categoryPath: 'congelados/congelados-preparados',
+    prefixes: [
+      'papas tradicionales',
+      'papas smiles',
+      'papas baston',
+      'papas golazo',
+      'papas horneables',
+      'papas freezer',
+      'papas mc cain',
+    ],
+  },
+  { categoryPath: 'limpieza/higiene-del-hogar', prefixes: ['toallitas desinfectantes'] },
+  { categoryPath: 'perfumeria', prefixes: ['toallitas femeninas', 'toallitas desmaquillantes'] },
+  {
+    categoryPath: 'almacen/conservas',
+    prefixes: ['lomito de atun', 'lomitos de atun', 'lomo de atun', 'lomos de atun'],
+  },
+  {
+    categoryPath: 'congelados/congelados-preparados',
+    prefixes: ['palito de pollo', 'palitos de pollo', 'palito pollo', 'palitos pollo'],
+  },
+  {
+    categoryPath: 'almacen/conservas',
+    prefixes: [
+      'tomate lc',
+      'tomates perita',
+      'tomates cubeteado',
+      'tomates cubeteados',
+      'tomate en lata',
+      'tomates en lata',
+      'extracto simple tomate',
+      'extracto simple de tomate',
+      'extracto de tomate',
+      'extracto tomate',
+      'merluza puglisi',
+    ],
+  },
+  {
+    categoryPath: 'congelados/congelados-preparados',
+    prefixes: [
+      'milanesa de soja',
+      'milanesa soja',
+      'milanesa vegetal',
+      'milanesa de vegetales',
+      'milanesa granja del sol',
+    ],
+  },
+  {
+    categoryPath: 'limpieza/higiene-del-hogar',
+    prefixes: ['desodorante glade', 'desodorante despertar'],
+  },
+  { categoryPath: 'almacen/cafe', prefixes: ['infusion a base de cafe', 'infusion base cafe'] },
+
   // ── Almacén sub-categorías (específicas primero) ──
   { categoryPath: 'almacen/arroz', prefixes: ['arroz'] },
   { categoryPath: 'almacen/aceite', prefixes: ['aceite'] },
@@ -45,6 +119,10 @@ const NAME_RULES: CategoryRule[] = [
     ],
   },
   { categoryPath: 'almacen/harinas', prefixes: ['harina', 'premezcla', 'polenta', 'maicena'] },
+  {
+    categoryPath: 'almacen/prepizzas',
+    prefixes: ['prepizza', 'pre-pizza', 'masa pizza', 'masa para pizza'],
+  },
   { categoryPath: 'almacen/cafe', prefixes: ['cafe', 'cafecito', 'espresso', 'moka'] },
   {
     categoryPath: 'almacen/galletitas',
@@ -70,11 +148,16 @@ const NAME_RULES: CategoryRule[] = [
       'condimento',
       'condimentos',
       'pimienta',
+      'pimienton',
+      'pimenton',
       'orégano',
       'comino',
       'curry',
       'paprika',
       'aji molido',
+      'zanahoria deshidratada',
+      'cebolla deshidratada',
+      'verdura deshidratada',
     ],
   },
   {
@@ -88,6 +171,13 @@ const NAME_RULES: CategoryRule[] = [
       'atún',
       'atun',
       'tomate triturado',
+      'tomate perita',
+      'tomate cubeteado',
+      'tomate cubetado',
+      'cubeteado',
+      'cubetado',
+      'merluza en aceite',
+      'merluza aceite',
       'pure de tomate',
       'verduras enlatadas',
     ],
@@ -163,7 +253,7 @@ const NAME_RULES: CategoryRule[] = [
   { categoryPath: 'lacteos/dulce-de-leche', prefixes: ['dulce de leche'] },
   {
     categoryPath: 'lacteos/postres-frescos',
-    prefixes: ['postre', 'flan', 'budin', 'crema pastelera', 'tiramisu', 'mousse'],
+    prefixes: ['postre', 'flan', 'crema pastelera', 'tiramisu', 'mousse'],
   },
   { categoryPath: 'lacteos', prefixes: ['lacteo', 'lacteos'] },
 
@@ -178,13 +268,11 @@ const NAME_RULES: CategoryRule[] = [
       'hamburguesa',
       'salchicha',
       'chorizo',
-      'jamon',
       'bondiola',
       'nalga',
       'peceto',
       'cuadrada',
       'roast beef',
-      'panceta',
       'matambre',
       'costillas',
       'pollo entero',
@@ -200,6 +288,7 @@ const NAME_RULES: CategoryRule[] = [
       'salamin',
       'salame',
       'lomito',
+      'jamon',
       'panceta',
       'jamon cocido',
       'jamon crudo',
@@ -211,6 +300,8 @@ const NAME_RULES: CategoryRule[] = [
       'pan ',
       'pan,',
       'pan:',
+      'panes ',
+      'panificacion',
       'panificado',
       'bizcochito',
       'factura',
@@ -220,6 +311,13 @@ const NAME_RULES: CategoryRule[] = [
       'sacha',
       'pan de miga',
       'tostado',
+      'grisines',
+      'grisin',
+      'magdalena',
+      'madale',
+      'pastelito',
+      'rebozador',
+      'budin',
     ],
   },
   {
@@ -251,6 +349,10 @@ const NAME_RULES: CategoryRule[] = [
     ],
   },
   { categoryPath: 'frescos/huevos', prefixes: ['huevo', 'huevos'] },
+  {
+    categoryPath: 'frescos/rotiseria',
+    prefixes: ['rotiseria', 'rotisería', 'rotisserie', 'vianda'],
+  },
   {
     categoryPath: 'frescos/pescados',
     prefixes: [
@@ -284,6 +386,12 @@ const NAME_RULES: CategoryRule[] = [
       'congelado preparado',
       'empanada congelada',
       'nuggets',
+      'bocadito de pollo',
+      'bocaditos de pollo',
+      'patitas',
+      'medallon',
+      'supremita',
+      'formita',
       'papas fritas congeladas',
       'prepizza',
       'pizza congelada',
@@ -305,6 +413,10 @@ const NAME_RULES: CategoryRule[] = [
       'aromatizante',
       'insecticida',
       'papel higienico',
+      'pano',
+      'panuelo',
+      'franela',
+      'alcohol',
     ],
   },
   {
@@ -340,7 +452,16 @@ const NAME_RULES: CategoryRule[] = [
   { categoryPath: 'perfumeria/desodorantes', prefixes: ['desodorante', 'antitranspirante'] },
   {
     categoryPath: 'perfumeria/pañales',
-    prefixes: ['pañal', 'pañales', 'toallitas húmedas', 'leche bebe', 'formula'],
+    prefixes: [
+      'pañal',
+      'pañales',
+      'toallitas húmedas',
+      'toallitas',
+      'toallita',
+      'toallas humedas',
+      'leche bebe',
+      'formula',
+    ],
   },
   {
     categoryPath: 'perfumeria',
@@ -374,11 +495,20 @@ export function normalizeToken(s: string): string {
     .trim();
 }
 
+/** Normaliza un prefix de regla: minúsculas y sin acentos, pero conserva los
+ *  espacios (un prefix con espacio de cierre tipo 'pan ' indica límite de palabra). */
+function normalizePrefix(p: string): string {
+  return p
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 /** Devuelve el path de taxonomía según el nombre del producto. */
 export function matchCategoryByName(name: string): string {
   const n = normalizeToken(name);
   for (const rule of NAME_RULES) {
-    if (rule.prefixes.some((p) => n.startsWith(p))) return rule.categoryPath;
+    if (rule.prefixes.some((p) => n.startsWith(normalizePrefix(p)))) return rule.categoryPath;
   }
   return NAME_DEFAULT;
 }
@@ -397,7 +527,7 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
   },
   {
     path: 'almacen/yerba',
-    tokens: ['yerba', 'yerbas', 'yerba-y-infusiones', 'mate', 'infusiones'],
+    tokens: ['yerba', 'yerbas', 'yerba-y-infusiones', 'mate'],
   },
   {
     path: 'almacen/fideos',
@@ -405,8 +535,9 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
   },
   {
     path: 'almacen/harinas',
-    tokens: ['harinas', 'harina', 'premezclas', 'harinas-y-premezclas', 'prepizza', 'panificados'],
+    tokens: ['harinas', 'harina', 'premezclas', 'harinas-y-premezclas'],
   },
+  { path: 'almacen/prepizzas', tokens: ['prepizza', 'prepizzas', 'pre-pizza', 'pre-pizzas'] },
   { path: 'almacen/cafe', tokens: ['cafe', 'café', 'cafes', 'cafetería'] },
   { path: 'almacen/galletitas', tokens: ['galletitas', 'galletita', 'galletas', 'cookies'] },
   { path: 'almacen/snacks', tokens: ['snacks', 'snack', 'picadas', 'papas-fritas'] },
@@ -519,7 +650,10 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
     path: 'frescos/pescados',
     tokens: ['pescados', 'pescado', 'mariscos', 'pescados-y-mariscos', 'pescadería'],
   },
-  { path: 'frescos/rotiseria', tokens: ['rotiseria', 'rotisería', 'roti'] },
+  {
+    path: 'frescos/rotiseria',
+    tokens: ['rotiseria', 'rotisería', 'rotisserie', 'roti', 'comida preparada'],
+  },
   { path: 'frescos', tokens: ['frescos', 'fresco', 'fresca'] },
 
   // ── Congelados sub-categorías ──
@@ -552,6 +686,7 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
       'limpieza-de-bano',
       'prod-limpieza',
       'aromatizantes',
+      'papeles',
     ],
   },
   { path: 'limpieza/bolsas', tokens: ['bolsas', 'bolsas-de-residuo', 'residuos'] },
@@ -617,13 +752,23 @@ const STORE_ALIASES: Array<{ path: string; tokens: string[] }> = [
 export function matchCategoryByStorePath(categoryPath: string[] | undefined): string | null {
   if (!categoryPath || categoryPath.length === 0) return null;
   const normed = categoryPath.map(normalizeToken).filter(Boolean);
-  let best: { path: string; rank: number } | null = null;
+  let best: { path: string; score: number } | null = null;
   for (const alias of STORE_ALIASES) {
-    for (const token of alias.tokens) {
-      const hit = normed.some((t) => t === token || t.includes(token) || token.includes(t));
-      if (hit) {
-        const rank = alias.path.split('/').length;
-        if (!best || rank > best.rank) best = { path: alias.path, rank };
+    const depth = alias.path.split('/').length;
+    for (const raw of alias.tokens) {
+      const token = normalizeToken(raw);
+      if (!token) continue;
+      for (const seg of normed) {
+        // Match exacto de segmento sobre el token manda (ej: 'panal' -> pañales).
+        let weight = 0;
+        if (seg === token) weight = 100;
+        // Substring solo para tokens no ambiguos (>= 4 chars). Un token corto
+        // como 'pan' NO debe absorber 'pana', 'panal', 'pan de miga', etc.
+        else if (token.length >= 4 && seg.includes(token)) weight = 50;
+        else if (seg.length >= 4 && token.includes(seg)) weight = 30;
+        if (weight === 0) continue;
+        const score = weight + depth;
+        if (!best || score > best.score) best = { path: alias.path, score };
       }
     }
   }

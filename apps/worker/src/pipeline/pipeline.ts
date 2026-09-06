@@ -499,8 +499,16 @@ export class IngestPipeline {
     categoryPath: string[] | undefined,
     name?: string,
   ): Promise<number | null> {
-    let taxPath = matchCategoryByStorePath(categoryPath);
-    if (!taxPath && name) taxPath = matchCategoryByName(name);
+    const storePath = matchCategoryByStorePath(categoryPath);
+    const namePath = name ? matchCategoryByName(name) : null;
+    let taxPath: string | null = null;
+    if (storePath && namePath) {
+      // Preferir el resultado más específico. Si la tienda solo aporta un path
+      // genérico (ej: 'almacen'), el nombre del producto suele clasificar mejor.
+      taxPath = storePath.split('/').length >= namePath.split('/').length ? storePath : namePath;
+    } else {
+      taxPath = storePath ?? namePath;
+    }
     if (taxPath) {
       const byPath = await this.db
         .selectFrom('category')
