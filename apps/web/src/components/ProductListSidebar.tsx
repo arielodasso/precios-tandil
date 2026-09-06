@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, ShoppingCart, Trash2, X } from 'lucide-react';
 import { useProductList, type ListEntry } from './ProductListContext';
 import { cn, formatUnit, titleCase } from '@/lib/utils';
 import { formatArs } from './HistoryStrip';
-import { Button } from '@/components/ui/button';
+import { ProductImage } from './ProductImage';
 
 export function ProductListToggle() {
   const { items } = useProductList();
@@ -35,20 +36,36 @@ export function ProductListToggle() {
 function ProductListSidebar({ onClose }: { onClose: () => void }) {
   const { items, clear, totalSelected, savings, groupedByStore } = useProductList();
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/30" />
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  if (typeof document === 'undefined') return null;
+
+  const groups = [...groupedByStore].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative flex h-full w-full max-w-sm flex-col bg-card shadow-xl animate-slide-in-right"
+        className="relative flex h-full w-full max-w-md flex-col bg-amber-100 text-stone-900 shadow-2xl animate-slide-in-right dark:bg-amber-950 dark:text-amber-50"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Mi lista"
       >
         {/* Encabezado */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b-2 border-amber-300 px-4 py-3 dark:border-amber-800">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="size-5 text-alerta" />
+            <span className="flex size-8 items-center justify-center rounded-lg bg-stone-900 text-amber-100 dark:bg-amber-100 dark:text-stone-900">
+              <ShoppingCart className="size-4" />
+            </span>
             <h2 className="text-lg font-bold">Mi lista</h2>
             {items.length > 0 && (
-              <span className="rounded-full bg-alerta/15 px-2 py-0.5 text-xs font-semibold text-alerta">
+              <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-bold text-amber-100 dark:bg-amber-100 dark:text-stone-900">
                 {items.length}
               </span>
             )}
@@ -56,7 +73,7 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
+            className="rounded-md p-1.5 text-stone-600 transition-colors hover:bg-amber-200 hover:text-stone-900 dark:text-amber-300 dark:hover:bg-amber-900 dark:hover:text-amber-50"
             aria-label="Cerrar"
           >
             <X className="size-5" />
@@ -66,28 +83,30 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
         {/* Agrupado por fuente elegida */}
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-center text-sm text-stone-600 dark:text-amber-200">
               Tu lista está vacía. Agregá productos tocando el botón que aparece al lado del precio
               de cada fuente en los listados.
             </p>
           ) : (
-            <div className="divide-y divide-border">
-              {groupedByStore.map((group) => {
+            <div className="divide-y divide-amber-200 dark:divide-amber-800">
+              {groups.map((group) => {
                 const subtotal = group.entries.reduce((s, e) => s + e.price, 0);
                 return (
                   <div key={group.name}>
-                    <div className="flex items-center justify-between bg-muted/50 px-4 py-2">
+                    <div className="flex items-center justify-between bg-amber-200/70 px-4 py-2 dark:bg-amber-900">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-amber-100">
                           {group.name}
                         </span>
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <span className="rounded bg-stone-900/10 px-1.5 py-0.5 text-[10px] font-bold text-stone-700 dark:bg-amber-100/10 dark:text-amber-200">
                           {group.entries.length} {group.entries.length === 1 ? 'item' : 'items'}
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-primary">{formatArs(subtotal)}</span>
+                      <span className="text-xs font-bold text-stone-900 dark:text-amber-50">
+                        {formatArs(subtotal)}
+                      </span>
                     </div>
-                    <ul className="divide-y divide-border">
+                    <ul className="divide-y divide-amber-200 bg-amber-100 dark:divide-amber-800 dark:bg-amber-950">
                       {group.entries.map((entry) => (
                         <EntryRow key={`${entry.slug}-${entry.store}`} entry={entry} />
                       ))}
@@ -101,34 +120,36 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
 
         {/* Pie: total + ahorro */}
         {items.length > 0 && (
-          <div className="border-t border-border px-4 py-3">
+          <div className="border-t-2 border-amber-300 bg-amber-200/60 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/60">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">Total de tu lista</span>
-              <span className="text-lg font-extrabold text-primary">
+              <span className="text-sm font-medium text-stone-700 dark:text-amber-200">
+                Total de tu lista
+              </span>
+              <span className="text-lg font-extrabold text-stone-900 dark:text-amber-50">
                 {formatArs(totalSelected)}
               </span>
             </div>
             {savings > 0 && (
               <div className="mt-1.5">
-                <p className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                <p className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-sm font-bold text-white">
                   <ShoppingCart className="size-3.5" />
                   Con Precios Tandil ahorraste {formatArs(savings)}
                 </p>
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full text-destructive hover:text-destructive"
+            <button
+              type="button"
               onClick={clear}
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-stone-400/60 px-3 py-1.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-700 hover:text-white dark:border-amber-700 dark:text-red-400 dark:hover:bg-red-700 dark:hover:text-white"
             >
-              <Trash2 className="mr-1.5 size-3.5" />
+              <Trash2 className="size-3.5" />
               Limpiar lista
-            </Button>
+            </button>
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -141,38 +162,47 @@ function EntryRow({ entry }: { entry: ListEntry }) {
 
   return (
     <li className="flex items-start gap-3 px-4 py-3">
+      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-amber-300 bg-white/80 dark:border-amber-800 dark:bg-amber-900">
+        <ProductImage src={entry.image_url} alt={titleCase(entry.name)} />
+      </div>
       <div className="min-w-0 flex-1">
         {entry.source_url ? (
           <a
             href={entry.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-start gap-1 line-clamp-2 text-sm font-semibold transition-colors hover:text-alerta"
+            className="inline-flex items-start gap-1 text-sm font-semibold leading-snug transition-colors hover:text-amber-700 dark:hover:text-amber-300"
           >
-            {titleCase(entry.name)}
+            <span className="line-clamp-2">{titleCase(entry.name)}</span>
             <ExternalLink className="mt-0.5 size-3 shrink-0 opacity-60" />
           </a>
         ) : (
-          <p className="line-clamp-2 text-sm font-semibold">{titleCase(entry.name)}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-snug">{titleCase(entry.name)}</p>
         )}
-        {entry.brand && <p className="text-xs text-muted-foreground">{entry.brand}</p>}
-        {entry.unit && (
-          <p className="text-[11px] text-muted-foreground/70">{formatUnit(entry.unit)}</p>
-        )}
+        <p className="mt-0.5 text-xs text-stone-600 dark:text-amber-200/80">
+          {[entry.brand, entry.unit ? formatUnit(entry.unit) : null].filter(Boolean).join(' · ')}
+        </p>
         {best != null && !isBestPick && bestStore && (
-          <p className="mt-1 text-[11px] text-emerald-600">
+          <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
             Mejor: {formatArs(best)} en {bestStore}
           </p>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <span className={cn('text-sm font-bold', isBestPick ? 'text-emerald-600' : 'text-primary')}>
+      <div className="flex shrink-0 items-start gap-1">
+        <span
+          className={cn(
+            'whitespace-nowrap text-sm font-bold',
+            isBestPick
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-stone-900 dark:text-amber-50',
+          )}
+        >
           {formatArs(entry.price)}
         </span>
         <button
           type="button"
           onClick={() => remove(entry.slug, entry.store)}
-          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+          className="rounded p-1 text-stone-500 transition-colors hover:bg-red-700 hover:text-white"
           aria-label={`Quitar ${entry.name} de la lista`}
         >
           <X className="size-3.5" />

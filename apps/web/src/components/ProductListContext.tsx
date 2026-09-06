@@ -71,7 +71,19 @@ function readStorage(): ListEntry[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(LIST_KEY);
-    return raw ? (JSON.parse(raw) as ListEntry[]) : [];
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (e): e is ListEntry =>
+        typeof e === 'object' &&
+        e !== null &&
+        typeof (e as ListEntry).slug === 'string' &&
+        typeof (e as ListEntry).store === 'string' &&
+        typeof (e as ListEntry).store_name === 'string' &&
+        typeof (e as ListEntry).price === 'number' &&
+        (e as ListEntry).price > 0 &&
+        Array.isArray((e as ListEntry).offers),
+    );
   } catch {
     return [];
   }
@@ -196,7 +208,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
   const noop = () => {};
 
   const toastEl = toast ? (
-    <div key={toast.id} className="fixed bottom-4 right-4 z-[60] animate-toast-in">
+    <div key={toast.id} className="fixed bottom-4 right-4 z-[120] animate-toast-in">
       <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 shadow-lg">
         {toast.kind === 'added' && <Check className="size-4 shrink-0 text-emerald-600" />}
         {toast.kind === 'removed' && <ListX className="size-4 shrink-0 text-muted-foreground" />}
