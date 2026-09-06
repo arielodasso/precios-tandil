@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, ShoppingCart, Trash2, X } from 'lucide-react';
 import { useProductList, type ListEntry } from './ProductListContext';
@@ -35,14 +35,6 @@ export function ProductListToggle() {
 
 function ProductListSidebar({ onClose }: { onClose: () => void }) {
   const { items, clear, totalSelected, savings, groupedByStore } = useProductList();
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
 
   if (typeof document === 'undefined') return null;
 
@@ -81,7 +73,7 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Agrupado por fuente elegida */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {items.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-stone-600 dark:text-amber-200">
               Tu lista está vacía. Agregá productos tocando el botón que aparece al lado del precio
