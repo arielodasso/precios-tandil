@@ -12,6 +12,7 @@ import {
 } from '@/lib/queries/analytics';
 import { resolveCbaBasket } from '@/lib/cba';
 import { CbaBasketCard } from '@/components/CbaBasketCard';
+import { SavingsCounter } from '@/components/SavingsCounter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { siteUrl } from '@/lib/site';
@@ -111,7 +112,7 @@ export default async function HomePage() {
         ¿Dónde conviene comprar hoy?
       </h1>
       <p className="mb-6 text-muted-foreground">
-        Precios comparados entre supermercados de Tandil, actualizados a diario.
+        Compará precios y armá tu lista de productos ahorrando al máximo
       </p>
 
       <SearchBar />
@@ -144,7 +145,8 @@ export default async function HomePage() {
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+              <SavingsCounter />
               <div className="rounded-lg bg-muted/40 p-3">
                 <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
                 <p className="text-xl font-bold">{formatInt(overview?.prices_today)}</p>

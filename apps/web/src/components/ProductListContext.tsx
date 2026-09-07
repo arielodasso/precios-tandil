@@ -30,6 +30,8 @@ export interface ListEntry {
   store_name: string;
   price: number;
   source_url: string | null;
+  /** Cantidad de unidades del producto en la lista (mínimo 1). */
+  quantity: number;
   added_at: number;
 }
 
@@ -54,6 +56,8 @@ interface ProductListState {
   clear: () => void;
   /** Reemplaza la fuente elegida de una entrada por otra del mismo producto. */
   replace: (slug: string, store: string, next: Omit<ListEntry, 'added_at'>) => void;
+  /** Actualiza la cantidad de una entrada (mínimo 1). */
+  setQuantity: (slug: string, store: string, quantity: number) => void;
   /** Total si comprás cada producto único a su mejor precio. */
   totalBest: number;
   /** Total si comprás cada producto único al promedio de las otras fuentes. */
@@ -75,17 +79,19 @@ function readStorage(): ListEntry[] {
     const raw = localStorage.getItem(LIST_KEY);
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (e): e is ListEntry =>
-        typeof e === 'object' &&
-        e !== null &&
-        typeof (e as ListEntry).slug === 'string' &&
-        typeof (e as ListEntry).store === 'string' &&
-        typeof (e as ListEntry).store_name === 'string' &&
-        typeof (e as ListEntry).price === 'number' &&
-        (e as ListEntry).price > 0 &&
-        Array.isArray((e as ListEntry).offers),
-    );
+    return parsed
+      .filter(
+        (e): e is ListEntry =>
+          typeof e === 'object' &&
+          e !== null &&
+          typeof (e as ListEntry).slug === 'string' &&
+          typeof (e as ListEntry).store === 'string' &&
+          typeof (e as ListEntry).store_name === 'string' &&
+          typeof (e as ListEntry).price === 'number' &&
+          (e as ListEntry).price > 0 &&
+          Array.isArray((e as ListEntry).offers),
+      )
+      .map((e) => ({ ...e, quantity: e.quantity && e.quantity > 0 ? e.quantity : 1 }));
   } catch {
     return [];
   }
@@ -126,7 +132,10 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
     (entry: Omit<ListEntry, 'added_at'>) => {
       setItems((prev) => {
         if (prev.some((i) => i.slug === entry.slug && i.store === entry.store)) return prev;
-        return [...prev, { ...entry, added_at: Date.now() }];
+        return [
+          ...prev,
+          { ...entry, quantity: entry.quantity > 0 ? entry.quantity : 1, added_at: Date.now() },
+        ];
       });
       notify('added', `Agregado a Mi lista: ${entry.name}`);
     },
@@ -154,6 +163,16 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
     notify('cleared', 'Mi lista fue vaciada');
   }, [items, notify]);
 
+  const setQuantity = useCallback((slug: string, store: string, quantity: number) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.slug === slug && i.store === store
+          ? { ...i, quantity: Math.max(1, Math.floor(quantity)) }
+          : i,
+      ),
+    );
+  }, []);
+
   const replace = useCallback(
     (slug: string, store: string, next: Omit<ListEntry, 'added_at'>) => {
       setItems((prev) => {
@@ -164,7 +183,12 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
           return prev.filter((_, k) => k !== idx);
         }
         const arr = [...prev];
-        arr[idx] = { ...next, added_at: Date.now() };
+        const existing = arr[idx]!;
+        arr[idx] = {
+          ...next,
+          quantity: next.quantity > 0 ? next.quantity : existing.quantity,
+          added_at: Date.now(),
+        };
         return arr;
       });
       notify('added', `Fuente cambiada a ${next.store_name}: ${next.name}`);
@@ -187,7 +211,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
 
     const groups = new Map<string, ListStoreGroup>();
     for (const item of items) {
-      totalSelected += item.price;
+      totalSelected += item.price * item.quantity;
       const key = item.store_name || item.store || 'Otra';
       const group = groups.get(key) ?? { name: key, entries: [] };
       group.entries.push(item);
@@ -196,7 +220,9 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
 
     for (const entries of bySlug.values()) {
       const prices = new Set<number>();
+      let totalQty = 0;
       for (const e of entries) {
+        totalQty += e.quantity;
         for (const o of e.offers) {
           if (o.price != null && o.price > 0) prices.add(o.price);
         }
@@ -205,9 +231,10 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
       if (sorted.length === 0) continue;
       const best = sorted[0] as number;
       const others = sorted.slice(1);
-      totalBest += best;
-      totalAvgOthers +=
+      const avgOthers =
         others.length > 0 ? others.reduce((s, p) => s + p, 0) / others.length : best;
+      totalBest += best * totalQty;
+      totalAvgOthers += avgOthers * totalQty;
     }
 
     return {
@@ -217,6 +244,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
       has,
       clear,
       replace,
+      setQuantity,
       totalBest,
       totalAvgOthers,
       totalSelected,
@@ -224,7 +252,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
       groupedByStore: [...groups.values()],
       toast,
     };
-  }, [items, add, remove, has, clear, replace, toast]);
+  }, [items, add, remove, has, clear, replace, setQuantity, toast]);
 
   const noop = () => {};
 
@@ -249,6 +277,7 @@ export function ProductListProvider({ children }: { children: React.ReactNode })
           has: () => false,
           clear: noop,
           replace: noop,
+          setQuantity: noop,
           totalBest: 0,
           totalAvgOthers: 0,
           totalSelected: 0,

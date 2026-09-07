@@ -130,6 +130,7 @@ export function ProductComparisonCard({
                             store_name: offer.store_name,
                             price: offer.price,
                             source_url: offer.source_url ?? null,
+                            quantity: 1,
                           }}
                         />
                       )}

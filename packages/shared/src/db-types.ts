@@ -137,6 +137,13 @@ export interface AdminTokenRow {
   created_at: Generated<Date>;
 }
 
+export interface UserSavingsRow {
+  device_id: string;
+  savings_amount: string;
+  item_count: number;
+  updated_at: Date;
+}
+
 export interface DB {
   store: StoreRow;
   category: CategoryRow;
@@ -149,4 +156,5 @@ export interface DB {
   deal_candidate: DealCandidateRow;
   deal_publication: DealPublicationRow;
   admin_token: AdminTokenRow;
+  user_savings: UserSavingsRow;
 }

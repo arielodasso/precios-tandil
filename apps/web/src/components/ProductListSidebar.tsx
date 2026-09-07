@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ExternalLink, ShoppingCart, Trash2, X } from 'lucide-react';
+import { ExternalLink, Minus, Plus, Share2, ShoppingCart, Trash2, X } from 'lucide-react';
 import { useProductList, type ListEntry } from './ProductListContext';
 import { cn, formatUnit, titleCase } from '@/lib/utils';
 import { formatArs } from './HistoryStrip';
@@ -82,7 +82,7 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
           ) : (
             <div className="divide-y divide-yellow-200 dark:divide-[#3B3620]">
               {groups.map((group) => {
-                const subtotal = group.entries.reduce((s, e) => s + e.price, 0);
+                const subtotal = group.entries.reduce((s, e) => s + e.price * e.quantity, 0);
                 return (
                   <div key={group.name}>
                     <div className="flex items-center justify-between bg-yellow-200/70 px-4 py-2 dark:bg-[#3D3820]">
@@ -122,11 +122,12 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
               </span>
             </div>
             {savings > 0 && (
-              <div className="mt-1.5">
+              <div className="mt-2">
                 <p className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-sm font-bold text-white">
                   <ShoppingCart className="size-3.5" />
                   Con Precios Tandil ahorraste {formatArs(savings)}
                 </p>
+                <ShareSavings savings={savings} itemCount={items.length} />
               </div>
             )}
             <button
@@ -145,13 +146,72 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
   );
 }
 
+function ShareSavings({ savings, itemCount }: { savings: number; itemCount: number }) {
+  const text = `Comparé ${itemCount} ${itemCount === 1 ? 'producto' : 'productos'} en Precios Tandil y ahorré ${formatArs(savings)} 🛒 Arma tu lista y ahorrá también 👉 https://preciostandil.ar`;
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+  const handleShare = async () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'Mi ahorro con Precios Tandil',
+          text,
+          url: 'https://preciostandil.ar',
+        });
+        return;
+      } catch {
+        /* usuario canceló o share no disponible */
+      }
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <p className="text-xs font-semibold text-stone-700 dark:text-[#C9BE90]">
+        Compartí cuánto ahorraste:
+      </p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-semibold text-yellow-100 transition-colors hover:bg-stone-700 dark:bg-[#FDEC20] dark:text-[#1F1B07] dark:hover:bg-[#F5E94B]"
+          aria-label="Compartir mi ahorro (WhatsApp, Telegram, etc.)"
+        >
+          <Share2 className="size-3.5" />
+          Compartir
+        </button>
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#1fb457]"
+          aria-label="Compartir mi ahorro por WhatsApp"
+        >
+          <WhatsAppIcon />
+          WhatsApp
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+    </svg>
+  );
+}
+
 function EntryRow({ entry }: { entry: ListEntry }) {
-  const { remove, replace } = useProductList();
+  const { remove, replace, setQuantity } = useProductList();
   const prices = entry.offers.map((o) => o.price).filter((p): p is number => p != null && p > 0);
   const best = prices.length > 0 ? Math.min(...prices) : null;
   const bestStore = best != null ? entry.offers.find((o) => o.price === best)?.store_name : null;
   const bestOffer = best != null ? entry.offers.find((o) => o.price === best) : null;
   const isBestPick = best != null && entry.price === best;
+  const lineTotal = entry.price * entry.quantity;
 
   const handleSwitch = () => {
     if (!bestOffer) return;
@@ -166,6 +226,7 @@ function EntryRow({ entry }: { entry: ListEntry }) {
       store_name: bestOffer.store_name,
       price: bestOffer.price!,
       source_url: bestOffer.source_url ?? null,
+      quantity: entry.quantity,
     });
   };
 
@@ -203,25 +264,52 @@ function EntryRow({ entry }: { entry: ListEntry }) {
           </button>
         )}
       </div>
-      <div className="flex shrink-0 items-start gap-1">
-        <span
-          className={cn(
-            'whitespace-nowrap text-sm font-bold',
-            isBestPick
-              ? 'text-emerald-700 dark:text-emerald-400'
-              : 'text-stone-900 dark:text-[#FFE97A]',
-          )}
-        >
-          {formatArs(entry.price)}
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'whitespace-nowrap text-sm font-bold',
+              isBestPick
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-stone-900 dark:text-[#FFE97A]',
+            )}
+          >
+            {formatArs(lineTotal)}
+          </span>
+          <button
+            type="button"
+            onClick={() => remove(entry.slug, entry.store)}
+            className="rounded p-1 text-stone-500 transition-colors hover:bg-red-700 hover:text-white dark:text-[#C9BE90]"
+            aria-label={`Quitar ${entry.name} de la lista`}
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className="inline-flex items-center gap-1 rounded-md border border-yellow-400/70 bg-white/60 dark:border-[#6B633C] dark:bg-black/20">
+          <button
+            type="button"
+            onClick={() => setQuantity(entry.slug, entry.store, entry.quantity - 1)}
+            disabled={entry.quantity <= 1}
+            className="px-1 py-0.5 text-stone-700 transition-colors hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-40 dark:text-[#F2E9C4] dark:hover:bg-[#3D3820]"
+            aria-label={`Reducir cantidad de ${entry.name}`}
+          >
+            <Minus className="size-3" />
+          </button>
+          <span className="min-w-[1.25rem] text-center text-xs font-bold" aria-live="polite">
+            {entry.quantity}
+          </span>
+          <button
+            type="button"
+            onClick={() => setQuantity(entry.slug, entry.store, entry.quantity + 1)}
+            className="px-1 py-0.5 text-stone-700 transition-colors hover:bg-yellow-300 dark:text-[#F2E9C4] dark:hover:bg-[#3D3820]"
+            aria-label={`Aumentar cantidad de ${entry.name}`}
+          >
+            <Plus className="size-3" />
+          </button>
+        </div>
+        <span className="text-[10px] text-stone-500 dark:text-[#B8AE82]">
+          {formatArs(entry.price)} c/u
         </span>
-        <button
-          type="button"
-          onClick={() => remove(entry.slug, entry.store)}
-          className="rounded p-1 text-stone-500 transition-colors hover:bg-red-700 hover:text-white dark:text-[#C9BE90]"
-          aria-label={`Quitar ${entry.name} de la lista`}
-        >
-          <X className="size-3.5" />
-        </button>
       </div>
     </li>
   );

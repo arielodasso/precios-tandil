@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Footer } from '@/components/Footer';
 import { ProductListProvider } from '@/components/ProductListContext';
+import { SavingsReporter } from '@/components/SavingsReporter';
 import { ProductListToggle } from '@/components/ProductListSidebar';
 import { SITE_BASE_URL } from '@/lib/site';
 import './globals.css';
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${montserrat.className} min-h-dvh antialiased`}>
         <ProductListProvider>
+          <SavingsReporter />
           <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-sm">
             <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
               <Link href="/" className="flex items-center gap-2.5">
