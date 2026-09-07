@@ -1,8 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { formatArs } from './HistoryStrip';
 import { ProductImage } from './ProductImage';
 import { AddToListButton } from './AddToListButton';
+import { QuantityStepper } from './QuantityStepper';
+import { useProductList } from './ProductListContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn, formatUnit, titleCase } from '@/lib/utils';
 import type { CardOffer, ProductUnit } from '@/lib/types';
@@ -22,8 +27,8 @@ export interface ProductCardData {
 
 /**
  * T044/T062/T066 — Tarjeta de producto en listados.
- * Muestra imagen, nombre normalizado (capitalizado), y TODOS los precios
- * de las fuentes (no solo el mejor), cada uno con su link de origen.
+ * Selector de cantidad siempre visible (a la altura del título); los precios de
+ * las fuentes se calculan dinámicamente multiplicando por la cantidad elegida.
  */
 export function ProductCard({ product }: { product: ProductCardData }) {
   const {
@@ -36,6 +41,17 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     discount_pct,
     stores_count,
   } = product;
+
+  const { items, setQuantity } = useProductList();
+  const inListEntries = items.filter((i) => i.slug === slug);
+  const [qty, setQtyState] = useState(() => inListEntries[0]?.quantity ?? 1);
+
+  const setQty = (next: number) => {
+    setQtyState(next);
+    if (inListEntries.length > 0) {
+      for (const entry of inListEntries) setQuantity(entry.slug, entry.store, next);
+    }
+  };
 
   const fallbackBest = product.best_price;
   const sortedOffers =
@@ -76,16 +92,22 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             )}
           </div>
 
-          {showBest && bestPrice != null ? (
-            <div className="shrink-0 text-right">
-              <p className="text-lg font-bold leading-none text-primary">{formatArs(bestPrice)}</p>
-              {stores_count != null ? (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <QuantityStepper compact value={qty} onChange={setQty} />
+            {showBest && bestPrice != null ? (
+              <p
+                className="text-lg font-bold leading-none text-primary"
+                aria-label={`Mejor precio total: ${formatArs(bestPrice * qty)}`}
+              >
+                {formatArs(bestPrice * qty)}
+              </p>
+            ) : null}
+            {stores_count != null ? (
+              <p className="text-xs text-muted-foreground">
+                {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {sortedOffers ? (
@@ -111,6 +133,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                     )}
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
+                    {qty > 1 && <span className="text-[11px] text-muted-foreground">×{qty}</span>}
                     {offer.source_url ? (
                       <a
                         href={offer.source_url}
@@ -118,17 +141,18 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                         rel="noopener noreferrer"
                         className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary transition-colors hover:text-alerta"
                       >
-                        {offer.price != null ? formatArs(offer.price) : '—'}
+                        {offer.price != null ? formatArs(offer.price * qty) : '—'}
                         <ExternalLink className="size-3" />
                       </a>
                     ) : (
                       <span className="shrink-0 font-semibold">
-                        {offer.price != null ? formatArs(offer.price) : '—'}
+                        {offer.price != null ? formatArs(offer.price * qty) : '—'}
                       </span>
                     )}
                     {offer.price != null ? (
                       <AddToListButton
                         className="px-1.5 py-1 text-[11px]"
+                        quantity={qty}
                         entry={{
                           slug,
                           name,
@@ -145,7 +169,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                           store_name: offer.store_name,
                           price: offer.price,
                           source_url: offer.source_url ?? null,
-                          quantity: 1,
+                          quantity: qty,
                         }}
                       />
                     ) : null}

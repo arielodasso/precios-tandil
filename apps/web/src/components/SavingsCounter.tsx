@@ -40,11 +40,11 @@ export async function SavingsCounter() {
         className="mt-1 text-2xl font-extrabold text-emerald-700 dark:text-emerald-400"
         aria-live="polite"
       >
-        {formatArsBig(total)}
+        ${formatArsBig(total)}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
         {contributors > 0
-          ? `junto a ${contributors} ${contributors === 1 ? 'vecino' : 'vecinos'} usando Precios Tandil`
+          ? `usando Precios Tandil`
           : '¡Sumá tus productos a una lista y empezá a ahorrar!'}
       </p>
     </div>

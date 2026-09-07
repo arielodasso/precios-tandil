@@ -13,6 +13,7 @@ import {
 import { resolveCbaBasket } from '@/lib/cba';
 import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { SavingsCounter } from '@/components/SavingsCounter';
+import { PanoramaCarousel } from '@/components/PanoramaCarousel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { siteUrl } from '@/lib/site';
@@ -145,13 +146,13 @@ export default async function HomePage() {
               </h2>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+            <PanoramaCarousel>
               <SavingsCounter />
-              <div className="rounded-lg bg-muted/40 p-3">
+              <div className="h-full rounded-lg bg-muted/40 p-3">
                 <p className="text-xs text-muted-foreground">Precios relevados hoy</p>
                 <p className="text-xl font-bold">{formatInt(overview?.prices_today)}</p>
               </div>
-              <div className="rounded-lg bg-muted/40 p-3">
+              <div className="h-full rounded-lg bg-muted/40 p-3">
                 <p className="text-xs text-muted-foreground">Tienda más barata</p>
                 <p className="text-xl font-bold truncate">{cheapestStore?.store_name ?? '—'}</p>
                 {cheapestSavingsPct !== null && (
@@ -161,7 +162,7 @@ export default async function HomePage() {
                 )}
               </div>
               <CbaBasketCard basket={cbaBasket} details={cbaDetails} />
-            </div>
+            </PanoramaCarousel>
 
             {cheapestStore && cheapestSavingsPct !== null && (
               <p className="mt-4 text-sm text-muted-foreground">
