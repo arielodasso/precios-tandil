@@ -373,7 +373,19 @@ const NAME_RULES: CategoryRule[] = [
   },
   {
     categoryPath: 'almacen/reposteria',
-    prefixes: ['levadura', 'vanillina', 'colorante', 'decoracion', 'cobertura', 'merengue'],
+    prefixes: [
+      'levadura',
+      'vanillina',
+      'colorante',
+      'decoracion',
+      'cobertura',
+      'merengue',
+      'magdalena',
+      'madale',
+      'budin',
+      'budines',
+      'pastelito',
+    ],
   },
 
   // ── Bebidas sub-categorías ──
@@ -490,11 +502,8 @@ const NAME_RULES: CategoryRule[] = [
       'tostado',
       'grisines',
       'grisin',
-      'magdalena',
-      'madale',
       'pastelito',
       'rebozador',
-      'budin',
     ],
   },
   {

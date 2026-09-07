@@ -81,6 +81,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es-AR" suppressHydrationWarning className={montserrat.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-XE3FDVCJFE"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-XE3FDVCJFE');
+            `,
+          }}
+        />
       </head>
       <body className={`${montserrat.className} min-h-dvh antialiased`}>
         <ProductListProvider>

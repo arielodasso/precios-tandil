@@ -505,7 +505,10 @@ export class IngestPipeline {
     if (storePath && namePath) {
       // Preferir el resultado más específico. Si la tienda solo aporta un path
       // genérico (ej: 'almacen'), el nombre del producto suele clasificar mejor.
-      taxPath = storePath.split('/').length >= namePath.split('/').length ? storePath : namePath;
+      // A igual profundidad gana el nombre: la góndola de la tienda es genérica
+      // ("frescos") mientras el nombre identifica el producto real (ej: un budín
+      // envasado es de "almacen/reposteria" aunque la tienda lo ponga en panadería).
+      taxPath = storePath.split('/').length > namePath.split('/').length ? storePath : namePath;
     } else {
       taxPath = storePath ?? namePath;
     }

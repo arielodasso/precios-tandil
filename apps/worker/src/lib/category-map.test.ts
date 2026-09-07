@@ -35,8 +35,8 @@ describe('matchCategoryByName', () => {
     expect(matchCategoryByName('roast beef rodaja')).toBe('frescos/carnes');
     expect(matchCategoryByName('rotiseria morfi x porcion')).toBe('frescos/rotiseria');
     expect(matchCategoryByName('grisines malteados')).toBe('frescos/panaderia');
-    expect(matchCategoryByName('magdalenas vainilla')).toBe('frescos/panaderia');
-    expect(matchCategoryByName('pastelitos de membrillo')).toBe('frescos/panaderia');
+    expect(matchCategoryByName('magdalenas vainilla')).toBe('almacen/reposteria');
+    expect(matchCategoryByName('pastelitos de membrillo')).toBe('almacen/reposteria');
   });
 
   it('alcohol va a limpieza, no a frutas', () => {
@@ -95,7 +95,7 @@ describe('matchCategoryByName', () => {
     expect(matchCategoryByName('pimienton campagnola')).toBe('almacen/condimentos');
     expect(matchCategoryByName('cebolla deshidratada escama')).toBe('almacen/condimentos');
     expect(matchCategoryByName('infusion base cafe arlistan')).toBe('almacen/cafe');
-    expect(matchCategoryByName('budin vainilla chips smams')).toBe('frescos/panaderia');
+    expect(matchCategoryByName('budin vainilla chips smams')).toBe('almacen/reposteria');
     expect(matchCategoryByName('papa comun 1 kgs')).toBe('frescos/frutas-y-verduras');
     expect(matchCategoryByName('papas mc cain golazo')).toBe('congelados/congelados-preparados');
     expect(matchCategoryByName('milanesa granja del sol napolitana')).toBe(

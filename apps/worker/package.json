@@ -13,6 +13,7 @@
     "retag-categories": "tsx src/cli-retag-categories.ts",
     "reconcile": "tsx src/cli-reconcile.ts",
     "rematch": "tsx src/cli-rematch.ts",
+    "match-missing": "tsx src/cli-match-missing.ts",
     "unconflict": "tsx src/cli-unconflict.ts",
     "consolidate": "tsx src/cli-consolidate.ts",
     "merge-by-ean": "tsx src/cli-merge-by-ean.ts",
