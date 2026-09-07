@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toPng } from 'html-to-image';
 import { ChevronRight, ShoppingBasket, Loader } from 'lucide-react';
 
@@ -78,14 +79,15 @@ export function CbaBasketCard({
         )}
       </button>
 
-      {open && cheapest && (
+      {open && cheapest && createPortal(
         <CbaBasketModal
           basket={basket}
           details={details}
           initialSlug={cheapest.store_slug}
           exportable={exportable}
           onClose={() => setOpen(false)}
-        />
+        />,
+        document.body,
       )}
     </>
   );
