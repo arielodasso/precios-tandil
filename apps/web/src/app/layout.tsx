@@ -76,22 +76,21 @@ const themeScript = `
   }
 })()`;
 
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-7V77W8GP1C';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es-AR" suppressHydrationWarning className={montserrat.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-XE3FDVCJFE"
-        />
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-XE3FDVCJFE');
+              gtag('config', '${GA_ID}');
             `,
           }}
         />
