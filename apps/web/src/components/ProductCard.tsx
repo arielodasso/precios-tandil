@@ -27,7 +27,7 @@ export interface ProductCardData {
 
 /**
  * T044/T062/T066 — Tarjeta de producto en listados.
- * Selector de cantidad siempre visible (a la altura del título); los precios de
+ * Selector de cantidad siempre visible debajo del precio; los precios de
  * las fuentes se calculan dinámicamente multiplicando por la cantidad elegida.
  */
 export function ProductCard({ product }: { product: ProductCardData }) {
@@ -93,7 +93,6 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </div>
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <QuantityStepper compact value={qty} onChange={setQty} />
             {showBest && bestPrice != null ? (
               <p
                 className="text-lg font-bold leading-none text-primary"
@@ -102,6 +101,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                 {formatArs(bestPrice * qty)}
               </p>
             ) : null}
+            <QuantityStepper compact value={qty} onChange={setQty} />
             {stores_count != null ? (
               <p className="text-xs text-muted-foreground">
                 {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
