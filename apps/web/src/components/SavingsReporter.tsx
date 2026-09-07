@@ -26,8 +26,8 @@ function getDeviceId(): string {
 /**
  * Reporta al backend el ahorro actual de este usuario (agregado anónimo por
  * device_id). Esto alimenta el contador "cuánto llevan ahorrado los tandilenses"
- * en el dashboard. Reporta cada vez que el ahorro cambia (incluyendo a 0)
- * para que el agregado sea real y se mantenga actualizado.
+ * en el dashboard. El backend acumula con GREATEST: el ahorro de cada dispositivo
+ * solo crece, por lo que limpiar la lista no reduce el contador global.
  */
 export function SavingsReporter() {
   const { savings, items } = useProductList();

@@ -6,6 +6,8 @@ import { jsonWithCache, SEARCH_JSON_CACHE } from '@/lib/http';
 /**
  * POST /api/v1/savings
  * Reporta el ahorro actual de un usuario (upsert por device_id anónimo).
+ * El savings_amount solo crece: se usa GREATEST para que una vez que un
+ * dispositivo reportó un ahorro, limpiar la lista no reduzca el contador.
  */
 export async function POST(request: Request) {
   try {
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
       INSERT INTO user_savings (device_id, savings_amount, item_count, updated_at)
       VALUES (${deviceId}, ${savings}, ${itemCount}, now())
       ON CONFLICT (device_id) DO UPDATE SET
-        savings_amount = EXCLUDED.savings_amount,
+        savings_amount = GREATEST(EXCLUDED.savings_amount, user_savings.savings_amount),
         item_count = EXCLUDED.item_count,
         updated_at = now()
     `.execute(db);
