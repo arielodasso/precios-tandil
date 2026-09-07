@@ -112,7 +112,6 @@ function CbaBasketModal({
   const detail = details.find((d) => d.store_slug === row?.store_slug);
   const totalItems = basket[0]?.products_count ?? 0;
 
-  const savingsPct = row ? Math.abs(Number(row.vs_reference_pct)) : null;
   const missing = detail?.products.filter((p) => p.is_missing) ?? [];
 
   async function download(): Promise<void> {
@@ -208,33 +207,6 @@ function CbaBasketModal({
           </div>
 
           {error && <p className="border-b px-4 pt-2 text-sm text-red-600">{error}</p>}
-
-          {row && (
-            <div className="border-b px-4 py-3">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="text-lg font-extrabold text-alerta">{row.store_name}</p>
-                <p className="text-2xl font-extrabold tracking-tight">
-                  {formatArs(row.total_basket)}
-                </p>
-                {savingsPct !== null && row.vs_reference_pct !== '0' && (
-                  <span
-                    className={`text-sm font-semibold ${
-                      Number(row.vs_reference_pct) <= 0 ? 'text-emerald-600' : 'text-red-600'
-                    }`}
-                  >
-                    {Number(row.vs_reference_pct) <= 0
-                      ? `−${savingsPct}% vs promedio`
-                      : `+${savingsPct}% vs promedio`}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                {row.products_present} de {row.products_count} productos con precio propio · los que
-                no vende se valúan al promedio · precio promedio de las demás tiendas como
-                referencia
-              </p>
-            </div>
-          )}
 
           <div className="border-b px-4 py-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">

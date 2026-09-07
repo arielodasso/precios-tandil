@@ -26,7 +26,8 @@ function getDeviceId(): string {
 /**
  * Reporta al backend el ahorro actual de este usuario (agregado anónimo por
  * device_id). Esto alimenta el contador "cuánto llevan ahorrado los tandilenses"
- * en el dashboard. Solo reporta cuando hay un ahorro real y positivo.
+ * en el dashboard. Reporta cada vez que el ahorro cambia (incluyendo a 0)
+ * para que el agregado sea real y se mantenga actualizado.
  */
 export function SavingsReporter() {
   const { savings, items } = useProductList();
@@ -37,9 +38,11 @@ export function SavingsReporter() {
     const deviceId = getDeviceId();
     if (!deviceId) return;
 
-    // Reportar si el ahorro cambió de forma significativa desde el último envío.
+    // Reportar si el ahorro o la lista cambiaron desde el último envío.
+    // Se reporta también un ahorro en 0 (lista vacía) para que el agregado
+    // refleje siempre valores reales y no queden montos desactualizados.
     const key = `${Math.round(savings * 100)}:${items.length}`;
-    if (savings <= 0 || reported.current === key) return;
+    if (reported.current === key) return;
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
