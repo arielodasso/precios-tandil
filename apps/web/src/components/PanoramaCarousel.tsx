@@ -34,7 +34,7 @@ export function PanoramaCarousel({ children }: { children: ReactNode[] }) {
             style={{ transform: `translateX(-${index * 100}%)` }}
           >
             {children.map((child, i) => (
-              <div key={i} className="w-full shrink-0 px-0.5">
+              <div key={i} className="w-full shrink-0 px-0.5 py-1">
                 {child}
               </div>
             ))}
