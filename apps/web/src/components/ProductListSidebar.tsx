@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, Minus, Plus, Share2, ShoppingCart, Trash2, X } from 'lucide-react';
-import { useProductList, type ListEntry } from './ProductListContext';
+import { useProductList, type ListEntry, type ListStoreGroup } from './ProductListContext';
 import { cn, formatUnit, titleCase } from '@/lib/utils';
 import { formatArs } from './HistoryStrip';
+import { siteUrl } from '@/lib/site';
 import { ProductImage } from './ProductImage';
 
 export function ProductListToggle() {
@@ -127,9 +128,13 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
                   <ShoppingCart className="size-3.5" />
                   Con Precios Tandil ahorraste {formatArs(savings)}
                 </p>
-                <ShareSavings savings={savings} itemCount={items.length} />
               </div>
             )}
+            <ShareSavings
+              savings={savings}
+              totalSelected={totalSelected}
+              groupedByStore={groupedByStore}
+            />
             <button
               type="button"
               onClick={clear}
@@ -146,18 +151,48 @@ function ProductListSidebar({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ShareSavings({ savings, itemCount }: { savings: number; itemCount: number }) {
-  const text = `Comparé ${itemCount} ${itemCount === 1 ? 'producto' : 'productos'} en Precios Tandil y ahorré ${formatArs(savings)} 🛒 Arma tu lista y ahorrá también 👉 https://preciostandil.ar`;
+function ShareSavings({
+  savings,
+  totalSelected,
+  groupedByStore,
+}: {
+  savings: number;
+  totalSelected: number;
+  groupedByStore: ListStoreGroup[];
+}) {
+  const lines: string[] = [];
+  lines.push('🛒 *Mi lista de compras en Precios Tandil*');
 
+  for (const group of [...groupedByStore].sort((a, b) => a.name.localeCompare(b.name, 'es'))) {
+    const subtotal = group.entries.reduce((s, e) => s + e.price * e.quantity, 0);
+    lines.push('');
+    lines.push(`🏪 *${group.name}* — ${formatArs(subtotal)}`);
+    for (const entry of group.entries) {
+      const qty = entry.quantity > 1 ? `${entry.quantity} x ` : '';
+      lines.push(
+        `  • ${qty}${titleCase(entry.name)} — ${formatArs(entry.price * entry.quantity)} (${siteUrl(`/p/${entry.slug}`)})`,
+      );
+    }
+  }
+
+  lines.push('');
+  lines.push(`🧾 *Total:* ${formatArs(totalSelected)}`);
+  if (savings > 0) {
+    lines.push(`✨ Ahorrás ${formatArs(savings)} comprando al mejor precio`);
+  }
+  lines.push('');
+  lines.push(`Mirá los precios y compará acá 👉 ${siteUrl('/')}`);
+
+  const text = lines.join('\n');
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
 
   const handleShare = async () => {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          title: 'Mi ahorro con Precios Tandil',
+          title: 'Mi lista con Precios Tandil',
           text,
-          url: 'https://preciostandil.ar',
+          url: siteUrl('/'),
         });
         return;
       } catch {
@@ -167,30 +202,30 @@ function ShareSavings({ savings, itemCount }: { savings: number; itemCount: numb
   };
 
   return (
-    <div className="mt-2">
+    <div className="mt-3">
       <p className="text-xs font-semibold text-stone-700 dark:text-[#C9BE90]">
-        Compartí cuánto ahorraste:
+        Compartí tu lista por WhatsApp:
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={handleShare}
-          className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-semibold text-yellow-100 transition-colors hover:bg-stone-700 dark:bg-[#FDEC20] dark:text-[#1F1B07] dark:hover:bg-[#F5E94B]"
-          aria-label="Compartir mi ahorro (WhatsApp, Telegram, etc.)"
-        >
-          <Share2 className="size-3.5" />
-          Compartir
-        </button>
         <a
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-md bg-[#25D366] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#1fb457]"
-          aria-label="Compartir mi ahorro por WhatsApp"
+          aria-label="Compartir mi lista por WhatsApp"
         >
           <WhatsAppIcon />
           WhatsApp
         </a>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-2.5 py-1.5 text-xs font-semibold text-yellow-100 transition-colors hover:bg-stone-700 dark:bg-[#FDEC20] dark:text-[#1F1B07] dark:hover:bg-[#F5E94B]"
+          aria-label="Compartir mi lista (WhatsApp, Telegram, etc.)"
+        >
+          <Share2 className="size-3.5" />
+          Compartir
+        </button>
       </div>
     </div>
   );

@@ -52,7 +52,10 @@ function propertyId(): string | null {
   return process.env.GA_PROPERTY_ID ?? null;
 }
 
-type Row = { dimensionValues?: { value?: string | null }[]; metricValues?: { value?: string | null }[] };
+type Row = {
+  dimensionValues?: { value?: string | null }[];
+  metricValues?: { value?: string | null }[];
+};
 
 function rowToMap(row: Row, dims: number, metrics: number): { dims: string[]; metrics: number[] } {
   const d = (row.dimensionValues ?? []).slice(0, dims).map((v) => v.value ?? '');
@@ -157,22 +160,22 @@ export async function getGa4Dashboard(): Promise<Ga4Report> {
       value: pick(r30, m.name),
     }));
 
+    // No se ordena por la dimensión `date` en el request: la Data API rechaza
+    // orderBy sobre `date` ("Metric ... in MetricOrderBy is missing from visible
+    // metrics list"). Se ordena acá en cliente por fecha.
     const trendRows = await runReport({
       dateRanges: range30,
       dimensions: [{ name: 'date' }],
-      metrics: [
-        { name: 'totalUsers' },
-        { name: 'sessions' },
-        { name: 'screenPageViews' },
-      ],
-      orderBys: [{ metric: { metricName: 'date' }, desc: false }],
+      metrics: [{ name: 'totalUsers' }, { name: 'sessions' }, { name: 'screenPageViews' }],
     });
-    base.trend = trendRows.map((r) => {
-      const { dims, metrics } = rowToMap(r, 1, 3);
-      const raw = dims[0] ?? '';
-      const date = raw.length === 8 ? `${raw.slice(6, 8)}/${raw.slice(4, 6)}` : raw;
-      return { date, users: metrics[0], sessions: metrics[1], views: metrics[2] };
-    });
+    base.trend = trendRows
+      .map((r) => {
+        const { dims, metrics } = rowToMap(r, 1, 3);
+        const raw = dims[0] ?? '';
+        const date = raw.length === 8 ? `${raw.slice(6, 8)}/${raw.slice(4, 6)}` : raw;
+        return { date, users: metrics[0], sessions: metrics[1], views: metrics[2] };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date, 'es'));
 
     const [pages, channels, devices, countries] = await Promise.all([
       runReport({
@@ -209,7 +212,7 @@ export async function getGa4Dashboard(): Promise<Ga4Report> {
       const title = dims[1]?.trim();
       return {
         path: dims[0] ?? '',
-        title: title && title !== '(not set)' ? title : dims[0] ?? '',
+        title: title && title !== '(not set)' ? title : (dims[0] ?? ''),
         views: metrics[0],
         users: metrics[1],
       };

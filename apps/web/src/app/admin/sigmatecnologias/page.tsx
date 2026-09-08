@@ -7,6 +7,7 @@ import type { Ga4Metric } from '@/lib/ga4';
 import { BackButton } from '@/components/BackButton';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { titleCase } from '@/lib/utils';
+import { siteUrl } from '@/lib/site';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-7V77W8GP1C';
-const SITE_URL = 'https://precios-tandil.vercel.app';
+const SITE_URL = siteUrl('/').replace(/\/$/, '') || 'https://preciostandil.vercel.app';
 
 const GA_SNIPPET = `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
 <script>
@@ -94,7 +95,8 @@ function BarRow({
         />
       </div>
       <span className="w-28 shrink-0 text-right text-sm font-semibold">
-        {value.toLocaleString('es-AR')}{suffix ? ` ${suffix}` : ''}
+        {value.toLocaleString('es-AR')}
+        {suffix ? ` ${suffix}` : ''}
       </span>
     </div>
   );
@@ -124,10 +126,7 @@ export default async function SigmaTecnologiasPage() {
 
   const ga = await getGa4Dashboard();
 
-  const trendMax = Math.max(
-    1,
-    ...ga.trend.slice(-14).map((t) => Math.max(t.users, t.sessions)),
-  );
+  const trendMax = Math.max(1, ...ga.trend.slice(-14).map((t) => Math.max(t.users, t.sessions)));
 
   const today = new Date().toLocaleDateString('es-AR', {
     year: 'numeric',
@@ -141,9 +140,7 @@ export default async function SigmaTecnologiasPage() {
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <BackButton />
-          <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">
-            Sigma Tecnologías
-          </h1>
+          <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">Sigma Tecnologías</h1>
         </div>
         <p className="mt-1 text-muted-foreground">
           Dashboard de SEO, tráfico e interacción desde Google Analytics 4 y estado interno del
@@ -264,12 +261,10 @@ export default async function SigmaTecnologiasPage() {
               <p className="text-sm font-semibold text-alerta">
                 No se pudo consultar Google Analytics
               </p>
-              <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-                {ga.error}
-              </p>
+              <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{ga.error}</p>
               <p className="mt-3 text-sm text-muted-foreground">
-                El snippet (tag {GA_ID}) sigue midiendo el tráfico en todas las páginas; el
-                problema es la consulta de datos con la Data API.
+                El snippet (tag {GA_ID}) sigue midiendo el tráfico en todas las páginas; el problema
+                es la consulta de datos con la Data API.
               </p>
             </div>
           ) : null}
