@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? 'G-7V77W8GP1C';
-const SITE_URL = siteUrl('/').replace(/\/$/, '') || 'https://preciostandil.vercel.app';
+const SITE_URL = siteUrl('/').replace(/\/$/, '');
 
 const GA_SNIPPET = `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
 <script>
