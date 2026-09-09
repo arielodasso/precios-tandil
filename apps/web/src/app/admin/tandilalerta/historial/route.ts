@@ -15,6 +15,7 @@ const HEADERS = [
   'lista_o_promo',
   'unidad',
   'capturado_el',
+  'fecha_corrida',
   'url_origen',
   'run_id',
   'es_sospechoso',
@@ -53,6 +54,7 @@ export async function GET() {
            pr.list_or_promo as lista_o_promo,
            ss.unit_label as unidad,
            to_char(pr.captured_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as capturado_el,
+           to_char(rr.started_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as fecha_corrida,
            coalesce(pr.source_url, ss.url) as url_origen,
            pr.run_id::text as run_id,
            pr.is_suspect as es_sospechoso
@@ -62,6 +64,7 @@ export async function GET() {
     join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
     join product p on p.id = ml.product_id
     left join category c on c.id = p.category_id
+    left join run_report rr on rr.run_id = pr.run_id::text
     where (pr.captured_at, pr.id) > ($1::timestamptz, $2::bigint)
     order by pr.captured_at asc, pr.id asc
     limit ${PAGE}
@@ -93,6 +96,7 @@ export async function GET() {
                 r.lista_o_promo,
                 r.unidad,
                 r.capturado_el,
+                r.fecha_corrida,
                 r.url_origen,
                 r.run_id,
                 r.es_sospechoso,
