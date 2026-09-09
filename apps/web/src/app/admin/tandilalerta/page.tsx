@@ -123,8 +123,7 @@ export default async function AnalyticsPage() {
           <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">Analíticas</h1>
         </div>
         <p className="mt-1 text-muted-foreground">
-          Resumen de precios y tendencias de supermercados de Tandil. Cada sección se puede
-          descargar como imagen para compartir.
+          Precios y tendencias de supermercados de Tandil.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" size="sm">
@@ -145,7 +144,7 @@ export default async function AnalyticsPage() {
       {/* Canasta por tienda (al principio del panel) */}
       <CaptureSection
         title="Canasta por tienda"
-        description="Costo de una canasta fija de productos esenciales, valuada en cada supermercado. Los productos que una tienda no vende se valúan al precio promedio. Click en una tienda para ver los productos."
+        description="Costo de una canasta fija de productos esenciales en cada supermercado."
         fileName="precios-tandil-canasta.png"
         action={
           <ExportCsvButton
@@ -178,7 +177,7 @@ export default async function AnalyticsPage() {
       {/* Canasta para difusión (mismo bloque que la home, con exportación) */}
       <CaptureSection
         title="Canasta para difusión"
-        description="El mismo detalle de la home: elegí la tienda, armá la comparación y descargala como imagen para difundir."
+        description="Compará tiendas y descargala como imagen."
         fileName="precios-tandil-canasta-detalle.png"
       >
         <CbaBasketCard basket={basket} details={cbaDetails} exportable />
@@ -196,7 +195,7 @@ export default async function AnalyticsPage() {
       {/* Product History Search */}
       <CaptureSection
         title="Evolución de precio"
-        description="Buscá un producto por su nombre o slug para ver la evolución histórica de precios."
+        description="Evolución histórica del precio de un producto."
         fileName="precios-tandil-evolucion.png"
       >
         <ProductHistorySearch />
@@ -205,7 +204,7 @@ export default async function AnalyticsPage() {
       {/* Price Drops */}
       <CaptureSection
         title="Bajadas de la semana"
-        description="Productos con mayor descuento comparando el precio actual contra el de hace 7 días."
+        description="Mayores bajas vs. hace 7 días."
         fileName="precios-tandil-bajadas.png"
         action={
           <ExportCsvButton
@@ -271,7 +270,7 @@ export default async function AnalyticsPage() {
       {/* Price Rises */}
       <CaptureSection
         title="Subas de la semana"
-        description="Productos con mayor aumento comparando el precio actual contra el de hace 7 días."
+        description="Mayores subas vs. hace 7 días."
         fileName="precios-tandil-subas.png"
         action={
           <ExportCsvButton
@@ -335,7 +334,7 @@ export default async function AnalyticsPage() {
       {/* Most Volatile Products */}
       <CaptureSection
         title="Mayores variaciones"
-        description="Productos con mayor variación de precio (subidas y bajadas) comparando el precio actual contra el de hace 7 días."
+        description="Variación de precio vs. hace 7 días."
         fileName="precios-tandil-variaciones.png"
         action={
           <ExportCsvButton
@@ -399,7 +398,7 @@ export default async function AnalyticsPage() {
       {/* Top Savings Opportunities */}
       <CaptureSection
         title="Top oportunidades"
-        description="Productos con mayor ahorro absoluto: la diferencia entre el mejor precio y el promedio de 30 días."
+        description="Mayor ahorro vs. el promedio de 30 días."
         fileName="precios-tandil-oportunidades.png"
         action={
           <ExportCsvButton
@@ -476,7 +475,7 @@ export default async function AnalyticsPage() {
       {/* Price Gaps */}
       <CaptureSection
         title="Brechas de precio"
-        description="Productos donde más conviene elegir la tienda: mayor diferencia contra el promedio."
+        description="Mayor diferencia de precio contra el promedio."
         fileName="precios-tandil-brechas.png"
         action={
           <ExportCsvButton
@@ -542,7 +541,7 @@ export default async function AnalyticsPage() {
       {/* Store Competitiveness */}
       <CaptureSection
         title="Competitividad por tienda"
-        description="Cuántas veces cada tienda tiene el mejor precio entre los productos comparables."
+        description="Veces con el mejor precio entre productos comparables."
         fileName="precios-tandil-competitividad.png"
       >
         {competitiveness.length === 0 ? (
@@ -574,7 +573,7 @@ export default async function AnalyticsPage() {
       {/* Near Historical Low */}
       <CaptureSection
         title="Cerca del mínimo histórico"
-        description="Productos cuyo precio actual está cerca del más bajo registrado en 90 días."
+        description="Cerca del mínimo de 90 días."
         fileName="precios-tandil-minimo-historico.png"
       >
         {nearLow.length === 0 ? (

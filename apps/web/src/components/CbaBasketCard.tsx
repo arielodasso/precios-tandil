@@ -191,9 +191,7 @@ function CbaBasketModal({
               <ShoppingBasket className="size-5 text-alerta" />
               <div>
                 <h3 className="text-lg font-bold">Canasta más barata</h3>
-                <p className="text-xs text-gray-500">
-                  Canasta fija de {totalItems} productos en cada supermercado
-                </p>
+                <p className="text-xs text-gray-500">Canasta fija · {totalItems} productos</p>
               </div>
             </div>
             <div className="flex items-center gap-2 text-gray-500">
@@ -216,7 +214,7 @@ function CbaBasketModal({
 
           <div className="border-b px-4 py-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">
-              Comparación con las otras tiendas
+              Comparación entre tiendas
             </p>
             <div className="flex flex-wrap gap-2">
               {basket.map((b) => {
@@ -288,8 +286,7 @@ function CbaBasketModal({
                 </table>
                 {missing.length > 0 && (
                   <p className="mt-2 text-xs text-gray-500">
-                    {missing.length} productos no disponibles en esta tienda se valuaron al
-                    promedio.
+                    {missing.length} productos sin stock · valuados al promedio.
                   </p>
                 )}
               </>

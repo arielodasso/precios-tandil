@@ -81,8 +81,7 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   {formatArs(b.total_basket)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_present} de {b.products_count} productos con precio propio · el resto
-                  valuado al promedio
+                  {b.products_present}/{b.products_count} con precio · resto al promedio
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   reales{' '}
@@ -205,7 +204,7 @@ function BasketModal({
           <div>
             <h3 className="text-lg font-bold">Canasta · {store.store_name}</h3>
             <p className="text-xs text-muted-foreground">
-              Canasta fija · {products.length} productos · Total {formatArs(store.total_basket)}
+              {products.length} productos · Total {formatArs(store.total_basket)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -247,7 +246,7 @@ function BasketModal({
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wider text-gray-500">
                 <th className="px-4 py-2">Producto</th>
-                <th className="px-4 py-2 text-right">Precio en esta tienda</th>
+                <th className="px-4 py-2 text-right">Precio</th>
                 <th className="px-4 py-2 text-right">Prom. otras tiendas</th>
               </tr>
             </thead>
@@ -274,7 +273,7 @@ function BasketModal({
           </table>
           {missing.length > 0 && (
             <p className="px-4 py-2 text-xs text-gray-500">
-              {missing.length} productos no disponibles en esta tienda se valuaron al promedio.
+              {missing.length} productos sin stock · valuados al promedio.
             </p>
           )}
         </div>
