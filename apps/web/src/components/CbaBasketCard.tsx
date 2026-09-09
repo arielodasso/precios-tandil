@@ -11,6 +11,8 @@ interface CbaBasketRow {
   products_count: number;
   products_present: number;
   total_basket: string;
+  total_real: string;
+  total_estimated: string;
   reference_total: string;
   vs_reference_pct: string;
 }
@@ -79,16 +81,18 @@ export function CbaBasketCard({
         )}
       </button>
 
-      {open && cheapest && createPortal(
-        <CbaBasketModal
-          basket={basket}
-          details={details}
-          initialSlug={cheapest.store_slug}
-          exportable={exportable}
-          onClose={() => setOpen(false)}
-        />,
-        document.body,
-      )}
+      {open &&
+        cheapest &&
+        createPortal(
+          <CbaBasketModal
+            basket={basket}
+            details={details}
+            initialSlug={cheapest.store_slug}
+            exportable={exportable}
+            onClose={() => setOpen(false)}
+          />,
+          document.body,
+        )}
     </>
   );
 }

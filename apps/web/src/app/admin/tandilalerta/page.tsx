@@ -20,6 +20,7 @@ import { BackButton } from '@/components/BackButton';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { ProductHistorySearch } from '@/components/ProductHistorySearch';
 import { BasketSection } from '@/components/BasketSection';
+import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { titleCase } from '@/lib/utils';
 import type { Metadata } from 'next';
 
@@ -60,6 +61,17 @@ function PctBadge({ value }: { value: number | string | null }) {
       {n.toFixed(1)}%
     </span>
   );
+}
+
+/** Precio de referencia hace 7 días derivado del % de cambio y del precio actual. */
+function priceDaysAgo(current: number | string | null, pct: number | string | null): number | null {
+  if (current === null || current === undefined) return null;
+  const c = typeof current === 'string' ? Number.parseFloat(current) : current;
+  const v = typeof pct === 'string' ? Number.parseFloat(pct) : pct;
+  if (!Number.isFinite(c) || v === null || v === undefined || !Number.isFinite(v)) return null;
+  const divisor = 1 + v / 100;
+  if (divisor === 0) return null;
+  return Math.round((c / divisor) * 100) / 100;
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -119,6 +131,30 @@ export default async function AnalyticsPage() {
         title="Canasta por tienda"
         description="Costo de una canasta fija de productos esenciales, valuada en cada supermercado. Los productos que una tienda no vende se valúan al precio promedio. Click en una tienda para ver los productos."
         fileName="precios-tandil-canasta.png"
+        action={
+          <ExportCsvButton
+            label="Exportar CSV"
+            fileName="canasta-por-tienda.csv"
+            headers={[
+              'tienda',
+              'productos',
+              'productos_reales',
+              'total_canasta',
+              'total_real',
+              'total_estimado',
+              '%_vs_promedio',
+            ]}
+            rows={basket.map((b) => [
+              b.store_name,
+              b.products_count,
+              b.products_present,
+              b.total_basket,
+              b.total_real,
+              b.total_estimated,
+              b.vs_reference_pct,
+            ])}
+          />
+        }
       >
         <BasketSection basket={basket} />
       </CaptureSection>
@@ -153,8 +189,22 @@ export default async function AnalyticsPage() {
       {/* Price Drops */}
       <CaptureSection
         title="Bajadas de la semana"
-        description="Productos con mayor descuento contra el promedio de 30 días."
+        description="Productos con mayor descuento comparando el precio actual contra el de hace 7 días."
         fileName="precios-tandil-bajadas.png"
+        action={
+          <ExportCsvButton
+            fileName="bajadas-semana.csv"
+            headers={['producto', 'marca', 'precio_hoy', 'hace_7d', 'cambio_%', 'tienda']}
+            rows={drops.map((p) => [
+              p.name,
+              p.brand,
+              p.best_price,
+              priceDaysAgo(p.best_price, p.pct_change_7d),
+              p.pct_change_7d,
+              p.best_store,
+            ])}
+          />
+        }
       >
         {drops.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -167,7 +217,7 @@ export default async function AnalyticsPage() {
                 <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-2.5">Producto</th>
                   <th className="px-4 py-2.5 text-right">Precio hoy</th>
-                  <th className="px-4 py-2.5 text-right">Prom. 30d</th>
+                  <th className="px-4 py-2.5 text-right">Hace 7d</th>
                   <th className="px-4 py-2.5 text-right">Cambio</th>
                   <th className="px-4 py-2.5">Tienda</th>
                 </tr>
@@ -188,7 +238,7 @@ export default async function AnalyticsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right font-bold">{formatArs(p.best_price)}</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">
-                      {formatArs(p.avg_30d)}
+                      {formatArs(priceDaysAgo(p.best_price, p.pct_change_7d))}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <PctBadge value={p.pct_change_7d} />
@@ -205,8 +255,22 @@ export default async function AnalyticsPage() {
       {/* Price Rises */}
       <CaptureSection
         title="Subas de la semana"
-        description="Productos con mayor aumento contra el promedio de 30 días."
+        description="Productos con mayor aumento comparando el precio actual contra el de hace 7 días."
         fileName="precios-tandil-subas.png"
+        action={
+          <ExportCsvButton
+            fileName="subas-semana.csv"
+            headers={['producto', 'marca', 'precio_hoy', 'hace_7d', 'cambio_%', 'tienda']}
+            rows={rises.map((p) => [
+              p.name,
+              p.brand,
+              p.best_price,
+              priceDaysAgo(p.best_price, p.pct_change_7d),
+              p.pct_change_7d,
+              p.best_store,
+            ])}
+          />
+        }
       >
         {rises.length === 0 ? (
           <p className="text-sm text-muted-foreground">No hay subas significativas esta semana.</p>
@@ -217,7 +281,7 @@ export default async function AnalyticsPage() {
                 <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-2.5">Producto</th>
                   <th className="px-4 py-2.5 text-right">Precio hoy</th>
-                  <th className="px-4 py-2.5 text-right">Prom. 30d</th>
+                  <th className="px-4 py-2.5 text-right">Hace 7d</th>
                   <th className="px-4 py-2.5 text-right">Cambio</th>
                   <th className="px-4 py-2.5">Tienda</th>
                 </tr>
@@ -238,7 +302,7 @@ export default async function AnalyticsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right font-bold">{formatArs(p.best_price)}</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">
-                      {formatArs(p.avg_30d)}
+                      {formatArs(priceDaysAgo(p.best_price, p.pct_change_7d))}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <PctBadge value={p.pct_change_7d} />
@@ -255,8 +319,22 @@ export default async function AnalyticsPage() {
       {/* Most Volatile Products */}
       <CaptureSection
         title="Mayores variaciones"
-        description="Productos con mayor variación de precio (subidas y bajadas) contra el promedio de 30 días."
+        description="Productos con mayor variación de precio (subidas y bajadas) comparando el precio actual contra el de hace 7 días."
         fileName="precios-tandil-variaciones.png"
+        action={
+          <ExportCsvButton
+            fileName="mayores-variaciones.csv"
+            headers={['producto', 'marca', 'precio_hoy', 'hace_7d', 'cambio_%', 'tienda']}
+            rows={volatile.map((p) => [
+              p.name,
+              p.brand,
+              p.best_price,
+              priceDaysAgo(p.best_price, p.pct_change_7d),
+              p.pct_change_7d,
+              p.best_store,
+            ])}
+          />
+        }
       >
         {volatile.length === 0 ? (
           <p className="text-sm text-muted-foreground">No hay suficientes datos de variaciones.</p>
@@ -267,7 +345,7 @@ export default async function AnalyticsPage() {
                 <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-2.5">Producto</th>
                   <th className="px-4 py-2.5 text-right">Precio hoy</th>
-                  <th className="px-4 py-2.5 text-right">Prom. 30d</th>
+                  <th className="px-4 py-2.5 text-right">Hace 7d</th>
                   <th className="px-4 py-2.5 text-right">Cambio</th>
                   <th className="px-4 py-2.5">Tienda</th>
                 </tr>
@@ -288,7 +366,7 @@ export default async function AnalyticsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right font-bold">{formatArs(p.best_price)}</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">
-                      {formatArs(p.avg_30d)}
+                      {formatArs(priceDaysAgo(p.best_price, p.pct_change_7d))}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <PctBadge value={p.pct_change_7d} />
@@ -307,6 +385,29 @@ export default async function AnalyticsPage() {
         title="Top oportunidades"
         description="Productos con mayor ahorro absoluto: la diferencia entre el mejor precio y el promedio de 30 días."
         fileName="precios-tandil-oportunidades.png"
+        action={
+          <ExportCsvButton
+            fileName="top-oportunidades.csv"
+            headers={[
+              'producto',
+              'marca',
+              'precio_hoy',
+              'prom_30d',
+              'ahorro_abs',
+              'ahorro_%',
+              'tienda',
+            ]}
+            rows={topSavings.map((p) => [
+              p.name,
+              p.brand,
+              p.best_price,
+              p.avg_30d,
+              p.savings_abs,
+              p.savings_pct,
+              p.best_store,
+            ])}
+          />
+        }
       >
         {topSavings.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -361,6 +462,20 @@ export default async function AnalyticsPage() {
         title="Brechas de precio"
         description="Productos donde más conviene elegir la tienda: mayor diferencia contra el promedio."
         fileName="precios-tandil-brechas.png"
+        action={
+          <ExportCsvButton
+            fileName="brechas-precio.csv"
+            headers={['producto', 'marca', 'mejor_precio', 'prom_30d', 'ahorro_%', 'tienda']}
+            rows={gaps.map((p) => [
+              p.name,
+              p.brand,
+              p.best_price,
+              p.avg_30d,
+              p.savings_pct,
+              p.best_store,
+            ])}
+          />
+        }
       >
         {gaps.length === 0 ? (
           <p className="text-sm text-muted-foreground">

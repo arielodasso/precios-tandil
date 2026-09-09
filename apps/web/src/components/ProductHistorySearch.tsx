@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { HistoryResponse } from '@/lib/types';
 import { titleCase } from '@/lib/utils';
+import { ExportCsvButton } from '@/components/ExportCsvButton';
 
 function formatArs(v: number): string {
   return new Intl.NumberFormat('es-AR', {
@@ -114,13 +115,21 @@ export function ProductHistorySearch() {
 
       {data && (
         <div className="mt-4 rounded-lg border border-border bg-card p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-bold">
               {titleCase(data.product_name ?? data.product_slug)}
             </h4>
-            <span className="text-xs text-muted-foreground">
-              {data.series.length} días de datos
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {data.series.length} días de datos
+              </span>
+              <ExportCsvButton
+                label="CSV"
+                fileName={`historial-${data.product_slug}.csv`}
+                headers={['fecha', 'precio_minimo', 'precio_promedio']}
+                rows={data.series.map((p) => [p.date, p.min_price, p.avg_price])}
+              />
+            </div>
           </div>
           <Sparkline series={data.series} />
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">

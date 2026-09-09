@@ -9,6 +9,7 @@ interface CaptureSectionProps {
   title: string;
   description?: string;
   fileName: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -17,7 +18,13 @@ interface CaptureSectionProps {
  * bloque (con cabecera de marca + fecha) como PNG para compartir (WhatsApp,
  * redes). La captura fuerza tema claro sacando temporalmente la clase .dark.
  */
-export function CaptureSection({ title, description, fileName, children }: CaptureSectionProps) {
+export function CaptureSection({
+  title,
+  description,
+  fileName,
+  action,
+  children,
+}: CaptureSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,18 +104,21 @@ export function CaptureSection({ title, description, fileName, children }: Captu
             </p>
           )}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void download();
-          }}
-          disabled={busy}
-        >
-          {busy ? <Loader className="size-4 animate-spin" /> : <Download className="size-4" />}
-          {busy ? 'Generando…' : 'Descargar imagen'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {action}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void download();
+            }}
+            disabled={busy}
+          >
+            {busy ? <Loader className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {busy ? 'Generando…' : 'Descargar imagen'}
+          </Button>
+        </div>
       </div>
 
       <div

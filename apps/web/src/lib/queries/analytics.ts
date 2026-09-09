@@ -48,7 +48,12 @@ export async function getOverview(db: KyselyDB) {
   };
 }
 
-/** Products with biggest price drops in 7 days (falls back to avg_30d when no 7d history) */
+/**
+ * Products with biggest price drops in 7 days.
+ * El porcentaje siempre compara el precio actual contra el último precio
+ * válido de hace 7 días (NUNCA cae a avg_30d, para que coincida con lo
+ * visible). Si no hay historia de 7 días, el producto se excluye.
+ */
 export async function getBiggestDrops(db: KyselyDB, limit = 10) {
   return db
     .selectFrom('price_aggregate as pa')
@@ -57,42 +62,26 @@ export async function getBiggestDrops(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
-    .where((eb) =>
-      eb.or([
-        eb('pa.pct_change_7d', '<', '0'),
-        eb.and([
-          eb('pa.pct_change_7d', 'is', null),
-          eb('pa.avg_30d', '>', '0'),
-          eb('pa.best_price', '<', eb.ref('pa.avg_30d')),
-        ]),
-      ]),
-    )
+    .where('pa.pct_change_7d', '<', '0')
     .select([
       'p.slug',
       'p.canonical_name as name',
       'p.brand',
       'pa.best_price',
-      'pa.avg_30d',
+      'pa.pct_change_7d',
       'pa.stores_count',
       's.name as best_store',
       's.slug as best_store_slug',
-      sql<number>`coalesce(
-        pa.pct_change_7d,
-        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
-      )`.as('pct_change_7d'),
     ])
-    .orderBy(
-      sql`coalesce(
-        pa.pct_change_7d,
-        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
-      )`,
-      'asc',
-    )
+    .orderBy('pa.pct_change_7d', 'asc')
     .limit(limit)
     .execute();
 }
 
-/** Products with biggest price increases in 7 days (falls back to avg_30d when no 7d history) */
+/**
+ * Products with biggest price increases in 7 days.
+ * Misma regla que drops: solo pct_change_7d, sin fallback a avg_30d.
+ */
 export async function getBiggestRises(db: KyselyDB, limit = 10) {
   return db
     .selectFrom('price_aggregate as pa')
@@ -101,37 +90,18 @@ export async function getBiggestRises(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
-    .where((eb) =>
-      eb.or([
-        eb('pa.pct_change_7d', '>', '0'),
-        eb.and([
-          eb('pa.pct_change_7d', 'is', null),
-          eb('pa.avg_30d', '>', '0'),
-          eb('pa.best_price', '>', eb.ref('pa.avg_30d')),
-        ]),
-      ]),
-    )
+    .where('pa.pct_change_7d', '>', '0')
     .select([
       'p.slug',
       'p.canonical_name as name',
       'p.brand',
       'pa.best_price',
-      'pa.avg_30d',
+      'pa.pct_change_7d',
       'pa.stores_count',
       's.name as best_store',
       's.slug as best_store_slug',
-      sql<number>`coalesce(
-        pa.pct_change_7d,
-        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
-      )`.as('pct_change_7d'),
     ])
-    .orderBy(
-      sql`coalesce(
-        pa.pct_change_7d,
-        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
-      )`,
-      'desc',
-    )
+    .orderBy('pa.pct_change_7d', 'desc')
     .limit(limit)
     .execute();
 }
@@ -180,6 +150,8 @@ export async function getBasketByStore(db: KyselyDB) {
     products_count: number;
     products_present: number;
     total_basket: string;
+    total_real: string;
+    total_estimated: string;
     reference_total: string;
     vs_reference_pct: string;
   }>`
@@ -222,6 +194,8 @@ export async function getBasketByStore(db: KyselyDB) {
         ss2.n as products_count,
         count(distinct ap.product_id)::int as products_present,
         round(sum(coalesce(ap.price, pr.ref_price))::numeric, 0) as total_basket,
+        round(sum(ap.price)::numeric, 0) as total_real,
+        round((sum(coalesce(ap.price, pr.ref_price)) - coalesce(sum(ap.price), 0))::numeric, 0) as total_estimated,
         round(sum(pr.ref_price)::numeric, 0) as reference_total
       from comparable c
       cross join store s
@@ -234,6 +208,8 @@ export async function getBasketByStore(db: KyselyDB) {
     select
       store_slug, store_name, products_count, products_present,
       total_basket::text as total_basket,
+      total_real::text as total_real,
+      total_estimated::text as total_estimated,
       reference_total::text as reference_total,
       round(((total_basket::numeric - reference_total::numeric) / nullif(reference_total::numeric, 0) * 100), 1)::text as vs_reference_pct
     from per_store
@@ -249,6 +225,8 @@ export async function getBasketByStore(db: KyselyDB) {
     products_count: Number(r.products_count),
     products_present: Number(r.products_present),
     total_basket: r.total_basket,
+    total_real: r.total_real,
+    total_estimated: r.total_estimated,
     reference_total: r.reference_total,
     vs_reference_pct: r.vs_reference_pct,
   }));
@@ -271,6 +249,8 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
     products_count: number;
     products_present: number;
     total_basket: string;
+    total_real: string;
+    total_estimated: string;
     reference_total: string;
     vs_reference_pct: string;
   }>`
@@ -307,6 +287,8 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
         bs.n as products_count,
         count(distinct ap.product_id)::int as products_present,
         round(sum(coalesce(ap.price, pr.ref_price))::numeric, 0) as total_basket,
+        round(sum(ap.price)::numeric, 0) as total_real,
+        round((sum(coalesce(ap.price, pr.ref_price)) - coalesce(sum(ap.price), 0))::numeric, 0) as total_estimated,
         round(sum(pr.ref_price)::numeric, 0) as reference_total
       from store_rows sr
       join store s on s.id = sr.store_id and s.is_active
@@ -318,6 +300,8 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
     select
       store_slug, store_name, products_count, products_present,
       total_basket::text as total_basket,
+      total_real::text as total_real,
+      total_estimated::text as total_estimated,
       reference_total::text as reference_total,
       round(((total_basket::numeric - reference_total::numeric) / nullif(reference_total::numeric, 0) * 100), 1)::text as vs_reference_pct
     from per_store
@@ -333,6 +317,8 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
     products_count: Number(r.products_count),
     products_present: Number(r.products_present),
     total_basket: r.total_basket,
+    total_real: r.total_real,
+    total_estimated: r.total_estimated,
     reference_total: r.reference_total,
     vs_reference_pct: r.vs_reference_pct,
   }));
@@ -499,7 +485,7 @@ export async function getNearHistoricalLow(db: KyselyDB, limit = 10) {
     .then((r) => r.rows);
 }
 
-/** Products with most volatility: biggest absolute change vs avg_30d (both up and down) */
+/** Products with most volatility: biggest absolute change vs 7d ago (both up and down) */
 export async function getMostVolatile(db: KyselyDB, limit = 10) {
   return db
     .selectFrom('price_aggregate as pa')
@@ -508,24 +494,18 @@ export async function getMostVolatile(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
-    .where('pa.avg_30d', '>', '0')
+    .where('pa.pct_change_7d', 'is not', null)
     .select([
       'p.slug',
       'p.canonical_name as name',
       'p.brand',
       'pa.best_price',
-      'pa.avg_30d',
+      'pa.pct_change_7d',
       'pa.stores_count',
       's.name as best_store',
       's.slug as best_store_slug',
-      sql<number>`coalesce(
-        pa.pct_change_7d,
-        round(((pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100)::numeric, 2)
-      )`.as('pct_change_7d'),
-      sql<number>`abs(coalesce(
-        pa.pct_change_7d,
-        (pa.best_price::numeric - pa.avg_30d::numeric) / pa.avg_30d::numeric * 100
-      ))`.as('abs_change'),
+      sql<number>`(pa.pct_change_7d)::numeric`.as('pct_change_7d'),
+      sql<number>`abs(pa.pct_change_7d)::numeric`.as('abs_change'),
     ])
     .orderBy('abs_change', 'desc')
     .limit(limit)

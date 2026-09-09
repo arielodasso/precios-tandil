@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import type { BrowserContext } from 'playwright';
 import {
@@ -421,7 +421,8 @@ export class IngestPipeline {
         .execute();
     }
 
-    const last = await this.db
+    // Umbral clásico de variación (salto abrupto): salto > 80% siempre sospechoso.
+    const latestRow = await this.db
       .selectFrom('price_record')
       .select('price_amount')
       .where('store_sku_id', '=', skuId)
@@ -430,10 +431,62 @@ export class IngestPipeline {
       .limit(1)
       .executeTakeFirst();
 
-    const previous = last !== undefined ? Number(last.price_amount) : null;
+    const previous = latestRow !== undefined ? Number(latestRow.price_amount) : null;
     const change = previous !== null ? pctChange(snap.price.amount, previous) : null;
-    const isSuspect = change !== null && Math.abs(change) > 80;
-    if (isSuspect) {
+    let isSuspect = change !== null && Math.abs(change) > 80;
+
+    // Detección estadística de outliers (best-effort): si hay suficiente historial
+    // reciente y el precio entrante se desvía más de ~4 desviaciones estándar de la
+    // media, se marca sospechoso aunque no supere el 80 %. Así se atrapan errores de
+    // scraping "compatibles" en magnitud (p. ej. decimal corrido). Si la consulta de
+    // estadísticas falla (p. ej. en entornos de test con DB falsa sin SQL raw) se
+    // degrada al umbral fijo del 80 % sin romper la ingesta.
+    if (!isSuspect) {
+      try {
+        const statsRow = await sql<{
+          recent_avg: string | null;
+          recent_stddev: string | null;
+          recent_n: number;
+        }>`
+          select avg(pr.price_amount::numeric)::text as recent_avg,
+                 stddev_samp(pr.price_amount::numeric)::text as recent_stddev,
+                 count(*)::int as recent_n
+          from price_record pr
+          where pr.store_sku_id = ${skuId}
+            and pr.is_suspect = false
+            and pr.captured_at >= now() - interval '90 days'
+        `.execute(this.db);
+        const stats = statsRow.rows[0];
+        if (stats) {
+          const n = Number(stats.recent_n ?? 0);
+          const avg = stats.recent_avg !== null ? Number(stats.recent_avg) : NaN;
+          const stddev = stats.recent_stddev !== null ? Number(stats.recent_stddev) : NaN;
+          if (n >= 5 && Number.isFinite(avg) && Number.isFinite(stddev) && stddev > 0) {
+            const z = Math.abs((snap.price.amount - avg) / stddev);
+            if (z > 4) {
+              isSuspect = true;
+              log.warn(
+                {
+                  event: 'price.suspect.outlier',
+                  skuId,
+                  price: snap.price.amount,
+                  recentAvg: avg,
+                  recentStddev: stddev,
+                  zScore: z,
+                },
+                'precio fuera de rango estadístico marcado como sospechoso',
+              );
+            }
+          }
+        }
+      } catch (err) {
+        log.debug(
+          { err, event: 'price.suspect.stats_skipped' },
+          'detección estadística de outliers no disponible, usando umbral fijo',
+        );
+      }
+    }
+    if (isSuspect && change !== null && Math.abs(change) > 80) {
       log.warn(
         { event: 'price.suspect.flagged', previous, current: snap.price.amount, change },
         'variación sospechosa marcada',

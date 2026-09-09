@@ -11,6 +11,8 @@ interface BasketRow {
   products_count: number;
   products_present: number;
   total_basket: string;
+  total_real: string;
+  total_estimated: string;
   reference_total: string;
   vs_reference_pct: string;
 }
@@ -79,8 +81,16 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   {formatArs(b.total_basket)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_present} de {b.products_count} productos de la canasta con precio
-                  propio · el resto valuado al promedio
+                  {b.products_present} de {b.products_count} productos con precio propio · el resto
+                  valuado al promedio
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  reales{' '}
+                  <span className="font-semibold text-foreground">{formatArs(b.total_real)}</span> ·
+                  estimados{' '}
+                  <span className="font-semibold text-foreground">
+                    {formatArs(b.total_estimated)}
+                  </span>
                 </p>
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <span
