@@ -22,7 +22,7 @@ import { ProductHistorySearch } from '@/components/ProductHistorySearch';
 import { BasketSection } from '@/components/BasketSection';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, History } from 'lucide-react';
 import { titleCase } from '@/lib/utils';
 import type { Metadata } from 'next';
 
@@ -126,17 +126,32 @@ export default async function AnalyticsPage() {
           Resumen de precios y tendencias de supermercados de Tandil. Cada sección se puede
           descargar como imagen para compartir.
         </p>
-        <div className="mt-4">
-          <Button asChild variant="outline" size="sm">
-            <a href="/admin/tandilalerta/data" download="precios-tandil-base.csv">
-              <Download className="size-4" />
-              Descargar base completa (CSV)
-            </a>
-          </Button>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Último precio no sospechoso por producto y supermercado, listo para analizar en Excel u
-            otra herramienta sin depender de este panel.
-          </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <a href="/admin/tandilalerta/data" download="precios-tandil-base.csv">
+                <Download className="size-4" />
+                Base actual (CSV)
+              </a>
+            </Button>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Último precio no sospechoso por producto y supermercado, listo para analizar en Excel
+              u otra herramienta sin depender de este panel.
+            </p>
+          </div>
+          <div>
+            <Button asChild variant="outline" size="sm">
+              <a href="/admin/tandilalerta/historial" download="precios-tandil-historial.csv">
+                <History className="size-4" />
+                Historial completo (CSV)
+              </a>
+            </Button>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Todo el historial de precios, fila por fila con supermercado, fecha/hora, URL de
+              origen y corrida de captura. Útil para auditoría y trazabilidad si un comercio
+              cuestiona un dato.
+            </p>
+          </div>
         </div>
       </div>
 
