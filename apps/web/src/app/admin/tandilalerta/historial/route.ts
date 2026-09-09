@@ -64,7 +64,7 @@ export async function GET() {
     join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
     join product p on p.id = ml.product_id
     left join category c on c.id = p.category_id
-    left join run_report rr on rr.run_id = pr.run_id::text
+    left join run_report rr on rr.run_id = pr.run_id::uuid
     where (pr.captured_at, pr.id) > ($1::timestamptz, $2::bigint)
     order by pr.captured_at asc, pr.id asc
     limit ${PAGE}
