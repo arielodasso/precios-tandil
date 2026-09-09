@@ -80,18 +80,7 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                 <p className="mt-2 text-2xl font-extrabold tracking-tight text-alerta">
                   {formatArs(b.total_basket)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {b.products_present}/{b.products_count} con precio · resto al promedio
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  reales{' '}
-                  <span className="font-semibold text-foreground">{formatArs(b.total_real)}</span> ·
-                  estimados{' '}
-                  <span className="font-semibold text-foreground">
-                    {formatArs(b.total_estimated)}
-                  </span>
-                </p>
-                <div className="mt-2 flex items-center justify-between text-xs">
+                <div className="mt-2 flex items-center justify-between gap-2 whitespace-nowrap text-xs">
                   <span
                     className={
                       diff <= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-red-600'
@@ -99,7 +88,7 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
                   >
                     {diff > 0 ? `+${diff}%` : `${diff}%`} vs. promedio
                   </span>
-                  <span className="text-muted-foreground" data-capture-exclude="true">
+                  <span className="shrink-0 text-muted-foreground" data-capture-exclude="true">
                     Ver canasta →
                   </span>
                 </div>
