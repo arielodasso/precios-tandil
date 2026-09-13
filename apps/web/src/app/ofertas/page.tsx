@@ -61,7 +61,7 @@ export default async function OfertasPage() {
           No hay oportunidades detectadas en este momento.
         </p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3">
           {deals.map((deal) => (
             <li key={deal.slug}>
               <ProductCard

@@ -174,7 +174,7 @@ export default async function BuscarPage({
             : 'Escribí un término arriba para empezar a buscar.'}
         </p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3">
           {items.map((p) => (
             <li key={p.slug}>
               <ProductCard

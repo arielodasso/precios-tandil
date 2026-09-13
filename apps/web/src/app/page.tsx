@@ -192,7 +192,7 @@ export default async function HomePage() {
             reales contra el promedio de 30 días.
           </p>
         ) : (
-          <ul className="grid gap-3">
+          <ul className="grid grid-cols-1 gap-3">
             {deals.slice(0, 6).map((deal) => (
               <li key={deal.slug}>
                 <ProductCard

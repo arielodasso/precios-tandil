@@ -66,7 +66,7 @@ export function BasketSection({ basket }: { basket: BasketRow[] }) {
           No hay suficientes datos de canasta por tienda.
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {basket.map((b) => {
             const diff = Number(b.vs_reference_pct);
             return (

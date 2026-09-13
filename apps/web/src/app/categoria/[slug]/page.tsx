@@ -162,7 +162,7 @@ export default async function CategoryPage({
             : 'Todavía no hay productos en esta categoría.'}
         </p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-1 gap-3">
           {items.map((p) => (
             <li key={p.slug}>
               <ProductCard
