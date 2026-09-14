@@ -81,7 +81,7 @@ export default async function HomePage() {
         url: siteUrl('/'),
         logo: siteUrl('/sigma-market.png'),
         description:
-          'Comparador de precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto.',
+          'Comparador de precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Golopolis y Cooperativa Obrera.',
         sameAs: ['https://sigmatecnologiasarg.com', 'https://www.instagram.com/tandilalerta/'],
       },
       {

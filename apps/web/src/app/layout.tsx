@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: '%s | Precios Tandil',
   },
   description:
-    'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto. Historial de precios y oportunidades.',
+    'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Golopolis y Cooperativa Obrera. Historial de precios y oportunidades.',
   alternates: {
     canonical: '/',
   },
@@ -33,16 +33,14 @@ export const metadata: Metadata = {
     siteName: 'Precios Tandil',
     title: 'Precios Tandil — compará precios de supermercados',
     description:
-      'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Comerciante Maxi y Coto. Historial de precios y oportunidades detectadas.',
-    images: [{ url: '/sigma-market.png', width: 512, height: 512, alt: 'Precios Tandil' }],
+      'Compará precios de supermercados de Tandil: Carrefour, Vea, Día, Monarca, Golopolis y Cooperativa Obrera. Historial de precios y oportunidades detectadas.',
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     site: '@tandilalerta',
     creator: '@tandilalerta',
     title: 'Precios Tandil — compará precios de supermercados',
     description: 'Compará precios de supermercados de Tandil y encontrá las mejores oportunidades.',
-    images: ['/sigma-market.png'],
   },
   robots: {
     index: true,

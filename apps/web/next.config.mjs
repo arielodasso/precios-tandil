@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['pg'],
+  outputFileTracingIncludes: {
+    '/opengraph-image': ['./assets/fonts/*'],
+    '/p/[slug]/opengraph-image': ['./assets/fonts/*'],
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

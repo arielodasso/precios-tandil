@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { OG_COLORS, OgShell, loadBrandAssets } from '@/lib/og-brand';
 import { siteUrl } from '@/lib/site';
 
 export const alt = 'Precio en supermercados de Tandil';
@@ -35,27 +36,48 @@ export default async function OpengraphImage({ params }: { params: Promise<{ slu
     // fallback al slug
   }
 
+  const { logo, fonts } = await loadBrandAssets();
+  const shortName = name.length > 52 ? `${name.slice(0, 52).trim()}…` : name;
+
   return new ImageResponse(
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        background: '#0d6e3c',
-        color: '#ffffff',
-        padding: 64,
-        fontSize: 48,
-      }}
-    >
-      <div style={{ fontSize: 28, opacity: 0.85, marginBottom: 24 }}>Precios Tandil</div>
-      <div style={{ fontWeight: 700, textAlign: 'center', maxWidth: 1000 }}>{name}</div>
-      <div style={{ marginTop: 32, fontSize: price ? 72 : 36 }}>
-        {price ? `Desde ${price}` : 'Compará precios en Tandil'}
+    <OgShell logo={logo}>
+      <div
+        style={{
+          maxWidth: 1040,
+          fontSize: 66,
+          fontWeight: 800,
+          lineHeight: 1.12,
+          letterSpacing: '-0.02em',
+          color: OG_COLORS.white,
+        }}
+      >
+        {shortName}
       </div>
-    </div>,
-    size,
+      <div style={{ marginTop: 36, display: 'flex' }}>
+        {price ? (
+          <div
+            style={{
+              display: 'inline-flex',
+              background: OG_COLORS.yellow,
+              color: OG_COLORS.bg,
+              fontWeight: 800,
+              fontSize: 56,
+              borderRadius: 999,
+              padding: '18px 44px',
+            }}
+          >
+            Desde {price}
+          </div>
+        ) : (
+          <div style={{ fontSize: 34, fontWeight: 400, color: OG_COLORS.muted }}>
+            Compará precios en supermercados de Tandil
+          </div>
+        )}
+      </div>
+    </OgShell>,
+    {
+      ...size,
+      fonts,
+    },
   );
 }

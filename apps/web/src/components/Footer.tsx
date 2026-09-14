@@ -26,6 +26,9 @@ export function Footer() {
           Datos informativos, sin garantía. Los precios corresponden a publicaciones oficiales de
           cada supermercado y no incluyen promociones tipo 2x1 ni descuentos por cantidad.
         </p>
+        <p className="mt-3 border-t border-white/10 pt-3 text-[11px] text-white/40">
+          &copy; 2026 Precios Tandil &middot; Publicado el 20 de agosto de 2026
+        </p>
       </div>
     </footer>
   );
