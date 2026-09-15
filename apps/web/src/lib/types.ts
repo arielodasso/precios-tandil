@@ -17,7 +17,7 @@ export interface ProductOffer {
   price: number | null;
   unit_price: number | null;
   promo: boolean;
-  source_url: string;
+  source_url: string | null;
   captured_at: string | null;
   freshness_hours: number | null;
   is_stale: boolean;

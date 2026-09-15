@@ -10,6 +10,7 @@ import {
 } from '@/lib/queries/category-products';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
+import { Pagination } from '@/components/Pagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { siteUrl } from '@/lib/site';
@@ -138,6 +139,25 @@ export default async function CategoryPage({
         <BackButton />
         <h1 className="text-2xl font-bold">{match.name}</h1>
       </div>
+      {match.children.some((c) => c.product_count > 0) && (
+        <nav aria-label="Subcategorías" className="mb-8 -mx-4 overflow-x-auto pb-2">
+          <ul className="flex gap-2 px-4">
+            {match.children.map(
+              (c) =>
+                c.product_count > 0 && (
+                  <li key={c.slug}>
+                    <Button asChild variant="outline" size="sm" className="rounded-full">
+                      <Link href={`/categoria/${c.slug}`}>
+                        {c.name}
+                        <span className="text-xs text-muted-foreground">{c.product_count}</span>
+                      </Link>
+                    </Button>
+                  </li>
+                ),
+            )}
+          </ul>
+        </nav>
+      )}
       <CategorySummaryBar summary={summary} />
 
       <form method="get" action={`/categoria/${slug}`} className="mb-8 mt-8">
@@ -183,29 +203,7 @@ export default async function CategoryPage({
       )}
 
       {showPagination && totalPages > 1 && (
-        <nav aria-label="Paginación" className="mt-6 flex items-center justify-center gap-3">
-          {page > 1 ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={pageHref(page - 1)}>Anterior</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              Anterior
-            </Button>
-          )}
-          <span className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </span>
-          {page < totalPages ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={pageHref(page + 1)}>Siguiente</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              Siguiente
-            </Button>
-          )}
-        </nav>
+        <Pagination page={page} totalPages={totalPages} href={pageHref} />
       )}
     </div>
   );

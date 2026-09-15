@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { sql } from 'kysely';
 import type { Metadata } from 'next';
 import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
+import { Pagination } from '@/components/Pagination';
 import { loadOffersByProduct } from '@/lib/queries/offers';
 import type { CardOffer, ProductUnit } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -194,31 +194,7 @@ export default async function BuscarPage({
         </ul>
       )}
 
-      {totalPages > 1 && (
-        <nav aria-label="Paginación" className="mt-6 flex items-center justify-center gap-3">
-          {page > 1 ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={pageHref(page - 1)}>Anterior</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              Anterior
-            </Button>
-          )}
-          <span className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </span>
-          {page < totalPages ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={pageHref(page + 1)}>Siguiente</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" disabled>
-              Siguiente
-            </Button>
-          )}
-        </nav>
-      )}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} href={pageHref} />}
     </div>
   );
 }

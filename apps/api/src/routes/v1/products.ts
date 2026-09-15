@@ -9,12 +9,12 @@ const PRODUCT_CACHE_TTL_SECONDS = 5 * 60;
 export interface ProductOffer {
   store: string;
   store_name: string;
-  price: number;
+  price: number | null;
   unit_price: number | null;
   promo: boolean;
-  source_url: string;
-  captured_at: string;
-  freshness_hours: number;
+  source_url: string | null;
+  captured_at: string | null;
+  freshness_hours: number | null;
   is_stale: boolean;
 }
 
@@ -125,7 +125,31 @@ export async function getProductDetail(
     };
   });
 
-  const freshOffers = offers.filter((o) => !o.is_stale);
+  const offeredStores = new Set(offers.map((o) => o.store));
+  const result = await db
+    .selectFrom('store')
+    .select(['slug', 'name'])
+    .where('is_active', '=', true)
+    .orderBy('name asc')
+    .execute();
+  const missingOffers: ProductOffer[] = result
+    .filter((s) => !offeredStores.has(s.slug))
+    .map((s) => ({
+      store: s.slug,
+      store_name: s.name,
+      price: null,
+      unit_price: null,
+      promo: false,
+      source_url: null,
+      captured_at: null,
+      freshness_hours: null,
+      is_stale: false,
+    }));
+  offers.push(...missingOffers);
+
+  const freshOffers = offers.filter(
+    (o): o is ProductOffer & { price: number } => !o.is_stale && o.price !== null,
+  );
 
   const aggregate = await db
     .selectFrom('price_aggregate')

@@ -1,6 +1,7 @@
 import { sql, type Kysely, type SqlBool } from 'kysely';
 import type { DB } from '@precios/shared';
 import { AppError } from '@precios/shared';
+import type { ProductOffer } from '../types';
 
 const FRESH_WINDOW_DAYS = 7;
 
@@ -61,7 +62,7 @@ export async function getProductDetail(db: Kysely<DB>, slug: string) {
   const now = Date.now();
   const staleThresholdMs = FRESH_WINDOW_DAYS * 24 * 3_600_000;
 
-  const offers = offersResult.rows.map((row) => {
+  const offers: ProductOffer[] = offersResult.rows.map((row) => {
     const capturedMs = new Date(row.captured_at).getTime();
     const ageHours = Math.max(0, Math.floor((now - capturedMs) / 3_600_000));
     return {
@@ -77,7 +78,32 @@ export async function getProductDetail(db: Kysely<DB>, slug: string) {
     };
   });
 
-  const freshOffers = offers.filter((o) => !o.is_stale);
+  const offeredStores = new Set(offers.map((o) => o.store));
+  const allStores = await db
+    .selectFrom('store')
+    .select(['slug', 'name'])
+    .where('is_active', '=', true)
+    .orderBy('name asc')
+    .execute();
+  for (const s of allStores) {
+    if (!offeredStores.has(s.slug)) {
+      offers.push({
+        store: s.slug,
+        store_name: s.name,
+        price: null,
+        unit_price: null,
+        promo: false,
+        source_url: null,
+        captured_at: null,
+        freshness_hours: null,
+        is_stale: false,
+      });
+    }
+  }
+
+  const freshOffers = offers.filter(
+    (o): o is ProductOffer & { price: number } => !o.is_stale && o.price !== null,
+  );
   const aggregate = await db
     .selectFrom('price_aggregate')
     .select(['pct_change_7d', 'min_30d', 'min_90d'])

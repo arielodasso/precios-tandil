@@ -19,6 +19,8 @@ export interface OfferView {
  * T042 — Tarjeta de comparación: menor precio resaltado en verde con
  * etiqueta textual "Mejor precio", desglose por supermercado y diferencia
  * porcentual contra el mínimo (FR-014). Estados T074: stale, sin ofertas.
+ * Muestra TODOS los lugares relevados; los que no tienen el producto
+ * figuran con "---".
  */
 export function ProductComparisonCard({
   slug,
@@ -41,6 +43,15 @@ export function ProductComparisonCard({
   const prices = fresh.map((o) => o.price as number);
   const min = prices.length > 0 ? Math.min(...prices) : null;
 
+  const sorted = [
+    ...offers
+      .filter((o) => o.price !== null)
+      .sort((a, b) => (a.price as number) - (b.price as number)),
+    ...offers
+      .filter((o) => o.price === null)
+      .sort((a, b) => a.store_name.localeCompare(b.store_name)),
+  ];
+
   return (
     <section className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -62,82 +73,92 @@ export function ProductComparisonCard({
       </div>
 
       <div className="mt-4">
-        {fresh.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Este producto no tiene precios actualizados en las últimas tiendas.
           </p>
         ) : (
           <ul className="divide-y divide-border">
-            {[...fresh]
-              .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
-              .map((offer) => {
-                const isBest = offer.price !== null && offer.price === min;
-                const diff =
-                  min !== null && offer.price !== null && offer.price > min
-                    ? ((offer.price - min) / min) * 100
-                    : null;
-                return (
-                  <li
-                    key={offer.store}
-                    className={cn(
-                      'flex items-center justify-between gap-2 py-3',
-                      isBest && 'rounded-md bg-primary px-2 text-primary-foreground',
+            {sorted.map((offer) => {
+              const isBest = !offer.is_stale && offer.price !== null && offer.price === min;
+              const diff =
+                !offer.is_stale && min !== null && offer.price !== null && offer.price > min
+                  ? ((offer.price - min) / min) * 100
+                  : null;
+              return (
+                <li
+                  key={offer.store}
+                  className={cn(
+                    'flex items-center justify-between gap-2 py-3',
+                    isBest && 'rounded-md bg-primary px-2 text-primary-foreground',
+                  )}
+                >
+                  <span>
+                    {offer.source_url ? (
+                      <a
+                        href={offer.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 transition-colors hover:text-alerta"
+                      >
+                        {offer.store_name}
+                        <ExternalLink className="size-3 opacity-70" />
+                      </a>
+                    ) : (
+                      offer.store_name
                     )}
-                  >
-                    <span>
-                      {offer.source_url ? (
-                        <a
-                          href={offer.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 transition-colors hover:text-alerta"
-                        >
-                          {offer.store_name}
-                          <ExternalLink className="size-3 opacity-70" />
-                        </a>
-                      ) : (
-                        offer.store_name
-                      )}
-                      {isBest && (
-                        <Badge className="ml-2 bg-alerta text-black hover:bg-alerta-strong">
-                          Mejor precio
-                        </Badge>
-                      )}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="text-right font-semibold">
-                        {offer.price !== null && formatArs(offer.price)}
-                        {diff !== null && (
-                          <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
-                        )}
-                      </span>
+                    {isBest && (
+                      <Badge className="ml-2 bg-alerta text-black hover:bg-alerta-strong">
+                        Mejor precio
+                      </Badge>
+                    )}
+                    {offer.price !== null && offer.is_stale && (
+                      <Badge className="ml-2 bg-muted text-muted-foreground hover:bg-muted">
+                        Desactualizado
+                      </Badge>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-right font-semibold">
                       {offer.price !== null && (
-                        <AddToListButton
-                          className="px-1.5 py-1 text-[11px]"
-                          entry={{
-                            slug,
-                            name,
-                            brand: brand ?? null,
-                            unit: unit ?? null,
-                            image_url: imageUrl ?? null,
-                            offers: fresh.map((o) => ({
-                              store: o.store,
-                              store_name: o.store_name,
-                              price: o.price,
-                              source_url: o.source_url ?? null,
-                            })),
-                            store: offer.store,
-                            store_name: offer.store_name,
-                            price: offer.price,
-                            source_url: offer.source_url ?? null,
-                            quantity: 1,
-                          }}
-                        />
+                        <>
+                          {formatArs(offer.price)}
+                          {diff !== null && (
+                            <span className="ml-1 text-xs opacity-70">(+{diff.toFixed(0)}%)</span>
+                          )}
+                        </>
                       )}
                     </span>
-                  </li>
-                );
-              })}
+                    {offer.price === null && (
+                      <span className="text-right font-semibold text-muted-foreground">---</span>
+                    )}
+                    {offer.price !== null && !offer.is_stale && (
+                      <AddToListButton
+                        className="px-1.5 py-1 text-[11px]"
+                        entry={{
+                          slug,
+                          name,
+                          brand: brand ?? null,
+                          unit: unit ?? null,
+                          image_url: imageUrl ?? null,
+                          offers: fresh.map((o) => ({
+                            store: o.store,
+                            store_name: o.store_name,
+                            price: o.price,
+                            source_url: o.source_url ?? null,
+                          })),
+                          store: offer.store,
+                          store_name: offer.store_name,
+                          price: offer.price,
+                          source_url: offer.source_url ?? null,
+                          quantity: 1,
+                        }}
+                      />
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
 
