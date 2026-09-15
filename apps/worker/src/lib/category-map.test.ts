@@ -244,7 +244,7 @@ describe('matchCategoryByName - electrodomesticos', () => {
 
   it('no clasifica alimentos ni limpieza que contengan palabras parecidas', () => {
     expect(matchCategoryByName('bolsa horno barbacoa')).toBe('almacen');
-    expect(matchCategoryByName('bizcochuelo mama cocina')).toBe('almacen');
+    expect(matchCategoryByName('bizcochuelo mama cocina')).toBe('almacen/reposteria');
     expect(matchCategoryByName('pan de campo')).toBe('frescos/panaderia');
   });
 });
