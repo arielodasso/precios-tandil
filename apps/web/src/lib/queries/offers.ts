@@ -26,7 +26,7 @@ export async function loadOffersByProduct(
   const idList = [...new Set(productIds)].join(', ');
 
   const rows = await sql<OfferRow>`
-    select latest.product_id,
+    select p.id as product_id,
            s.slug as store,
            s.name as store_name,
            latest.price_amount::float8 as price,
