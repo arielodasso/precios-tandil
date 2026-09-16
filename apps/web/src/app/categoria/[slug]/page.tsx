@@ -11,6 +11,7 @@ import {
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { Pagination } from '@/components/Pagination';
+import { SortBar, type SortOption } from '@/components/SortBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { siteUrl } from '@/lib/site';
@@ -77,7 +78,12 @@ export default async function CategoryPage({
   const query = await searchParams;
   const rawPage = Array.isArray(query.page) ? query.page[0] : query.page;
   const rawQ = Array.isArray(query.q) ? query.q[0] : query.q;
+  const rawSort = Array.isArray(query.sort) ? query.sort[0] : query.sort;
   const q = (rawQ ?? '').trim();
+  const sort: SortOption =
+    rawSort === 'az' || rawSort === 'za' || rawSort === 'price_asc' || rawSort === 'price_desc'
+      ? rawSort
+      : 'relevance';
   const page = Math.max(1, Number.parseInt(rawPage ?? '1', 10) || 1);
 
   const db = getDb();
@@ -88,7 +94,7 @@ export default async function CategoryPage({
 
   const [summary, result] = await Promise.all([
     getCategorySummary(db, slug),
-    listCategoryProducts(db, slug, { page, pageSize: PAGE_SIZE, q }),
+    listCategoryProducts(db, slug, { page, pageSize: PAGE_SIZE, q, sort }),
   ]);
 
   const items = result?.items ?? [];
@@ -98,9 +104,16 @@ export default async function CategoryPage({
 
   const qs = new URLSearchParams();
   if (q) qs.set('q', q);
+  if (sort !== 'relevance') qs.set('sort', sort);
   const pageHref = (p: number) => {
     const params = new URLSearchParams(qs);
     params.set('page', String(p));
+    return `/categoria/${slug}?${params.toString()}`;
+  };
+  const sortHref = (s: SortOption) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (s !== 'relevance') params.set('sort', s);
     return `/categoria/${slug}?${params.toString()}`;
   };
 
@@ -174,6 +187,8 @@ export default async function CategoryPage({
           </Button>
         </div>
       </form>
+
+      {items.length > 0 && <SortBar current={sort} href={sortHref} className="mb-6" />}
 
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">

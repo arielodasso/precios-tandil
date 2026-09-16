@@ -7,6 +7,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Quita los acentos (y la "ñ" → "n") de un texto. Se usa del lado de
+ * búsqueda porque los nombres canónicos se guardan sin acentos; así
+ * "cañuelas" también matchea contra "canuelas".
+ */
+export function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Formatea la unidad de un producto para mostrar en la UI.
  * "1 kg", "500 ml", "6 uds", etc.
  */

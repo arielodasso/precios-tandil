@@ -11,6 +11,10 @@ const MAX_LIMIT = 20;
 const MIN_Q_LENGTH = 2;
 const MAX_Q_LENGTH = 64;
 
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 export interface SearchHit {
   slug: string;
   name: string;
@@ -137,6 +141,7 @@ export async function searchProducts(
   const offset = options.resolvedOffset ?? resolveCursorOffset(options.cursor);
   const stores = options.stores ?? [];
   const q = options.q.trim();
+  const qNorm = stripAccents(q);
 
   let categoryPath: string | null = null;
   if (options.category !== undefined) {
@@ -146,11 +151,15 @@ export async function searchProducts(
     }
   }
 
-  const tsQuery = sql`websearch_to_tsquery('spanish', ${q})`;
+  const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
   const storeFilter = stores.length > 0 ? sql`s.slug in (${stores})` : sql`true`;
   const categoryFilter =
     categoryPath !== null
       ? sql`and (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})`
+      : sql``;
+  const searchClause =
+    q.length > 0
+      ? sql`or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${qNorm}%`} or unaccent(coalesce(p.brand, '')) ilike ${`%${qNorm}%`}`
       : sql``;
 
   const result = await sql<SearchQueryRow>`
@@ -175,14 +184,15 @@ export async function searchProducts(
     from product p
     join price_aggregate pa on pa.product_id = p.id
     left join category c on c.id = p.category_id
-    where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q})
+    where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
+      ${searchClause})
       and exists (select 1 from avail a where a.product_id = p.id)
       and pa.stores_count >= 2
       and pa.best_price::numeric >= 500
       ${categoryFilter}
     order by greatest(
                ts_rank_cd(p.search_vector, ${tsQuery}),
-               similarity(p.canonical_name, ${q})
+               similarity(p.canonical_name, unaccent(${q}))
              ) desc,
              pa.best_price asc
     limit ${limit} offset ${offset}

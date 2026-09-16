@@ -18,13 +18,13 @@ export function Pagination({
   const edgeLink =
     'text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline';
   return (
-    <nav aria-label="Paginación" className="mt-6 flex flex-wrap items-center justify-center gap-3">
+    <nav aria-label="Paginación" className="mt-6 flex items-center justify-center gap-1.5 sm:gap-3">
       {page > 1 ? (
-        <Link href={href(1)} className={edgeLink}>
+        <Link href={href(1)} className={`${edgeLink} hidden sm:inline`}>
           Pág. 1
         </Link>
       ) : (
-        <span className="text-xs text-muted-foreground/60" aria-disabled="true">
+        <span className={`${edgeLink} hidden sm:inline`} aria-disabled="true">
           Pág. 1
         </span>
       )}
@@ -37,8 +37,8 @@ export function Pagination({
           Anterior
         </Button>
       )}
-      <span className="text-sm text-muted-foreground">
-        Página {page} de {totalPages}
+      <span className="text-xs text-muted-foreground tabular-nums sm:text-sm">
+        {page}/{totalPages}
       </span>
       {page < totalPages ? (
         <Button asChild {...btnBase}>
@@ -50,11 +50,11 @@ export function Pagination({
         </Button>
       )}
       {page < totalPages ? (
-        <Link href={href(totalPages)} className={edgeLink}>
+        <Link href={href(totalPages)} className={`${edgeLink} hidden sm:inline`}>
           Pág. {totalPages}
         </Link>
       ) : (
-        <span className="text-xs text-muted-foreground/60" aria-disabled="true">
+        <span className={`${edgeLink} hidden sm:inline`} aria-disabled="true">
           Pág. {totalPages}
         </span>
       )}

@@ -2,6 +2,8 @@ import { sql, type Kysely } from 'kysely';
 import type { DB } from '@precios/shared';
 import { loadOffersByProduct } from './offers';
 import type { CardOffer, ProductUnit } from '@/lib/types';
+import { stripAccents } from '@/lib/utils';
+import type { SortOption } from '@/components/SortBar';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -154,12 +156,13 @@ interface CategoryProductCountRow {
 export async function listCategoryProducts(
   db: Kysely<DB>,
   categoryToken: string,
-  opts: { page?: number; pageSize?: number; q?: string } = {},
+  opts: { page?: number; pageSize?: number; q?: string; sort?: SortOption } = {},
 ): Promise<CategoryProductPage | null> {
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = Math.min(Math.max(opts.pageSize ?? DEFAULT_PAGE_SIZE, 1), 60);
   const offset = (page - 1) * pageSize;
   const q = opts.q?.trim() ?? '';
+  const sort = opts.sort ?? 'relevance';
 
   const cat = await sql<{ path: string }>`
     select path from category
@@ -173,8 +176,17 @@ export async function listCategoryProducts(
 
   const searchClause =
     q.length > 0
-      ? sql`and (p.canonical_name ilike ${`%${q}%`} or p.brand ilike ${`%${q}%`})`
+      ? sql`and (unaccent(coalesce(p.canonical_name, '')) ilike ${`%${stripAccents(q)}%`} or unaccent(coalesce(p.brand, '')) ilike ${`%${stripAccents(q)}%`})`
       : sql``;
+
+  const orderClause =
+    sort === 'az'
+      ? sql`order by p.canonical_name asc nulls last`
+      : sort === 'za'
+        ? sql`order by p.canonical_name desc nulls last`
+        : sort === 'price_desc'
+          ? sql`order by pa.best_price desc nulls last, p.canonical_name asc`
+          : sql`order by pa.best_price asc nulls last, p.canonical_name asc`;
 
   const countRows = await sql<CategoryProductCountRow>`
     select count(*)::int as total
@@ -198,7 +210,7 @@ export async function listCategoryProducts(
     where (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})
       and pa.stores_count >= 2 and pa.best_price::numeric >= 500
       ${searchClause}
-    order by pa.best_price asc nulls last, p.canonical_name asc
+    ${orderClause}
     limit ${pageSize} offset ${offset}
   `.execute(db);
 

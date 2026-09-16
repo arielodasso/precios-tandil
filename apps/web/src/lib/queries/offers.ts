@@ -11,10 +11,10 @@ interface OfferRow {
 }
 
 /**
- * Devuelve, por producto, el último precio de cada fuente activa
- * (store_name + precio + link a la publicación de origen), ordenados de
- * menor a mayor precio. Se usa para listar todos los precios en cada
- * tarjeta de producto (no solo el mejor).
+ * Devuelve, por producto, el último precio de CADA fuente activa
+ * (store_name + precio + link a la publicación de origen). Las fuentes que
+ * no tienen el producto relevado (sin precio en el rango de frescura)
+ * aparecen igual con price = null para que la tarjeta muestre "—".
  */
 export async function loadOffersByProduct(
   db: Kysely<DB>,
@@ -31,19 +31,23 @@ export async function loadOffersByProduct(
            s.name as store_name,
            latest.price_amount::float8 as price,
            latest.source_url
-    from (
-      select distinct on (ss.store_id, ml.product_id)
-             ml.product_id, ss.store_id, pr.price_amount, pr.source_url
+    from product p
+    cross join store s
+    left join lateral (
+      select pr.price_amount, pr.source_url
       from price_record pr
       join store_sku ss on ss.id = pr.store_sku_id
       join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
-      where ml.product_id in (${sql.raw(idList)})
+      where ml.product_id = p.id
+        and ss.store_id = s.id
         and pr.is_suspect = false
         and pr.price_amount::numeric >= 500
-      order by ml.product_id, ss.store_id, pr.captured_at desc
-    ) latest
-    join store s on s.id = latest.store_id and s.is_active = true
-    order by latest.product_id, latest.price_amount asc
+      order by pr.captured_at desc
+      limit 1
+    ) latest on true
+    where p.id in (${sql.raw(idList)})
+      and s.is_active = true
+    order by p.id, latest.price_amount asc nulls last, s.name asc
   `.execute(db);
 
   for (const row of rows.rows) {

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
+import { SortableProductList } from '@/components/SortableProductList';
 import { apiFetch } from '@/lib/api';
 import { siteUrl } from '@/lib/site';
 import type { DealItem } from '@/lib/types';
@@ -61,23 +61,17 @@ export default async function OfertasPage() {
           No hay oportunidades detectadas en este momento.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-3">
-          {deals.map((deal) => (
-            <li key={deal.slug}>
-              <ProductCard
-                product={{
-                  slug: deal.slug,
-                  name: deal.name,
-                  best_price: deal.price,
-                  store_slug: deal.store_slug,
-                  discount_pct: deal.discount_pct,
-                  image_url: deal.image_url,
-                  offers: deal.offers,
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        <SortableProductList
+          items={deals.map((deal) => ({
+            slug: deal.slug,
+            name: deal.name,
+            best_price: deal.price,
+            store_slug: deal.store_slug,
+            discount_pct: deal.discount_pct,
+            image_url: deal.image_url,
+            offers: deal.offers,
+          }))}
+        />
       )}
     </div>
   );
