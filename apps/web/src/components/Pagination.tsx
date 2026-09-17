@@ -20,17 +20,14 @@ export function Pagination({
   return (
     <nav
       aria-label="Paginación"
-      className="mt-6 flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3"
+      className="mt-6 flex flex-wrap items-center justify-center gap-1.5 sm:gap-3"
     >
       {page > 1 ? (
-        <Link href={href(1)} className={`${edgeLink} hidden sm:inline`}>
+        <Link href={href(1)} className={edgeLink}>
           Pág. 1
         </Link>
       ) : (
-        <span
-          className={`${edgeLink} hidden text-muted-foreground/60 sm:inline`}
-          aria-disabled="true"
-        >
+        <span className={`${edgeLink} text-muted-foreground/60`} aria-disabled="true">
           Pág. 1
         </span>
       )}
@@ -56,14 +53,11 @@ export function Pagination({
         </Button>
       )}
       {page < totalPages ? (
-        <Link href={href(totalPages)} className={`${edgeLink} hidden sm:inline`}>
+        <Link href={href(totalPages)} className={edgeLink}>
           Pág. {totalPages}
         </Link>
       ) : (
-        <span
-          className={`${edgeLink} hidden text-muted-foreground/60 sm:inline`}
-          aria-disabled="true"
-        >
+        <span className={`${edgeLink} text-muted-foreground/60`} aria-disabled="true">
           Pág. {totalPages}
         </span>
       )}
