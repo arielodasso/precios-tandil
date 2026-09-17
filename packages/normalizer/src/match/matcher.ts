@@ -7,6 +7,8 @@ export interface MatchCandidate {
   normName: string;
   unitAmount: number | null;
   unitType: string | null;
+  unitCount: number | null;
+  isPack: boolean;
   brand: string | null;
   brandProvided: boolean;
   typeKeys: string[];
@@ -95,26 +97,50 @@ function toBaseAmount(unitType: string, amount: number): number | null {
   return null;
 }
 
+/** Datos de presentación comparables (cantidad + empaque). */
+interface Presentation {
+  unitAmount: number | null;
+  unitType: string | null;
+  unitCount: number | null;
+  isPack: boolean;
+}
+
+/**
+ * Conflicto duro de presentación: un multi-pack y un artículo suelto del mismo
+ * producto NO son comparables en precio, aunque compartan marca, nombre y EAN.
+ * Tampoco lo son dos packs con cantidad de unidades distinta (p.ej. 3 vs 6).
+ * Una cantidad "x1u"/"x500g" de un único artículo no es pack.
+ */
+export function presentationConflict(a: Presentation, b: Presentation): boolean {
+  if (a.isPack !== b.isPack) return true;
+  if (a.unitCount !== null && b.unitCount !== null && a.unitCount !== b.unitCount) return true;
+  return false;
+}
+
 /**
  * Factor de acuerdo de presentación por unidades. Devuelve null cuando no se
  * pueden comparar (falta unidad en ambos lados o unidad "un" ambigua).
  * "1 kg" vs "1000 g" es la misma presentación; "500 g" vs "1 kg" no.
  * Si solo uno de los dos declara unidad, devuelve 0.8 (penalización leve).
+ * Un pack vs un artículo suelto (o conteos de unidades distintos) bloquea (0.05).
  */
-function unitAgreementFactor(
-  aType: string | null,
-  aAmount: number | null,
-  bType: string | null,
-  bAmount: number | null,
-): number | null {
-  if (aType === null && bType === null) return null;
-  if (aType === 'un' || bType === 'un') return null;
-  if (aType === null || aAmount === null || bType === null || bAmount === null) return 0.8;
-  const scaleA = unitScale(aType);
-  const scaleB = unitScale(bType);
+function unitAgreementFactor(a: Presentation, b: Presentation): number | null {
+  if (presentationConflict(a, b)) return 0.05;
+  if (a.unitType === null && b.unitType === null) return null;
+  if (a.unitType === 'un' || b.unitType === 'un') return null;
+  if (
+    a.unitType === null ||
+    a.unitAmount === null ||
+    b.unitType === null ||
+    b.unitAmount === null
+  ) {
+    return 0.8;
+  }
+  const scaleA = unitScale(a.unitType);
+  const scaleB = unitScale(b.unitType);
   if (scaleA === null || scaleB === null) return null;
-  const aBase = toBaseAmount(aType, aAmount);
-  const bBase = toBaseAmount(bType, bAmount);
+  const aBase = toBaseAmount(a.unitType, a.unitAmount);
+  const bBase = toBaseAmount(b.unitType, b.unitAmount);
   if (aBase === null || bBase === null) return null;
   if (scaleA !== scaleB) return 0.6;
   const ratio = Math.min(aBase, bBase) / Math.max(aBase, bBase);
@@ -183,13 +209,9 @@ export function semanticScore(
 
   // Unidades: se comparan en base equivalente (kg<->g, l<->ml) para no separar
   // presentaciones que declararon el tamaño de otra forma ("1 kg" vs "1000 g"),
-  // pero sí separar tamaños reales distintos ("500 g" vs "1 kg" -> otro peso).
-  const unitFactor = unitAgreementFactor(
-    norm.unitType,
-    norm.unitAmount,
-    cand.unitType,
-    cand.unitAmount,
-  );
+  // pero sí separar tamaños reales distintos ("500 g" vs "1 kg" -> otro peso)
+  // y bloquear siempre pack vs artículo suelto.
+  const unitFactor = unitAgreementFactor(norm, cand);
   if (unitFactor !== null) score *= unitFactor;
 
   if (shared.length > 0 && norm.primaryType && norm.primaryType === cand.typeKeys[0]) {

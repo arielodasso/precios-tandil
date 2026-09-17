@@ -73,6 +73,8 @@ function toCandidate(p: ProductRow): MatchCandidate {
     normName: norm.normName,
     unitAmount: p.unit_amount !== null ? Number(p.unit_amount) : null,
     unitType: p.unit_type,
+    unitCount: norm.unitCount,
+    isPack: norm.isPack,
     brand: p.brand,
     brandProvided: norm.brandProvided,
     typeKeys: norm.typeKeys,
@@ -85,7 +87,10 @@ function toCandidate(p: ProductRow): MatchCandidate {
 
 function forgeSlug(norm: NormalizedProduct, ean: string | null, name: string): string {
   const slugBase = norm.normName.replace(/\s+/g, '-').slice(0, 60) || 'producto';
-  const hash = createHash('sha1').update(ean ?? name).digest('base64url').slice(0, 6);
+  const hash = createHash('sha1')
+    .update(ean ?? name)
+    .digest('base64url')
+    .slice(0, 6);
   return `${slugBase}-${hash}`;
 }
 
@@ -260,6 +265,8 @@ async function main() {
             normName: norm.normName,
             unitAmount: prod.unit_amount !== null ? Number(prod.unit_amount) : null,
             unitType: prod.unit_type,
+            unitCount: norm.unitCount,
+            isPack: norm.isPack,
             brand: prod.brand,
             brandProvided: norm.brandProvided,
             typeKeys: norm.typeKeys,
@@ -302,12 +309,10 @@ async function main() {
   }
 
   const categories = await db.selectFrom('category').select(['id', 'path']).execute();
-  const pathToCatId = new Map<string, number>(
-    categories.map((c) => [c.path, Number(c.id)]),
-  );
+  const pathToCatId = new Map<string, number>(categories.map((c) => [c.path, Number(c.id)]));
   const categoryIdFor = (name: string): number | null => {
     const path = matchCategoryByName(name);
-    return path ? pathToCatId.get(path) ?? null : null;
+    return path ? (pathToCatId.get(path) ?? null) : null;
   };
 
   let processed = 0;
@@ -376,10 +381,7 @@ async function main() {
 
   await flush();
 
-  logger.info(
-    { dryRun: !APPLY, create: CREATE, ...stats },
-    'match-missing: resumen',
-  );
+  logger.info({ dryRun: !APPLY, create: CREATE, ...stats }, 'match-missing: resumen');
   await db.destroy();
 }
 

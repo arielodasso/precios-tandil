@@ -7,8 +7,9 @@
  *
  *  1. Reconstruye los candidatos (productos) con el normalizador actual.
  *  2. Para cada vínculo auto/confirmed, normaliza su SKU y recalcula el mejor match.
- *  3. Si el vínculo actual tiene un CONFLICTO DE VARIANTE (embasado distinto sin
- *     compartir variante, p.ej. "Max" vs "Fresh"), lo corrige:
+ *  3. Si el vínculo actual tiene un CONFLICTO DURO (variante distinta sin
+ *     compartir línea, p.ej. "Max" vs "Fresh", o presentación pack vs suelta,
+ *     p.ej. six-pack vs lata), lo corrige:
  *       - si existe un mejor candidato con score >= umbral, lo reasigna;
  *       - si no, lo deja en `pending_review` para revisión manual.
  *
@@ -20,12 +21,15 @@ import { loadConfig } from './lib/config.ts';
 import { createDb } from './lib/db.ts';
 import { logger } from './lib/logger.ts';
 import {
+  aggregatePackInfo,
   normalizeDescription,
   semanticScore,
   findBestMatch,
   exclusiveVariantFlags,
+  presentationConflict,
   type MatchCandidate,
   type NormalizedProduct,
+  type PackInfo,
 } from '@precios/normalizer';
 
 const APPLY = process.argv.includes('--apply');
@@ -58,7 +62,7 @@ interface LinkRow {
   sku: SkuRow;
 }
 
-function toCandidate(p: ProductRow): MatchCandidate {
+function toCandidate(p: ProductRow, pack: PackInfo): MatchCandidate {
   const norm = normalizeDescription(p.canonical_name, { brand: p.brand });
   return {
     productId: p.id,
@@ -66,6 +70,8 @@ function toCandidate(p: ProductRow): MatchCandidate {
     normName: norm.normName,
     unitAmount: p.unit_amount !== null ? Number(p.unit_amount) : null,
     unitType: p.unit_type,
+    unitCount: pack.count,
+    isPack: pack.isPack,
     brand: p.brand,
     brandProvided: norm.brandProvided,
     typeKeys: norm.typeKeys,
@@ -76,7 +82,34 @@ function toCandidate(p: ProductRow): MatchCandidate {
   };
 }
 
-/** ¿Ambos lados declaran variantes de línea exclusivas y NO comparten ninguna? */
+interface ProductSkuName {
+  product_id: number | string;
+  raw_description: string | null;
+}
+
+/** Presentación agregada (pack/unidades) por producto desde nombres de SKUs. */
+async function loadProductPackInfos(ids: number[]): Promise<Map<number, PackInfo>> {
+  if (ids.length === 0) return new Map();
+  const rows: ProductSkuName[] = (await db
+    .selectFrom('store_sku')
+    .innerJoin('match_link', 'match_link.store_sku_id', 'store_sku.id')
+    .select(['store_sku.raw_description', 'match_link.product_id'])
+    .where('match_link.status', '<>', 'rejected')
+    .where('match_link.product_id', 'in', ids)
+    .execute()) as unknown as ProductSkuName[];
+  const names = new Map<number, string[]>();
+  for (const row of rows) {
+    const pid = Number(row.product_id);
+    const arr = names.get(pid);
+    if (arr) arr.push(row.raw_description ?? '');
+    else names.set(pid, [row.raw_description ?? '']);
+  }
+  const map = new Map<number, PackInfo>();
+  for (const [pid, list] of names) map.set(pid, aggregatePackInfo(list));
+  return map;
+}
+
+/* ¿Ambos lados declaran variantes de línea exclusivas y NO comparten ninguna? */
 function hasVariantConflict(norm: NormalizedProduct, cand: MatchCandidate): boolean {
   const nf = exclusiveVariantFlags(norm.variantFlags ?? []);
   const cf = exclusiveVariantFlags(cand.variantFlags ?? []);
@@ -84,12 +117,20 @@ function hasVariantConflict(norm: NormalizedProduct, cand: MatchCandidate): bool
   return !nf.some((f) => cf.includes(f));
 }
 
+/**
+ * ¿El SKU y el producto actual no pueden ser el mismo artículo por criterios
+ * duros (variante de línea distinta, o presentación pack vs suelta)?
+ */
+function hasUnfixableConflict(norm: NormalizedProduct, cand: MatchCandidate): boolean {
+  return hasVariantConflict(norm, cand) || presentationConflict(norm, cand);
+}
+
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL);
 
 const counts = {
   links: 0,
-  variantConflict: 0,
+  conflict: 0,
   reassigned: 0,
   toReview: 0,
   unchanged: 0,
@@ -113,8 +154,15 @@ async function run() {
     ])
     .execute()) as unknown as ProductRow[];
 
+  const packInfos = await loadProductPackInfos(products.map((p) => p.id));
+
   const candidates = new Map<string, MatchCandidate>();
-  for (const p of products) candidates.set(String(p.id), toCandidate(p));
+  for (const p of products) {
+    candidates.set(
+      String(p.id),
+      toCandidate(p, packInfos.get(p.id) ?? { count: null, declared: false, isPack: false }),
+    );
+  }
   const candidateArray = [...candidates.values()];
 
   const links = (await db
@@ -156,15 +204,15 @@ async function run() {
       description: link.description,
     });
     const curScore = semanticScore(norm, current);
-    const conflict = hasVariantConflict(norm, current);
+    const conflict = hasUnfixableConflict(norm, current);
 
     if (!conflict) {
       counts.unchanged++;
       continue;
     }
-    counts.variantConflict++;
+    counts.conflict++;
 
-    // El vínculo actual tiene un conflicto de variante: buscar el mejor candidato.
+    // El vínculo actual tiene un conflicto de variante o presentación:
     const outcome = findBestMatch(norm, link.declared_ean ?? undefined, candidateArray);
 
     if (outcome.method === 'none') {

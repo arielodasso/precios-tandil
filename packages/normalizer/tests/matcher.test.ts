@@ -6,6 +6,7 @@ import {
   hammingDistance,
   isValidEan13,
   matchByEan,
+  presentationConflict,
   semanticScore,
   type MatchCandidate,
 } from '../src/match/matcher.ts';
@@ -17,6 +18,8 @@ const candidates: MatchCandidate[] = [
     normName: 'arroz gallo oro',
     unitAmount: 1,
     unitType: 'kg',
+    unitCount: null,
+    isPack: false,
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
@@ -31,6 +34,8 @@ const candidates: MatchCandidate[] = [
     normName: 'arroz gallo oro',
     unitAmount: 1,
     unitType: 'kg',
+    unitCount: null,
+    isPack: false,
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
@@ -45,6 +50,8 @@ const candidates: MatchCandidate[] = [
     normName: 'arroz gallo oro',
     unitAmount: 500,
     unitType: 'g',
+    unitCount: null,
+    isPack: false,
     brand: 'gallo',
     brandProvided: true,
     typeKeys: ['arroz'],
@@ -59,6 +66,8 @@ const candidates: MatchCandidate[] = [
     normName: 'arroz parboil largo fino',
     unitAmount: 1,
     unitType: 'kg',
+    unitCount: null,
+    isPack: false,
     brand: null,
     brandProvided: false,
     typeKeys: ['arroz'],
@@ -102,6 +111,8 @@ describe('semanticScore', () => {
       normName: 'harina integral',
       unitAmount: 1,
       unitType: 'kg',
+      unitCount: null,
+      isPack: false,
       brand: null,
       brandProvided: false,
       typeKeys: ['harina'],
@@ -124,6 +135,8 @@ describe('semanticScore', () => {
       normName: 'chocolate con leche',
       unitAmount: 200,
       unitType: 'g',
+      unitCount: null,
+      isPack: false,
       brand: null,
       brandProvided: false,
       typeKeys: ['chocolate', 'leche'],
@@ -144,6 +157,8 @@ describe('semanticScore', () => {
       normName: 'arroz largo fino premium paquete',
       unitAmount: 1,
       unitType: 'kg',
+      unitCount: null,
+      isPack: false,
       brand: 'gallo',
       brandProvided: true,
       typeKeys: ['arroz'],
@@ -166,6 +181,8 @@ describe('semanticScore', () => {
       normName: 'polenta noel instantanea',
       unitAmount: 500,
       unitType: 'g',
+      unitCount: null,
+      isPack: false,
       brand: 'noel',
       brandProvided: true,
       typeKeys: ['legumbre'],
@@ -272,6 +289,8 @@ describe('findBestMatch', () => {
       normName: 'papel higienico higienol fresh hoja simple 120 mts',
       unitAmount: 4,
       unitType: 'un',
+      unitCount: 4,
+      isPack: true,
       brand: 'higienol',
       brandProvided: true,
       typeKeys: [],
@@ -292,6 +311,8 @@ describe('findBestMatch', () => {
       normName: 'papel higienico higienol max hoja simple 120 mts',
       unitAmount: 4,
       unitType: 'un',
+      unitCount: 4,
+      isPack: true,
       brand: 'higienol',
       brandProvided: true,
       typeKeys: [],
@@ -312,5 +333,94 @@ describe('findBestMatch', () => {
 
     const resSinEan = findBestMatch(norm, undefined, [candidates[0]!]);
     expect(resSinEan.method).toBe('semantic');
+  });
+});
+
+describe('presentación pack vs suelta', () => {
+  const sixPackNorm = normalizeDescription('Cerveza Lata Heineken Six Pack 6x710 ml', {
+    brand: 'heineken',
+  });
+  const lataSolaNorm = normalizeDescription('Cerveza Rubia Heineken Lata 710 cm3', {
+    brand: 'heineken',
+  });
+
+  const packCand: MatchCandidate = {
+    productId: 10,
+    ean: null,
+    normName: 'cerveza lata heineken six pack',
+    unitAmount: 710,
+    unitType: 'ml',
+    unitCount: 6,
+    isPack: true,
+    brand: 'heineken',
+    brandProvided: true,
+    typeKeys: ['cerveza'],
+    variantFlags: [],
+    imageHash: null,
+    imageUrl: null,
+    contextText: '',
+  };
+
+  it('detecta la six pack como pack de 6 unidades', () => {
+    expect(sixPackNorm.unitCount).toBe(6);
+    expect(sixPackNorm.isPack).toBe(true);
+    expect(lataSolaNorm.isPack).toBe(false);
+  });
+
+  it('no empareja una lata suelta contra una six-pack del mismo producto', () => {
+    expect(presentationConflict(lataSolaNorm, packCand)).toBe(true);
+    const res = findBestMatch(lataSolaNorm, undefined, [packCand]);
+    expect(res.method).toBe('none');
+  });
+
+  it('no empareja una six-pack entrante contra una single-pack (lata)', () => {
+    const singleCand: MatchCandidate = {
+      ...packCand,
+      unitCount: null,
+      isPack: false,
+      normName: 'cerveza rubia heineken lata',
+      productId: 11,
+    };
+    expect(presentationConflict(sixPackNorm, singleCand)).toBe(true);
+    const res = findBestMatch(sixPackNorm, undefined, [singleCand]);
+    expect(res.method).toBe('none');
+  });
+
+  it('sí empareja dos six-packs del mismo producto', () => {
+    const res = findBestMatch(sixPackNorm, undefined, [packCand]);
+    expect(res.method).toBe('semantic');
+    if (res.method === 'semantic') expect(res.productId).toBe(10);
+  });
+
+  it('separa conteos distintos (3 vs 6 unidades)', () => {
+    const tresCand: MatchCandidate = {
+      ...packCand,
+      unitCount: 3,
+      normName: 'cerveza lata heineken pack x 3',
+      productId: 12,
+    };
+    expect(presentationConflict(sixPackNorm, tresCand)).toBe(true);
+  });
+
+  it('x500g de un solo artículo no bloquea contra un 500 g', () => {
+    const norm500 = normalizeDescription('Hamburguesas x 500 g');
+    const cand500: MatchCandidate = {
+      productId: 13,
+      ean: null,
+      normName: 'hamburguesas',
+      unitAmount: 500,
+      unitType: 'g',
+      unitCount: null,
+      isPack: false,
+      brand: null,
+      brandProvided: false,
+      typeKeys: [],
+      variantFlags: [],
+      imageHash: null,
+      imageUrl: null,
+      contextText: '',
+    };
+    const res = findBestMatch(norm500, undefined, [cand500]);
+    expect(res.method).toBe('semantic');
   });
 });

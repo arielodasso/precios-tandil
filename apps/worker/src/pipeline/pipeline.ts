@@ -18,10 +18,13 @@ import {
   type ScraperAdapter,
 } from '@precios/scraper-core';
 import {
+  aggregatePackInfo,
   diceSimilarity,
   findBestMatch,
   normalizeDescription,
+  presentationConflict,
   type MatchCandidate,
+  type PackInfo,
 } from '@precios/normalizer';
 import { RunReporter, resolveStatus } from './run-reporter.ts';
 import {
@@ -187,6 +190,7 @@ export class IngestPipeline {
       .execute();
 
     const descriptions = await this.loadCandidateDescriptions(rows.map((r) => r.id));
+    const packInfos = await this.loadCandidatePackInfos(rows.map((r) => r.id));
 
     return rows.map((r) => {
       const desc = descriptions.get(Number(r.id)) ?? null;
@@ -202,12 +206,19 @@ export class IngestPipeline {
               description: descText,
             }).contextText
           : n.contextText;
+      const pack = packInfos.get(Number(r.id)) ?? {
+        count: n.unitCount,
+        declared: n.isPack,
+        isPack: n.isPack,
+      };
       return {
         productId: r.id,
         ean: r.ean,
         normName: n.normName,
         unitAmount: r.unit_amount !== null ? Number(r.unit_amount) : null,
         unitType: r.unit_type,
+        unitCount: pack.count,
+        isPack: pack.isPack,
         brand: r.brand,
         brandProvided: n.brandProvided,
         typeKeys: n.typeKeys,
@@ -217,6 +228,33 @@ export class IngestPipeline {
         contextText: context,
       };
     });
+  }
+
+  /**
+   * Presentación agregada (pack/unidades) por producto a partir de los NOMBRES
+   * de sus SKUs vinculados: preserva el conteo que el nombre canónico pierde al
+   * normalizarse y evita el ruido de las descripciones de marketing.
+   */
+  private async loadCandidatePackInfos(productIds: number[]): Promise<Map<number, PackInfo>> {
+    if (productIds.length === 0) return new Map();
+    const rows: Array<{ raw_description: string | null; product_id: string | number }> =
+      await this.db
+        .selectFrom('store_sku')
+        .innerJoin('match_link', 'match_link.store_sku_id', 'store_sku.id')
+        .select(['store_sku.raw_description', 'match_link.product_id'])
+        .where('match_link.status', '<>', 'rejected')
+        .where('match_link.product_id', 'in', productIds)
+        .execute();
+    const names = new Map<number, string[]>();
+    for (const row of rows) {
+      const pid = Number(row.product_id);
+      const arr = names.get(pid);
+      if (arr) arr.push(row.raw_description ?? '');
+      else names.set(pid, [row.raw_description ?? '']);
+    }
+    const map = new Map<number, PackInfo>();
+    for (const [pid, list] of names) map.set(pid, aggregatePackInfo(list));
+    return map;
   }
 
   /**
@@ -333,11 +371,15 @@ export class IngestPipeline {
       method = 'ean';
       score = 1;
       const matched = candidates.find((c) => c.productId === productId);
-      if (matched && diceSimilarity(norm.normName, matched.normName) < EAN_CONFLICT_SIMILARITY) {
+      if (
+        matched &&
+        (diceSimilarity(norm.normName, matched.normName) < EAN_CONFLICT_SIMILARITY ||
+          presentationConflict(norm, matched))
+      ) {
         linkStatus = 'pending_review';
         log.warn(
           { event: 'match.conflict.ean', skuId, productId },
-          'EAN compartido con descripciones dispares',
+          'EAN compartido con descripciones dispares o presentación distinta',
         );
       }
     } else if (outcome.method === 'semantic') {
@@ -368,6 +410,8 @@ export class IngestPipeline {
         normName: norm.normName,
         unitAmount: norm.unitAmount,
         unitType: norm.unitType,
+        unitCount: norm.unitCount,
+        isPack: norm.isPack,
         brand: norm.brand,
         brandProvided: norm.brandProvided,
         typeKeys: norm.typeKeys,

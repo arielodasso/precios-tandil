@@ -50,6 +50,8 @@ function normToCandidate(p: ProductRow): MatchCandidate {
     normName: norm.normName,
     unitAmount: p.unit_amount !== null ? Number(p.unit_amount) : null,
     unitType: p.unit_type,
+    unitCount: norm.unitCount,
+    isPack: norm.isPack,
     brand: p.brand,
     brandProvided: norm.brandProvided,
     typeKeys: norm.typeKeys,

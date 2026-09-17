@@ -14,6 +14,10 @@ export interface NormalizedProduct {
   brandProvided: boolean;
   unitAmount: number | null;
   unitType: UnitType | null;
+  /** Cantidad de unidades idénticas detectada (null si no se manifiesta). 1 = unitario. */
+  unitCount: number | null;
+  /** Presentación multi-artículo (pack / más de una unidad idéntica). */
+  isPack: boolean;
   /** Tipos de producto detectados (p.ej. ['arroz']) en orden de aparición en el texto. */
   typeKeys: string[];
   /** Primer tipo de producto detectado, o null. */
@@ -153,6 +157,110 @@ const UNIT_RE =
   /(?:x\s*)?(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kgs|k|g|grs?|gramos?|l|lts?|litros?|ml|cc|cm[³3]|unid\.?|unidades?)\b/gi;
 
 const UNITLESS_X_RE = /\bx\s*(\d{1,3})\b/gi;
+
+export interface PackInfo {
+  /** Cantidad de unidades idénticas declarada (1 = unitario, null si no se manifiesta). */
+  count: number | null;
+  /** true si el texto manifiesta explícitamente cantidad de unidades o un pack. */
+  declared: boolean;
+  /** true si la presentación es multi-artículo (pack literal o más de una unidad). */
+  isPack: boolean;
+}
+
+/** Contenedores "doypack"/"flexpack": NO son multipacks, se enmascaran. */
+const PACK_FALSE_POSITIVE_RE = /\bdoy\s*pack(s)?\b|\bflex\s*pack(s)?\b/gi;
+
+/**
+ * "6x710ml", "10 x 100g", "3 x 80 gr" → N unidades de medida M por unidad.
+ * El lookbehind evita que "alto x ancho x prof: 5.4 x 59 x 51 cm" (cadenas de
+ * dimensiones) se interprete como 59 unidades.
+ */
+const PACK_MULTI_RE =
+  /\b(?<!\bx\s?)(\d{1,3})\s*x\s*(\d+(?:[.,]\d+)?)\s*(ml|cc|cm[³3]?|g|grs?|gramos?|kg|kilos?|k|l|lts?|litros?)\b/i;
+
+/** Cantidad de unidades: "4 un", "x 10 Un", "3 uni", "8uds", "40 unidades", "20saq". */
+const PACK_UNITS_RE =
+  /(?:\b|x)(\d{1,3})\s*(?:x\s*)?(?:un(?:idad(?:es)?|id\.?|i\.?|\.)?|uds?\.?|und\.?|u\.?|saq(?:u(?:ito)?s?)?)\b/i;
+
+const SIX_PACK_RE = /\b(?:six|seis)\s+pack\b/i;
+
+/** "pack 6", "pack de 10", "pack x 40" → cantidad explícita. */
+const PACK_COUNT_RE = /[\s(]pack\s+(?:de\s+)?x?\s*([1-9]\d{0,2})\b/i;
+
+/** "pack", "six pack" sueltos → multi-pack sin cantidad explícita. */
+const PACK_WORD_RE = /[\s(](?:six\s+)?pack\b/i;
+
+/**
+ * Detecta presentaciones multi-artículo ("pack", "6x710ml", "4 unidades") para
+ * que el matcher no mezcle una lata sola con una six-pack del mismo producto.
+ * Cantidades de un único artículo (p.ej. "x500g", "x1K") no cuentan como pack.
+ */
+export function detectPackInfo(text: string): PackInfo {
+  const masked = text.replace(PACK_FALSE_POSITIVE_RE, ' ');
+  const hay = ` ${stripAccents(masked.trim().toLowerCase())} `;
+
+  const multi = hay.match(PACK_MULTI_RE);
+  if (multi) {
+    const count = Number.parseInt(multi[1]!, 10);
+    return { count, declared: true, isPack: count > 1 };
+  }
+
+  const units = hay.match(PACK_UNITS_RE);
+  if (units) {
+    const count = Number.parseInt(units[1]!, 10);
+    return { count, declared: true, isPack: count > 1 };
+  }
+
+  if (SIX_PACK_RE.test(hay)) return { count: 6, declared: true, isPack: true };
+
+  const countMatch = hay.match(PACK_COUNT_RE);
+  if (countMatch) {
+    const count = Number.parseInt(countMatch[1]!, 10);
+    return { count, declared: true, isPack: count > 1 };
+  }
+
+  if (PACK_WORD_RE.test(hay)) return { count: null, declared: true, isPack: true };
+
+  return { count: null, declared: false, isPack: false };
+}
+
+/**
+ * Presentación agregada de un producto a partir de los nombres de sus SKUs
+ * (los nombres describen el empaque real; las descripciones de marketing no).
+ * Elige la declaración de pack más frecuente; si no hay ninguna, devuelve un
+ * fallback sólo si éste declara pack, y en caso contrario "desconocido".
+ */
+export function aggregatePackInfo(
+  names: ReadonlyArray<string | null | undefined>,
+  fallback: string | null = null,
+): PackInfo {
+  const tally = new Map<string, { info: PackInfo; n: number }>();
+  for (const name of names) {
+    if (!name) continue;
+    const info = detectPackInfo(name);
+    const key = `${info.isPack ? 'P' : 'S'}:${info.count ?? 'x'}`;
+    const existing = tally.get(key);
+    if (existing) existing.n++;
+    else tally.set(key, { info, n: 1 });
+  }
+
+  let best: { info: PackInfo; n: number } | null = null;
+  for (const entry of tally.values()) {
+    if (!best) {
+      best = entry;
+      continue;
+    }
+    if (entry.info.isPack && !best.info.isPack) {
+      best = entry;
+    } else if (entry.info.isPack === best.info.isPack && entry.n > best.n) {
+      best = entry;
+    }
+  }
+
+  if (best && best.info.declared) return best.info;
+  if (fallback && detectPackInfo(fallback).isPack) return detectPackInfo(fallback);
+  return { count: null, declared: false, isPack: false };
+}
 
 /** Detecta los tipos de producto presentes en `text` (sin acentos) ordenados por aparición. */
 export function detectProductTypes(text: string): { keys: string[]; primary: string | null } {
@@ -311,6 +419,10 @@ export function normalizeDescription(raw: string, opts: NormalizeOptions = {}): 
 
   const brand = brandClean.length >= 2 ? brandClean : guessBrand(tokens, typeKeys);
 
+  // La presentación (pack vs suelta) se detecta SOLO desde el nombre del artículo:
+  // las descripciones de marketing suelen contener "pack"/dimensiones/medidas que
+  // no describen el empaque real y generarían falsos positivos.
+  const pack = detectPackInfo(`${clean} ${brandClean}`.trim());
   const contextText = contextTokens.join(' ');
 
   return {
@@ -320,6 +432,8 @@ export function normalizeDescription(raw: string, opts: NormalizeOptions = {}): 
     brandProvided: Boolean(brandClean),
     unitAmount,
     unitType,
+    unitCount: pack.count,
+    isPack: pack.isPack,
     typeKeys,
     primaryType,
     variantFlags: detectVariantFlags(tokens),
