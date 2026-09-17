@@ -31,16 +31,7 @@ export interface ProductCardData {
  * las fuentes se calculan dinámicamente multiplicando por la cantidad elegida.
  */
 export function ProductCard({ product }: { product: ProductCardData }) {
-  const {
-    slug,
-    name,
-    brand,
-    unit,
-    image_url: imageUrl,
-    offers,
-    discount_pct,
-    stores_count,
-  } = product;
+  const { slug, name, brand, unit, image_url: imageUrl, offers, discount_pct } = product;
 
   const { items, setQuantity } = useProductList();
   const inListEntries = items.filter((i) => i.slug === slug);
@@ -102,11 +93,6 @@ export function ProductCard({ product }: { product: ProductCardData }) {
               </p>
             ) : null}
             <QuantityStepper compact value={qty} onChange={setQty} />
-            {stores_count != null ? (
-              <p className="text-xs text-muted-foreground">
-                {stores_count} {stores_count === 1 ? 'tienda' : 'tiendas'}
-              </p>
-            ) : null}
           </div>
         </div>
 
@@ -141,12 +127,12 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                         rel="noopener noreferrer"
                         className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary transition-colors hover:text-alerta"
                       >
-                        {offer.price != null ? formatArs(offer.price * qty) : '—'}
+                        {offer.price != null ? formatArs(offer.price * qty) : '-'}
                         <ExternalLink className="size-3" />
                       </a>
                     ) : (
                       <span className="shrink-0 font-semibold">
-                        {offer.price != null ? formatArs(offer.price * qty) : '—'}
+                        {offer.price != null ? formatArs(offer.price * qty) : '-'}
                       </span>
                     )}
                     {offer.price != null ? (

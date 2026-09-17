@@ -7,6 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Elimina los acentos y diéresis de un texto ("cañuelas" → "canuelas").
+ * Se usa para comparar contra la base, que guarda los nombres sin acentos.
+ */
+export function stripAccents(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
  * Formatea la unidad de un producto para mostrar en la UI.
  * "1 kg", "500 ml", "6 uds", etc.
  */

@@ -4,8 +4,10 @@ import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { Pagination } from '@/components/Pagination';
+import { SortBar, type SortOption } from '@/components/SortBar';
 import { loadOffersByProduct } from '@/lib/queries/offers';
 import type { CardOffer, ProductUnit } from '@/lib/types';
+import { stripAccents } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -31,7 +33,12 @@ export default async function BuscarPage({
   const rawQ = Array.isArray(query.q) ? query.q[0] : query.q;
   const q = (rawQ ?? '').trim();
   const rawPage = Array.isArray(query.page) ? query.page[0] : query.page;
+  const rawSort = Array.isArray(query.sort) ? query.sort[0] : query.sort;
   const page = Math.max(1, Number.parseInt(rawPage ?? '1', 10) || 1);
+  const sort: SortOption =
+    rawSort === 'az' || rawSort === 'za' || rawSort === 'price_asc' || rawSort === 'price_desc'
+      ? rawSort
+      : 'relevance';
 
   const db = getDb();
 
@@ -50,13 +57,15 @@ export default async function BuscarPage({
   let totalPages = 1;
 
   if (q.length >= 2 && q.length <= 64) {
-    const tsQuery = sql`websearch_to_tsquery('spanish', ${q})`;
+    const normQ = stripAccents(q);
+    const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
     const countRows = await sql<{ total: number }>`
       select count(*)::int as total
       from product p
       join price_aggregate pa on pa.product_id = p.id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q}
-             or p.canonical_name ilike ${`%${q}%`} or p.brand ilike ${`%${q}%`})
+      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
+             or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${normQ}%`}
+             or unaccent(coalesce(p.brand, '')) ilike ${`%${normQ}%`})
         and exists (
           select 1 from price_record pr
           join store_sku ss on ss.id = pr.store_sku_id
@@ -92,8 +101,9 @@ export default async function BuscarPage({
              p.image_url
       from product p
       join price_aggregate pa on pa.product_id = p.id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q}
-             or p.canonical_name ilike ${`%${q}%`} or p.brand ilike ${`%${q}%`})
+      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
+             or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${normQ}%`}
+             or unaccent(coalesce(p.brand, '')) ilike ${`%${normQ}%`})
         and exists (
           select 1 from price_record pr
           join store_sku ss on ss.id = pr.store_sku_id
@@ -102,11 +112,18 @@ export default async function BuscarPage({
             and pr.captured_at >= now() - ${freshWindowInterval}
             and ml.product_id = p.id
         )
-      order by greatest(
-                 ts_rank_cd(p.search_vector, ${tsQuery}),
-                 similarity(p.canonical_name, ${q})
-               ) desc,
-               pa.best_price asc nulls last
+      order by
+        ${
+          sort === 'relevance'
+            ? sql`greatest(ts_rank_cd(p.search_vector, ${tsQuery}), similarity(p.canonical_name, unaccent(${q}))) desc, pa.best_price asc nulls last`
+            : sort === 'az'
+              ? sql`p.canonical_name asc nulls last`
+              : sort === 'za'
+                ? sql`p.canonical_name desc nulls last`
+                : sort === 'price_desc'
+                  ? sql`pa.best_price desc nulls last, p.canonical_name asc`
+                  : sql`pa.best_price asc nulls last, p.canonical_name asc`
+        }
       limit ${PAGE_SIZE} offset ${offset}
     `.execute(db);
 
@@ -134,9 +151,16 @@ export default async function BuscarPage({
 
   const qs = new URLSearchParams();
   if (q) qs.set('q', q);
+  if (sort !== 'relevance') qs.set('sort', sort);
   const pageHref = (p: number) => {
     const params = new URLSearchParams(qs);
     params.set('page', String(p));
+    return `/buscar?${params.toString()}`;
+  };
+  const sortHref = (s: SortOption) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (s !== 'relevance') params.set('sort', s);
     return `/buscar?${params.toString()}`;
   };
 
@@ -174,24 +198,27 @@ export default async function BuscarPage({
             : 'Escribí un término arriba para empezar a buscar.'}
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-3">
-          {items.map((p) => (
-            <li key={p.slug}>
-              <ProductCard
-                product={{
-                  slug: p.slug,
-                  name: p.name,
-                  brand: p.brand,
-                  unit: p.unit,
-                  best_price: p.best_price,
-                  stores_count: p.stores_count,
-                  image_url: p.image_url,
-                  offers: p.offers,
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <SortBar current={sort} href={sortHref} className="mb-6" />
+          <ul className="grid grid-cols-1 gap-3">
+            {items.map((p) => (
+              <li key={p.slug}>
+                <ProductCard
+                  product={{
+                    slug: p.slug,
+                    name: p.name,
+                    brand: p.brand,
+                    unit: p.unit,
+                    best_price: p.best_price,
+                    stores_count: p.stores_count,
+                    image_url: p.image_url,
+                    offers: p.offers,
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {totalPages > 1 && <Pagination page={page} totalPages={totalPages} href={pageHref} />}

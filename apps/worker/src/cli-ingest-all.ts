@@ -21,7 +21,6 @@ const STORES_TO_SCRAPE: StoreSlug[] = [
   'golopolis',
   'carrefour',
   'monarca',
-  'comerciante-maxi',
   'dia',
   'cooperativa-obrera',
   'vea',

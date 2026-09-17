@@ -4,13 +4,18 @@ const crypto = require('node:crypto');
 const { Client } = require('pg');
 
 const STORES = [
-  ['carrefour', 'Carrefour', 'https://www.carrefour.com.ar/'],
-  ['monarca', 'Monarca', 'https://web.monarcadigital.com.ar/'],
-  ['comerciante-maxi', 'Carrefour Maxi (Comerciante)', 'https://comerciante.carrefour.com.ar/'],
-  ['dia', 'DIA', 'https://diaonline.supermercadosdia.com.ar/'],
-  ['cooperativa-obrera', 'Cooperativa Obrera', 'https://www.cooperativaobrera.coop/'],
-  ['vea', 'Vea', 'https://www.vea.com.ar/'],
-  ['golopolis', 'Golopolis', 'https://www.golopolis.com.ar/'],
+  ['carrefour', 'Carrefour', 'https://www.carrefour.com.ar/', true],
+  ['monarca', 'Monarca', 'https://web.monarcadigital.com.ar/', true],
+  [
+    'comerciante-maxi',
+    'Carrefour Maxi (Comerciante)',
+    'https://comerciante.carrefour.com.ar/',
+    false,
+  ],
+  ['dia', 'DIA', 'https://diaonline.supermercadosdia.com.ar/', true],
+  ['cooperativa-obrera', 'Cooperativa Obrera', 'https://www.cooperativaobrera.coop/', true],
+  ['vea', 'Vea', 'https://www.vea.com.ar/', true],
+  ['golopolis', 'Golopolis', 'https://www.golopolis.com.ar/', true],
 ];
 
 const CATEGORIES = [
@@ -87,12 +92,12 @@ async function main() {
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    for (const [slug, name, baseUrl] of STORES) {
+    for (const [slug, name, baseUrl, isActive] of STORES) {
       await client.query(
-        `INSERT INTO store (slug, name, base_url, adapter_id)
-         VALUES ($1, $2, $3, $1)
+        `INSERT INTO store (slug, name, base_url, adapter_id, is_active)
+         VALUES ($1, $2, $3, $1, $4)
          ON CONFLICT (slug) DO NOTHING`,
-        [slug, name, baseUrl],
+        [slug, name, baseUrl, isActive],
       );
     }
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { ProductCard } from '@/components/ProductCard';
+import { SortableProductList } from '@/components/SortableProductList';
+import type { ProductCardData } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { apiFetch } from '@/lib/api';
 import { siteUrl } from '@/lib/site';
@@ -34,6 +35,16 @@ export default async function OfertasPage() {
     // API caída
   }
 
+  const products: ProductCardData[] = deals.map((deal) => ({
+    slug: deal.slug,
+    name: deal.name,
+    best_price: deal.price,
+    store_slug: deal.store_slug,
+    discount_pct: deal.discount_pct,
+    image_url: deal.image_url,
+    offers: deal.offers,
+  }));
+
   const itemListLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -56,28 +67,12 @@ export default async function OfertasPage() {
         <BackButton />
         <h1 className="text-2xl font-bold">Oportunidades detectadas</h1>
       </div>
-      {deals.length === 0 ? (
+      {products.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No hay oportunidades detectadas en este momento.
         </p>
       ) : (
-        <ul className="grid grid-cols-1 gap-3">
-          {deals.map((deal) => (
-            <li key={deal.slug}>
-              <ProductCard
-                product={{
-                  slug: deal.slug,
-                  name: deal.name,
-                  best_price: deal.price,
-                  store_slug: deal.store_slug,
-                  discount_pct: deal.discount_pct,
-                  image_url: deal.image_url,
-                  offers: deal.offers,
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        <SortableProductList products={products} defaultSort="relevance" />
       )}
     </div>
   );

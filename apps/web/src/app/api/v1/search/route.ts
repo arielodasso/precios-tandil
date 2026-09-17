@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
 import { jsonWithCache, SEARCH_JSON_CACHE } from '@/lib/http';
+import { stripAccents } from '@/lib/utils';
 
 const FRESH_WINDOW_DAYS = 7;
 const freshWindowInterval = sql.raw(`interval '${FRESH_WINDOW_DAYS} days'`);
@@ -73,16 +74,13 @@ export async function GET(request: Request) {
       if (!categoryPath) return NextResponse.json({ results: [], next_cursor: null });
     }
 
-    const tsQuery = sql`websearch_to_tsquery('spanish', ${q})`;
+    const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
     const storeFilter = stores.length > 0 ? sql`s.slug in (${stores})` : sql`true`;
     const categoryFilter =
       categoryPath !== null
         ? sql`and (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})`
         : sql``;
-    const ilikeClause =
-      q.length > 0
-        ? sql`or p.canonical_name ilike ${`%${q}%`} or p.brand ilike ${`%${q}%`}`
-        : sql``;
+    const ilikeClause = sql`or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${stripAccents(q)}%`} or unaccent(coalesce(p.brand, '')) ilike ${`%${stripAccents(q)}%`}`;
 
     const result = await sql<{
       slug: string;
@@ -115,7 +113,7 @@ export async function GET(request: Request) {
       from product p
       join price_aggregate pa on pa.product_id = p.id
       left join category c on c.id = p.category_id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % ${q}
+      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
              ${ilikeClause})
         and exists (select 1 from avail a where a.product_id = p.id)
         and pa.stores_count >= 2
@@ -123,7 +121,7 @@ export async function GET(request: Request) {
         ${categoryFilter}
       order by greatest(
                  ts_rank_cd(p.search_vector, ${tsQuery}),
-                 similarity(p.canonical_name, ${q})
+                 similarity(p.canonical_name, unaccent(${q}))
                ) desc,
                pa.best_price asc
       limit ${limit} offset ${offset}

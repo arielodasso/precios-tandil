@@ -39,51 +39,55 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     const offersResult = await sql<{
       store_slug: string;
       store_name: string;
-      price: number;
+      price: number | null;
       unit_price: number | null;
-      list_or_promo: string;
-      source_url: string;
-      captured_at: Date | string;
+      list_or_promo: string | null;
+      source_url: string | null;
+      captured_at: Date | string | null;
     }>`
       select s.slug as store_slug, s.name as store_name,
              latest.price_amount::float8 as price, latest.unit_price::float8 as unit_price,
              latest.list_or_promo, latest.source_url, latest.captured_at
-      from (
-        select distinct on (ss.store_id)
-               ss.store_id, pr.price_amount, pr.unit_price, pr.list_or_promo,
+      from store s
+      left join lateral (
+        select pr.price_amount, pr.unit_price, pr.list_or_promo,
                pr.source_url, pr.captured_at
         from price_record pr
         join store_sku ss on ss.id = pr.store_sku_id
         join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
-        where ml.product_id = ${product.id} and pr.is_suspect = false
-        order by ss.store_id, pr.captured_at desc,
+        where ml.product_id = ${product.id} and ss.store_id = s.id and pr.is_suspect = false
+        order by pr.captured_at desc,
                  case when pr.list_or_promo = 'promo' then 0 else 1 end,
                  pr.price_amount asc
-      ) latest
-      join store s on s.id = latest.store_id and s.is_active = true
-      order by latest.price_amount asc
+        limit 1
+      ) latest on true
+      where s.is_active = true
+      order by latest.price_amount asc nulls last, s.name asc
     `.execute(db);
 
     const now = Date.now();
     const staleThresholdMs = FRESH_WINDOW_DAYS * 24 * 3_600_000;
 
     const offers = offersResult.rows.map((row) => {
-      const capturedMs = new Date(row.captured_at).getTime();
-      const ageHours = Math.max(0, Math.floor((now - capturedMs) / 3_600_000));
+      const capturedAt = row.captured_at;
+      const hasData = capturedAt != null;
+      const capturedMs = hasData ? new Date(capturedAt).getTime() : null;
+      const ageHours =
+        capturedMs != null ? Math.max(0, Math.floor((now - capturedMs) / 3_600_000)) : null;
       return {
         store: row.store_slug,
         store_name: row.store_name,
-        price: round(row.price, 2),
+        price: row.price === null ? null : round(row.price, 2),
         unit_price: row.unit_price === null ? null : round(row.unit_price, 3),
         promo: row.list_or_promo === 'promo',
         source_url: row.source_url,
-        captured_at: new Date(row.captured_at).toISOString(),
+        captured_at: hasData ? new Date(capturedAt).toISOString() : null,
         freshness_hours: ageHours,
-        is_stale: now - capturedMs > staleThresholdMs,
+        is_stale: capturedMs == null || now - capturedMs > staleThresholdMs,
       };
     });
 
-    const freshOffers = offers.filter((o) => !o.is_stale);
+    const freshOffers = offers.filter((o) => !o.is_stale && o.price !== null);
 
     const aggregate = await db
       .selectFrom('price_aggregate')
@@ -104,7 +108,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         near_min_90d: false,
       };
     } else {
-      const prices = freshOffers.map((o) => o.price);
+      const prices = freshOffers.map((o) => o.price).filter((p): p is number => p != null);
       const bestPrice = Math.min(...prices);
       const worstPrice = Math.max(...prices);
       const bestOffer = freshOffers.find((o) => o.price === bestPrice)!;
