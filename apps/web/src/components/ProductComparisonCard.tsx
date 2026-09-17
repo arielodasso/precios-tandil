@@ -20,7 +20,7 @@ export interface OfferView {
  * etiqueta textual "Mejor precio", desglose por supermercado y diferencia
  * porcentual contra el mínimo (FR-014). Estados T074: stale, sin ofertas.
  * Muestra TODOS los lugares relevados; los que no tienen el producto
- * figuran con "---".
+ * figuran con "-".
  */
 export function ProductComparisonCard({
   slug,
@@ -130,7 +130,7 @@ export function ProductComparisonCard({
                       )}
                     </span>
                     {offer.price === null && (
-                      <span className="text-right font-semibold text-muted-foreground">---</span>
+                      <span className="text-right font-semibold text-muted-foreground">-</span>
                     )}
                     {offer.price !== null && !offer.is_stale && (
                       <AddToListButton
