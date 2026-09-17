@@ -154,13 +154,16 @@ async function run() {
     ])
     .execute()) as unknown as ProductRow[];
 
-  const packInfos = await loadProductPackInfos(products.map((p) => p.id));
+  const packInfos = await loadProductPackInfos(products.map((p) => Number(p.id)));
 
   const candidates = new Map<string, MatchCandidate>();
   for (const p of products) {
     candidates.set(
       String(p.id),
-      toCandidate(p, packInfos.get(p.id) ?? { count: null, declared: false, isPack: false }),
+      toCandidate(
+        p,
+        packInfos.get(Number(p.id)) ?? { count: null, declared: false, isPack: false },
+      ),
     );
   }
   const candidateArray = [...candidates.values()];
