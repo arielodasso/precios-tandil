@@ -134,8 +134,8 @@ interface ConflictApi {
 }
 
 class InsertBuilder {
-  private row: Row | null = null;
-  private retCol?: string;
+  private rows: Row[] = [];
+  private retCols: string[] = [];
   private upsertSet: Row | null = null;
   private skipOnConflict = false;
 
@@ -144,13 +144,13 @@ class InsertBuilder {
     private readonly table: string,
   ) {}
 
-  values(row: Row): this {
-    this.row = row;
+  values(row: Row | Row[]): this {
+    this.rows = Array.isArray(row) ? row : [row];
     return this;
   }
 
-  returning(col: string): this {
-    this.retCol = col;
+  returning(col: string | string[]): this {
+    this.retCols = Array.isArray(col) ? col : [col];
     return this;
   }
 
@@ -169,8 +169,7 @@ class InsertBuilder {
     return this;
   }
 
-  private apply(): number | null {
-    const row = this.row!;
+  private applyOne(row: Row): { id: number | null; out: Row } {
     const table = this.db.tables.get(this.table)!;
     const keys = CONFLICT_KEYS[this.table] ?? [];
     let existing: Row | undefined;
@@ -179,10 +178,18 @@ class InsertBuilder {
         keys.every((k) => normValue(candidate[k]) === normValue(row[k])),
       );
     }
-    if (existing && this.skipOnConflict) return Number(existing.id ?? 0);
+    if (existing && this.skipOnConflict) {
+      return {
+        id: existing.id !== undefined ? Number(existing.id) : null,
+        out: existing,
+      };
+    }
     if (existing && this.upsertSet) {
       Object.assign(existing, this.upsertSet);
-      return existing.id !== undefined ? Number(existing.id) : null;
+      return {
+        id: existing.id !== undefined ? Number(existing.id) : null,
+        out: existing,
+      };
     }
     const full: Row = { ...row };
     if (this.table === 'store_sku' || this.table === 'product' || this.table === 'match_link') {
@@ -193,17 +200,30 @@ class InsertBuilder {
       full.updated_at = new Date();
     }
     table.push(full);
-    return full.id !== undefined ? Number(full.id) : null;
+    return { id: full.id !== undefined ? Number(full.id) : null, out: full };
+  }
+
+  private apply(): { id: number | null; out: Row }[] {
+    return this.rows.map((row) => this.applyOne(row));
   }
 
   async executeTakeFirstOrThrow(): Promise<Row> {
-    const id = this.apply();
-    if (id === null) throw new Error(`fake-db: insert sin id en ${this.table}`);
-    return { [this.retCol!]: id };
+    const results = this.apply();
+    if (results.length === 0 || results[0]!.id === null) {
+      throw new Error(`fake-db: insert sin id en ${this.table}`);
+    }
+    const out: Row = {};
+    for (const col of this.retCols) out[col] = results[0]!.out[col];
+    return out;
   }
 
-  async execute(): Promise<void> {
-    this.apply();
+  async execute(): Promise<Row[]> {
+    return this.apply().map((r) => {
+      if (this.retCols.length === 0) return {};
+      const out: Row = {};
+      for (const col of this.retCols) out[col] = r.out[col];
+      return out;
+    });
   }
 }
 

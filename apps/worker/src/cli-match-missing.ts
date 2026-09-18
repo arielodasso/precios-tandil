@@ -22,8 +22,10 @@ import { createDb } from './lib/db.ts';
 import { logger } from './lib/logger.ts';
 import { sql } from 'kysely';
 import {
+  diceSimilarity,
   normalizeDescription,
   findBestMatch,
+  presentationConflict,
   type MatchCandidate,
   type NormalizedProduct,
 } from '@precios/normalizer';
@@ -32,6 +34,7 @@ import { matchCategoryByName } from './lib/category-map.ts';
 const APPLY = process.argv.includes('--apply');
 const CREATE = process.argv.includes('--create');
 const AUTO_MATCH_THRESHOLD = 0.82;
+const EAN_CONFLICT_SIMILARITY = 0.75;
 const FLUSH_EVERY = 300;
 
 const storeArg = process.argv.find((a) => a.startsWith('--store='));
@@ -98,6 +101,7 @@ interface MatchResult {
   productId: number;
   method: 'ean' | 'semantic';
   score: number;
+  status: 'auto' | 'pending_review';
 }
 
 function tokensOf(name: string): string[] {
@@ -116,10 +120,21 @@ function matchSku(
   tokenIndex: Map<string, number[]>,
 ): MatchResult | null {
   const ean = normalizeEan(declaredEan ?? null);
+
+  const solveEanConflict = (cand: MatchCandidate): 'auto' | 'pending_review' => {
+    return diceSimilarity(norm.normName, cand.normName) < EAN_CONFLICT_SIMILARITY ||
+      presentationConflict(norm, cand)
+      ? 'pending_review'
+      : 'auto';
+  };
+
   if (ean) {
     const hits = eanMap.get(ean) ?? [];
     if (hits.length === 1) {
-      return { productId: hits[0]!.productId, method: 'ean', score: 1 };
+      const cand = hits[0]!;
+      // Un EAN puede compartirse entre presentaciones distintas (p.ej. un
+      // six-pack y la lata suelta): la presentación y el nombre deben coincidir.
+      return { productId: cand.productId, method: 'ean', score: 1, status: solveEanConflict(cand) };
     }
     if (hits.length > 1) {
       let best: MatchCandidate | null = null;
@@ -132,7 +147,14 @@ function matchSku(
           best = cand;
         }
       }
-      if (best) return { productId: best.productId, method: 'ean', score: 1 };
+      if (best) {
+        return {
+          productId: best.productId,
+          method: 'ean',
+          score: 1,
+          status: solveEanConflict(best),
+        };
+      }
     }
   }
   const subset: MatchCandidate[] = [];
@@ -152,7 +174,15 @@ function matchSku(
     autoThreshold: AUTO_MATCH_THRESHOLD,
   });
   if (outcome.method === 'ean' || outcome.method === 'semantic') {
-    return { productId: outcome.productId, method: outcome.method, score: outcome.score };
+    return {
+      productId: outcome.productId,
+      method: outcome.method,
+      score: outcome.score,
+      status:
+        outcome.method === 'ean'
+          ? solveEanConflict(subset.find((c) => c.productId === outcome.productId)!)
+          : 'auto',
+    };
   }
   return null;
 }
@@ -233,7 +263,7 @@ async function main() {
     slug?: string;
     method: 'ean' | 'semantic';
     score: string;
-    status: 'auto';
+    status: 'auto' | 'pending_review';
   }> = [];
 
   async function flush() {
@@ -333,7 +363,7 @@ async function main() {
       const slug = forgeSlug(norm, realEan, sku.raw_description);
       const existing = slugToId.get(slug);
       if (existing !== undefined) {
-        outcome = { productId: existing, method: 'semantic', score: 0.82 };
+        outcome = { productId: existing, method: 'semantic', score: 0.82, status: 'auto' };
       } else {
         pendingProducts.push({
           slug,
@@ -346,7 +376,7 @@ async function main() {
           category_id: categoryIdFor(norm.normName),
         });
         pendingSlug = slug;
-        outcome = { productId: -1, method: 'semantic', score: 0.82 };
+        outcome = { productId: -1, method: 'semantic', score: 0.82, status: 'auto' };
       }
     }
 
@@ -369,7 +399,7 @@ async function main() {
           product_id: outcome.productId,
           method: outcome.method,
           score: outcome.method === 'ean' ? '1.0000' : outcome.score.toFixed(4),
-          status: 'auto',
+          status: outcome.status,
         });
       }
     } else {

@@ -29,8 +29,10 @@ import {
   type ScraperAdapter,
 } from '@precios/scraper-core';
 import {
+  diceSimilarity,
   findBestMatch,
   normalizeDescription,
+  presentationConflict,
   type MatchCandidate,
   type NormalizedProduct,
 } from '@precios/normalizer';
@@ -46,6 +48,7 @@ import {
 } from './lib/category-map.ts';
 
 const AUTO_MATCH_THRESHOLD = 0.82;
+const EAN_CONFLICT_SIMILARITY = 0.75;
 const FLUSH_EVERY = 300;
 
 const UA_POOL = [
@@ -117,7 +120,7 @@ interface PendingLink {
   product_slug: string | null;
   method: 'ean' | 'semantic';
   score: string | null;
-  status: 'auto' | 'pending_review' | 'confirmed' | 'rejected';
+  status: 'auto' | 'pending_review';
 }
 
 function toCandidate(p: ProductRow): MatchCandidate {
@@ -468,21 +471,25 @@ async function main(slug: string): Promise<void> {
       let productSlug: string | null = null;
       let method: 'ean' | 'semantic' = 'semantic';
       let score: string | null = null;
-      const status = 'auto';
+      let status: 'auto' | 'pending_review' = 'auto';
 
       const ean = snap.ean && /^\d{13}$/.test(snap.ean) ? snap.ean : undefined;
       let matchedProductId: number | null = null;
 
       if (ean) {
         const hits = eanIndex.get(ean) ?? [];
+
+        let eanCompetitor: MatchCandidate | null = null;
+        const selectCandidate = (id: number): MatchCandidate | null =>
+          candidates.find((c) => c.productId === id) ?? null;
+
         if (hits.length === 1) {
           matchedProductId = hits[0]!;
           method = 'ean';
           score = '1';
+          eanCompetitor = selectCandidate(matchedProductId);
         } else if (hits.length > 1) {
-          const subset = hits
-            .map((id) => candidates.find((c) => c.productId === id))
-            .filter((c): c is MatchCandidate => Boolean(c));
+          const subset = hits.map(selectCandidate).filter((c): c is MatchCandidate => Boolean(c));
           const subOutcome = findBestMatch(norm, ean, subset, {
             autoThreshold: AUTO_MATCH_THRESHOLD,
           });
@@ -490,6 +497,28 @@ async function main(slug: string): Promise<void> {
             matchedProductId = subOutcome.productId;
             method = 'ean';
             score = '1';
+            eanCompetitor = subset.find((c) => c.productId === subOutcome.productId) ?? null;
+          }
+        }
+
+        // Un EAN puede compartirse entre presentaciones distintas (p.ej. un
+        // six-pack de cerveza y la lata suelta, o packs de distinto conteo).
+        // Nunca auto-vincular si la descripción es dispar o la presentación
+        // (pack vs suelto, conteo de unidades) no coincide: va a revisión.
+        if (matchedProductId !== null && eanCompetitor) {
+          const conflict =
+            diceSimilarity(norm.normName, eanCompetitor.normName) < EAN_CONFLICT_SIMILARITY ||
+            presentationConflict(norm, eanCompetitor);
+          if (conflict) {
+            status = 'pending_review';
+            logger.warn(
+              {
+                event: 'match.conflict.ean',
+                externalId: snap.externalId,
+                productId: matchedProductId,
+              },
+              'EAN compartido con presentación distinta o nombre dispar: enviado a revisión',
+            );
           }
         }
       } else {

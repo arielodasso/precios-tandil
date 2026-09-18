@@ -25,7 +25,10 @@ const STORES_TO_SCRAPE: StoreSlug[] = [
   'cooperativa-obrera',
   'vea',
 ];
-const PER_STORE_TIMEOUT_MS = 45 * 60_000; // 45 minutos por tienda
+// Suficiente para que catalogues grandes (carrefour ~30k SKUs) se capturen
+// completos con la persistencia en lote; en caso de catálogos enormes el
+// run_timeout 4h del pipeline (scheduler) sigue siendo el techo absoluto.
+const PER_STORE_TIMEOUT_MS = Number(process.env.PER_STORE_TIMEOUT_MS ?? 3 * 60 * 60_000);
 
 logger.info({ stores: STORES_TO_SCRAPE }, 'iniciando ingest-all');
 

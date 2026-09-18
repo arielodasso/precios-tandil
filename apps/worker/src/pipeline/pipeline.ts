@@ -45,6 +45,7 @@ const AUTO_MATCH_THRESHOLD = 0.82;
 const REVIEW_THRESHOLD = 0.65;
 const EAN_CONFLICT_SIMILARITY = 0.75;
 const CANDIDATE_POOL_SIZE = 100000;
+const FLUSH_EVERY = 300;
 
 export interface PipelineRunOptions {
   runId: string;
@@ -69,6 +70,49 @@ interface StoreLite {
   slug: StoreSlug;
   base_url: string;
   config: StoreConfig;
+}
+
+interface PendingSku {
+  store_id: number;
+  external_id: string;
+  url: string;
+  raw_description: string;
+  description: string | null;
+  declared_ean: string | null;
+  unit_label: string | null;
+  last_seen_at: Date;
+  is_active: boolean;
+}
+
+interface PendingProduct {
+  slug: string;
+  canonical_name: string;
+  brand: string | null;
+  ean: string | null;
+  unit_amount: string | null;
+  unit_type: 'kg' | 'g' | 'l' | 'ml' | 'un' | null;
+  image_url: string | null;
+  category_id: number | null;
+}
+
+interface PendingLink {
+  external_id: string;
+  product_id: number | null;
+  product_slug: string | null;
+  method: 'ean' | 'semantic';
+  score: string | null;
+  status: 'auto' | 'pending_review';
+}
+
+interface PendingPrice {
+  external_id: string;
+  price_amount: string;
+  currency: string;
+  list_or_promo: 'list' | 'promo';
+  unit_price: string | null;
+  source_url: string;
+  captured_at: Date;
+  run_id: string;
 }
 
 export class IngestPipeline {
@@ -112,8 +156,226 @@ export class IngestPipeline {
 
     const allowedHosts = allowedHostsFor(store);
     const candidates = await this.loadCandidates();
+    const productSlugToId = await this.loadProductSlugs();
+    const categoryPathToId = await this.loadCategories();
+    const latestPriceBySku = await this.loadLatestPrices(store.id);
+    const statsBySku = await this.loadPriceStats(store.id);
     const seen = new Set<string>();
     let iteratorFailed = false;
+
+    const pendingSkus: PendingSku[] = [];
+    const pendingProducts: PendingProduct[] = [];
+    const pendingLinks: PendingLink[] = [];
+    const pendingPrices: PendingPrice[] = [];
+    const createdSlugs = new Set<string>();
+    const pendingImageRefines: Array<{ product_id: number; url: string; hash: string }> = [];
+
+    const resolveCategoryId = (
+      categoryPath: string[] | undefined,
+      name?: string,
+    ): number | null => {
+      const storePath = matchCategoryByStorePath(categoryPath);
+      const namePath = name ? matchCategoryByName(name) : null;
+      let taxPath: string | null = null;
+      if (storePath && namePath) {
+        taxPath = storePath.split('/').length > namePath.split('/').length ? storePath : namePath;
+      } else {
+        taxPath = storePath ?? namePath;
+      }
+      if (taxPath) {
+        const byPath = categoryPathToId.get(taxPath);
+        if (byPath !== undefined) return byPath;
+      }
+      if (!categoryPath || categoryPath.length === 0) return null;
+      const fullPath = categoryPath.map(normalizeToken).filter(Boolean).join('/');
+      const exact = categoryPathToId.get(fullPath);
+      if (exact !== undefined) return exact;
+      const root = categoryPathToId.get(normalizeToken(categoryPath[0]!));
+      return root ?? null;
+    };
+
+    /**
+     * Persistencia en lote: productos nuevos, store_sku, match_link y
+     * price_record se insertan con multi-row INSERT ... ON CONFLICT para
+     * reducir round-trips a la DB (el sistema principal de ingesta diaria).
+     * Devuelve el número de precios sospechosos marcados para el log.
+     */
+    const flushBuffer = async (): Promise<void> => {
+      if (pendingSkus.length === 0 && pendingProducts.length === 0) return;
+
+      // ---- productos nuevos ----
+      if (pendingProducts.length > 0) {
+        const unique = new Map<string, PendingProduct>();
+        for (const p of pendingProducts) {
+          if (!unique.has(p.slug)) unique.set(p.slug, p);
+        }
+        const ins = await this.db
+          .insertInto('product')
+          .values([...unique.values()])
+          .onConflict((oc) => oc.column('slug').doUpdateSet({ updated_at: new Date() }))
+          .returning(['id', 'slug'])
+          .execute();
+        for (const r of ins) {
+          const id = Number(r.id);
+          productSlugToId.set(r.slug, id);
+          const prod = unique.get(r.slug);
+          if (!prod || id <= 0) continue;
+          for (const link of pendingLinks) {
+            if (link.product_slug === r.slug) link.product_id = id;
+          }
+          const norm = normalizeDescription(prod.canonical_name, { brand: prod.brand });
+          candidates.push({
+            productId: id,
+            ean: prod.ean,
+            normName: norm.normName,
+            unitAmount: prod.unit_amount !== null ? Number(prod.unit_amount) : null,
+            unitType: prod.unit_type,
+            unitCount: norm.unitCount,
+            isPack: norm.isPack,
+            brand: prod.brand,
+            brandProvided: norm.brandProvided,
+            typeKeys: norm.typeKeys,
+            variantFlags: norm.variantFlags,
+            imageHash: null,
+            imageUrl: prod.image_url,
+            contextText: '',
+          });
+        }
+        pendingProducts.length = 0;
+      }
+      if (pendingSkus.length === 0) {
+        pendingLinks.length = 0;
+        pendingPrices.length = 0;
+        return;
+      }
+
+      // ---- store_sku: dedupe por external_id dentro del lote (un mismo SKU
+      // puede listarse en varias categorías) y multi-row upsert ----
+      {
+        const seenExt = new Set<string>();
+        const keep: number[] = [];
+        for (let i = 0; i < pendingSkus.length; i++) {
+          const ext = pendingSkus[i]!.external_id;
+          if (!seenExt.has(ext)) {
+            seenExt.add(ext);
+            keep.push(i);
+          }
+        }
+        const keepSet = new Set(keep);
+        pendingSkus.splice(0, pendingSkus.length, ...pendingSkus.filter((_, i) => keepSet.has(i)));
+        pendingLinks.splice(
+          0,
+          pendingLinks.length,
+          ...pendingLinks.filter((_, i) => keepSet.has(i)),
+        );
+
+        const ins = await this.db
+          .insertInto('store_sku')
+          .values(pendingSkus)
+          .onConflict((oc) =>
+            oc.columns(['store_id', 'external_id']).doUpdateSet({
+              url: sql.ref('excluded.url'),
+              raw_description: sql.ref('excluded.raw_description'),
+              description: sql.ref('excluded.description'),
+              declared_ean: sql.ref('excluded.declared_ean'),
+              unit_label: sql.ref('excluded.unit_label'),
+              last_seen_at: new Date(),
+              is_active: true,
+            }),
+          )
+          .returning(['id', 'external_id'])
+          .execute();
+        const extToSkuId = new Map<string, number>(ins.map((r) => [r.external_id, Number(r.id)]));
+        pendingSkus.length = 0;
+
+        // ---- match_link ----
+        const links = pendingLinks
+          .map((l) => {
+            const skuId = extToSkuId.get(l.external_id);
+            if (skuId === undefined) return null;
+            const productId: number | undefined =
+              l.product_id ?? (l.product_slug ? productSlugToId.get(l.product_slug) : undefined);
+            if (productId === undefined) return null;
+            return {
+              store_sku_id: skuId,
+              product_id: productId,
+              method: l.method,
+              score: l.score,
+              status: l.status,
+            };
+          })
+          .filter((x) => x !== null);
+        pendingLinks.length = 0;
+        if (links.length > 0) {
+          await this.db
+            .insertInto('match_link')
+            .values(links)
+            .onConflict((oc) =>
+              oc.column('store_sku_id').doUpdateSet({
+                product_id: sql.ref('excluded.product_id'),
+                method: sql.ref('excluded.method'),
+                score: sql.ref('excluded.score'),
+                status: sql.ref('excluded.status'),
+              }),
+            )
+            .execute();
+        }
+
+        // ---- price_record (con detección de sospechosos usando los mapas precargados) ----
+        const prices = pendingPrices
+          .map((p) => {
+            const skuId = extToSkuId.get(p.external_id);
+            if (skuId === undefined) return null;
+            return {
+              store_sku_id: skuId,
+              price_amount: p.price_amount,
+              currency: p.currency,
+              list_or_promo: p.list_or_promo,
+              unit_price: p.unit_price,
+              source_url: p.source_url,
+              captured_at: p.captured_at,
+              run_id: p.run_id,
+              is_suspect: this.isPriceSuspect(
+                skuId,
+                Number(p.price_amount),
+                latestPriceBySku,
+                statsBySku,
+                log,
+              ),
+            };
+          })
+          .filter((x) => x !== null);
+        if (prices.length > 0) {
+          await this.db
+            .insertInto('price_record')
+            .values(prices)
+            .onConflict((oc) =>
+              oc.columns(['store_sku_id', 'captured_at', 'list_or_promo']).doNothing(),
+            )
+            .execute();
+        }
+        pendingPrices.length = 0;
+      }
+
+      // ---- refinamiento de imagen (raro) ----
+      if (pendingImageRefines.length > 0) {
+        for (const ref of pendingImageRefines) {
+          await this.db
+            .updateTable('product')
+            .set({ image_hash: ref.hash, image_url: ref.url })
+            .where('id', '=', ref.product_id)
+            .where((wb) =>
+              wb.or([
+                wb('image_url', 'is', null),
+                wb('image_url', '=', ref.url as string),
+                wb('image_hash', 'is', null),
+              ]),
+            )
+            .execute();
+        }
+        pendingImageRefines.length = 0;
+      }
+    };
 
     try {
       for await (const raw of adapter.scrapeCatalog(ctx)) {
@@ -134,18 +396,150 @@ export class IngestPipeline {
         if (seen.has(dedupeKey)) continue;
         seen.add(dedupeKey);
 
-        try {
-          await this.persistSnapshot(store, snap, candidates, opts.runId, log);
-          reporter.countCaptured();
-        } catch (err) {
-          log.error({ err }, 'fallo persistiendo snapshot');
-          reporter.countHttpError(err);
+        const norm = normalizeDescription(snap.rawDescription, {
+          brand: snap.brand,
+          description: snap.description,
+        });
+
+        let outcome = findBestMatch(norm, snap.ean, candidates, {
+          autoThreshold: AUTO_MATCH_THRESHOLD,
+        });
+        const outProductId: number | null =
+          outcome.method !== 'none' && 'productId' in outcome ? outcome.productId : null;
+        let matched: MatchCandidate | undefined =
+          outProductId !== null ? candidates.find((c) => c.productId === outProductId) : undefined;
+
+        let incomingHash: string | null = null;
+        if (snap.imageUrl && matched?.imageHash && matched.imageUrl !== snap.imageUrl) {
+          incomingHash = await this.hashImage(snap.imageUrl);
+          const refined = findBestMatch(norm, snap.ean, candidates, {
+            autoThreshold: AUTO_MATCH_THRESHOLD,
+            incomingImageHash: incomingHash,
+          });
+          outcome = refined;
+          matched =
+            refined.method !== 'none'
+              ? candidates.find((c) => c.productId === refined.productId)
+              : undefined;
+        }
+
+        let productId: number | null = null;
+        let productSlug: string | null = null;
+        let method: 'ean' | 'semantic' = 'semantic';
+        let score: string | null = null;
+        let linkStatus: 'auto' | 'pending_review' = 'auto';
+
+        if (outcome.method === 'ean') {
+          productId = outcome.productId;
+          method = 'ean';
+          score = '1';
+          const matchedCand = candidates.find((c) => c.productId === productId);
+          if (
+            matchedCand &&
+            (diceSimilarity(norm.normName, matchedCand.normName) < EAN_CONFLICT_SIMILARITY ||
+              presentationConflict(norm, matchedCand))
+          ) {
+            linkStatus = 'pending_review';
+            log.warn(
+              { event: 'match.conflict.ean', skuId: snap.externalId, productId },
+              'EAN compartido con descripciones dispares o presentación distinta',
+            );
+          }
+        } else if (outcome.method === 'semantic') {
+          productId = outcome.productId;
+          method = 'semantic';
+          score = outcome.score.toFixed(4);
+        } else if (outcome.bestCandidateId !== null && outcome.bestScore >= REVIEW_THRESHOLD) {
+          productId = outcome.bestCandidateId;
+          method = 'semantic';
+          score = outcome.bestScore.toFixed(4);
+          linkStatus = 'pending_review';
+          log.info(
+            { event: 'match.pending_review', skuId: snap.externalId, productId, score },
+            'match dudoso enviado a revisión',
+          );
+        } else {
+          const catId = resolveCategoryId(snap.categoryPath, norm.normName);
+          const slug = this.forgeSlug(norm, snap);
+          if (createdSlugs.has(slug)) {
+            productSlug = slug;
+          } else {
+            const existingId = productSlugToId.get(slug);
+            if (existingId !== undefined) {
+              productId = existingId;
+              method = 'semantic';
+              score = '0.82';
+            } else {
+              createdSlugs.add(slug);
+              pendingProducts.push({
+                slug,
+                canonical_name: norm.normName,
+                brand: norm.brand ?? snap.brand ?? null,
+                ean: snap.ean ?? null,
+                unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
+                unit_type: norm.unitType,
+                image_url: snap.imageUrl ?? null,
+                category_id: catId,
+              });
+              productSlug = slug;
+            }
+          }
+        }
+
+        pendingSkus.push({
+          store_id: store.id,
+          external_id: snap.externalId,
+          url: snap.url,
+          raw_description: snap.rawDescription,
+          description: snap.description ?? null,
+          declared_ean: snap.ean ?? null,
+          unit_label: snap.unitLabel ?? null,
+          last_seen_at: new Date(),
+          is_active: true,
+        });
+        pendingLinks.push({
+          external_id: snap.externalId,
+          product_id: productId,
+          product_slug: productSlug,
+          method,
+          score,
+          status: linkStatus,
+        });
+        pendingPrices.push({
+          external_id: snap.externalId,
+          price_amount: snap.price.amount.toFixed(2),
+          currency: 'ARS',
+          list_or_promo: snap.price.listOrPromo,
+          unit_price: snap.price.unitPrice !== undefined ? snap.price.unitPrice.toFixed(3) : null,
+          source_url: snap.url,
+          captured_at: new Date(snap.capturedAt),
+          run_id: opts.runId,
+        });
+        if (incomingHash && snap.imageUrl && productId !== null) {
+          pendingImageRefines.push({
+            product_id: productId,
+            url: snap.imageUrl,
+            hash: incomingHash,
+          });
+        }
+        reporter.countCaptured();
+
+        if (pendingSkus.length >= FLUSH_EVERY) {
+          await flushBuffer();
         }
       }
     } catch (err) {
       iteratorFailed = true;
       reporter.countHttpError(err);
       log.error({ event: 'ingest.iterator.failed', err }, 'iteración del catálogo falló');
+    } finally {
+      // Vaciar el lote restante incluso si el iterador falló/timeout.
+      try {
+        await flushBuffer();
+      } catch (err) {
+        reporter.countHttpError(err);
+        log.error({ err }, 'fallo persistiendo el lote final');
+      }
     }
 
     const stats = reporter.stats;
@@ -153,6 +547,37 @@ export class IngestPipeline {
     const { quarantined } = await reporter.finish(status);
 
     return { runId: opts.runId, storeSlug: store.slug, status, ...stats, quarantined };
+  }
+
+  /**
+   * Detección de precio sospechoso para un store_sku_id usando solo los mapas
+   * precargados (sin queries por snapshot). Umbral clásico >80% + z-score >4
+   * sobre la ventana de 90 días cuando hay suficiente historial.
+   */
+  private isPriceSuspect(
+    skuId: number,
+    amount: number,
+    latestBySku: Map<number, number>,
+    statsBySku: Map<number, { n: number; avg: number; stddev: number | null }>,
+    log: Logger,
+  ): boolean {
+    const previous = latestBySku.get(skuId) ?? null;
+    const change = previous !== null ? pctChange(amount, previous) : null;
+    let isSuspect = change !== null && Math.abs(change) > 80;
+    if (!isSuspect) {
+      const stats = statsBySku.get(skuId);
+      if (stats && stats.n >= 5 && stats.stddev !== null && stats.stddev > 0) {
+        const z = Math.abs((amount - stats.avg) / stats.stddev);
+        if (z > 4) isSuspect = true;
+      }
+    }
+    if (isSuspect) {
+      log.warn(
+        { event: 'price.suspect.flagged', skuId, previous, current: amount },
+        'variación sospechosa marcada',
+      );
+    }
+    return isSuspect;
   }
 
   private async loadStore(slug: StoreSlug): Promise<StoreLite> {
@@ -230,6 +655,103 @@ export class IngestPipeline {
     });
   }
 
+  private async loadProductSlugs(): Promise<Map<string, number>> {
+    const rows = await this.db.selectFrom('product').select(['id', 'slug']).execute();
+    return new Map(rows.map((r) => [r.slug, Number(r.id)]));
+  }
+
+  private async loadCategories(): Promise<Map<string, number>> {
+    const rows = await this.db.selectFrom('category').select(['id', 'path']).execute();
+    return new Map(rows.map((c) => [c.path, Number(c.id)]));
+  }
+
+  /**
+   * Precio no sospechoso más reciente por store_sku_id de la tienda. Usa una
+   * sola query (distinct on) en lugar de una por snapshot. Si el ejecutor SQL
+   * crudo no está disponible (p. ej. fake-db en tests) degrada a una consulta
+   * armada con builders y reduce en memoria.
+   */
+  private async loadLatestPrices(storeId: number): Promise<Map<number, number>> {
+    try {
+      const rows = await sql<{ store_sku_id: number; price_amount: string }>`
+        select distinct on (pr.store_sku_id)
+               pr.store_sku_id, pr.price_amount::text as price_amount
+        from price_record pr
+        join store_sku ss on ss.id = pr.store_sku_id
+        where ss.store_id = ${storeId} and pr.is_suspect = false
+        order by pr.store_sku_id, pr.captured_at desc
+      `.execute(this.db);
+      return new Map(rows.rows.map((r) => [Number(r.store_sku_id), Number(r.price_amount)]));
+    } catch (err) {
+      this.logger.debug(
+        { err, event: 'price.latest.prefetch_fallback' },
+        'fallback: últimos precios por consulta simple',
+      );
+      const storeSkus = await this.db
+        .selectFrom('store_sku')
+        .select(['id'])
+        .where('store_id', '=', storeId)
+        .execute();
+      const idSet = new Set(storeSkus.map((r) => Number(r.id)));
+      if (idSet.size === 0) return new Map();
+      const rows = await this.db
+        .selectFrom('price_record')
+        .select(['store_sku_id', 'price_amount', 'captured_at'])
+        .where('is_suspect', '=', false)
+        .orderBy('captured_at', 'desc')
+        .execute();
+      const map = new Map<number, number>();
+      for (const r of rows) {
+        const skuId = Number(r.store_sku_id);
+        if (idSet.has(skuId) && !map.has(skuId)) map.set(skuId, Number(r.price_amount));
+      }
+      return map;
+    }
+  }
+
+  /**
+   * Estadística de 90 días (n, avg, stddev) por store_sku_id de la tienda.
+   * Una sola query en lugar de una por snapshot.
+   */
+  private async loadPriceStats(
+    storeId: number,
+  ): Promise<Map<number, { n: number; avg: number; stddev: number | null }>> {
+    try {
+      const rows = await sql<{
+        store_sku_id: number;
+        recent_avg: string;
+        recent_stddev: string | null;
+        recent_n: number;
+      }>`
+        select pr.store_sku_id,
+               avg(pr.price_amount::numeric)::text as recent_avg,
+               stddev_samp(pr.price_amount::numeric)::text as recent_stddev,
+               count(*)::int as recent_n
+        from price_record pr
+        join store_sku ss on ss.id = pr.store_sku_id
+        where ss.store_id = ${storeId}
+          and pr.is_suspect = false
+          and pr.captured_at >= now() - interval '90 days'
+        group by pr.store_sku_id
+      `.execute(this.db);
+      const map = new Map<number, { n: number; avg: number; stddev: number | null }>();
+      for (const r of rows.rows) {
+        map.set(Number(r.store_sku_id), {
+          n: Number(r.recent_n ?? 0),
+          avg: Number(r.recent_avg),
+          stddev: r.recent_stddev !== null ? Number(r.recent_stddev) : null,
+        });
+      }
+      return map;
+    } catch (err) {
+      this.logger.debug(
+        { err, event: 'price.stats.prefetch_fallback' },
+        'estadística 90d no disponible, usando umbral fijo',
+      );
+      return new Map();
+    }
+  }
+
   /**
    * Presentación agregada (pack/unidades) por producto a partir de los NOMBRES
    * de sus SKUs vinculados: preserva el conteo que el nombre canónico pierde al
@@ -298,342 +820,13 @@ export class IngestPipeline {
     return pending;
   }
 
-  private async persistSnapshot(
-    store: StoreLite,
-    snap: ProductSnapshot,
-    candidates: MatchCandidate[],
-    runId: string,
-    log: Logger,
-  ): Promise<void> {
-    const norm = normalizeDescription(snap.rawDescription, {
-      brand: snap.brand,
-      description: snap.description,
-    });
-
-    const sku = await this.db
-      .insertInto('store_sku')
-      .values({
-        store_id: store.id,
-        external_id: snap.externalId,
-        url: snap.url,
-        raw_description: snap.rawDescription,
-        description: snap.description ?? null,
-        declared_ean: snap.ean ?? null,
-        unit_label: snap.unitLabel ?? null,
-        last_seen_at: new Date(),
-        is_active: true,
-      })
-      .onConflict((oc) =>
-        oc.columns(['store_id', 'external_id']).doUpdateSet({
-          url: snap.url,
-          raw_description: snap.rawDescription,
-          description: snap.description ?? null,
-          declared_ean: snap.ean ?? null,
-          unit_label: snap.unitLabel ?? null,
-          last_seen_at: new Date(),
-          is_active: true,
-        }),
-      )
-      .returning('id')
-      .executeTakeFirstOrThrow();
-    const skuId = Number(sku.id);
-
-    const firstOutcome = findBestMatch(norm, snap.ean, candidates, {
-      autoThreshold: AUTO_MATCH_THRESHOLD,
-    });
-    let outcome = firstOutcome;
-    let matched: MatchCandidate | undefined =
-      firstOutcome.method !== 'none'
-        ? candidates.find((c) => c.productId === firstOutcome.productId)
-        : undefined;
-
-    let incomingHash: string | null = null;
-    if (snap.imageUrl && matched?.imageHash && matched.imageUrl !== snap.imageUrl) {
-      incomingHash = await this.hashImage(snap.imageUrl);
-      const refined = findBestMatch(norm, snap.ean, candidates, {
-        autoThreshold: AUTO_MATCH_THRESHOLD,
-        incomingImageHash: incomingHash,
-      });
-      outcome = refined;
-      matched =
-        refined.method !== 'none'
-          ? candidates.find((c) => c.productId === refined.productId)
-          : undefined;
-    }
-
-    let productId: number;
-    let method: 'ean' | 'semantic';
-    let score: number | null;
-    let linkStatus: 'auto' | 'pending_review' = 'auto';
-
-    if (outcome.method === 'ean') {
-      productId = outcome.productId;
-      method = 'ean';
-      score = 1;
-      const matched = candidates.find((c) => c.productId === productId);
-      if (
-        matched &&
-        (diceSimilarity(norm.normName, matched.normName) < EAN_CONFLICT_SIMILARITY ||
-          presentationConflict(norm, matched))
-      ) {
-        linkStatus = 'pending_review';
-        log.warn(
-          { event: 'match.conflict.ean', skuId, productId },
-          'EAN compartido con descripciones dispares o presentación distinta',
-        );
-      }
-    } else if (outcome.method === 'semantic') {
-      productId = outcome.productId;
-      method = 'semantic';
-      score = outcome.score;
-    } else if (outcome.bestCandidateId !== null && outcome.bestScore >= REVIEW_THRESHOLD) {
-      productId = outcome.bestCandidateId;
-      method = 'semantic';
-      score = outcome.bestScore;
-      linkStatus = 'pending_review';
-      log.info(
-        { event: 'match.pending_review', skuId, productId, score },
-        'match dudoso enviado a revisión',
-      );
-    } else {
-      // Producto nuevo: se omite el hasheo de imagen (page de Playwright por
-      // producto) en el scrape masivo porque es el cuello de botella. El EAN y
-      // el nombre alcanzan para deduplicar; la imagen se guarda igual para
-      // refinamientos posteriores de matching.
-      const createdHash = null;
-      productId = await this.createProduct(norm, snap, createdHash);
-      method = 'semantic';
-      score = null;
-      candidates.push({
-        productId,
-        ean: snap.ean ?? null,
-        normName: norm.normName,
-        unitAmount: norm.unitAmount,
-        unitType: norm.unitType,
-        unitCount: norm.unitCount,
-        isPack: norm.isPack,
-        brand: norm.brand,
-        brandProvided: norm.brandProvided,
-        typeKeys: norm.typeKeys,
-        variantFlags: norm.variantFlags,
-        imageHash: createdHash,
-        imageUrl: snap.imageUrl ?? null,
-        contextText: '',
-      });
-    }
-
-    await this.db
-      .insertInto('match_link')
-      .values({
-        store_sku_id: skuId,
-        product_id: productId,
-        method,
-        score: score !== null ? score.toFixed(4) : null,
-        status: linkStatus,
-      })
-      .onConflict((oc) =>
-        oc.column('store_sku_id').doUpdateSet({
-          product_id: productId,
-          method,
-          score: score !== null ? score.toFixed(4) : null,
-          status: linkStatus,
-        }),
-      )
-      .execute();
-
-    if (incomingHash && snap.imageUrl) {
-      await this.db
-        .updateTable('product')
-        .set({ image_hash: incomingHash, image_url: snap.imageUrl })
-        .where('id', '=', productId)
-        .where((wb) =>
-          wb.or([
-            wb('image_url', 'is', null),
-            wb('image_url', '=', snap.imageUrl as string),
-            wb('image_hash', 'is', null),
-          ]),
-        )
-        .execute();
-    }
-
-    const productCategoryId = await this.resolveCategory(snap.categoryPath, norm.normName);
-    if (productCategoryId !== null) {
-      await this.db
-        .updateTable('product')
-        .set({ category_id: productCategoryId })
-        .where('id', '=', productId)
-        .execute();
-    }
-
-    // Umbral clásico de variación (salto abrupto): salto > 80% siempre sospechoso.
-    const latestRow = await this.db
-      .selectFrom('price_record')
-      .select('price_amount')
-      .where('store_sku_id', '=', skuId)
-      .where('is_suspect', '=', false)
-      .orderBy('captured_at', 'desc')
-      .limit(1)
-      .executeTakeFirst();
-
-    const previous = latestRow !== undefined ? Number(latestRow.price_amount) : null;
-    const change = previous !== null ? pctChange(snap.price.amount, previous) : null;
-    let isSuspect = change !== null && Math.abs(change) > 80;
-
-    // Detección estadística de outliers (best-effort): si hay suficiente historial
-    // reciente y el precio entrante se desvía más de ~4 desviaciones estándar de la
-    // media, se marca sospechoso aunque no supere el 80 %. Así se atrapan errores de
-    // scraping "compatibles" en magnitud (p. ej. decimal corrido). Si la consulta de
-    // estadísticas falla (p. ej. en entornos de test con DB falsa sin SQL raw) se
-    // degrada al umbral fijo del 80 % sin romper la ingesta.
-    if (!isSuspect) {
-      try {
-        const statsRow = await sql<{
-          recent_avg: string | null;
-          recent_stddev: string | null;
-          recent_n: number;
-        }>`
-          select avg(pr.price_amount::numeric)::text as recent_avg,
-                 stddev_samp(pr.price_amount::numeric)::text as recent_stddev,
-                 count(*)::int as recent_n
-          from price_record pr
-          where pr.store_sku_id = ${skuId}
-            and pr.is_suspect = false
-            and pr.captured_at >= now() - interval '90 days'
-        `.execute(this.db);
-        const stats = statsRow.rows[0];
-        if (stats) {
-          const n = Number(stats.recent_n ?? 0);
-          const avg = stats.recent_avg !== null ? Number(stats.recent_avg) : NaN;
-          const stddev = stats.recent_stddev !== null ? Number(stats.recent_stddev) : NaN;
-          if (n >= 5 && Number.isFinite(avg) && Number.isFinite(stddev) && stddev > 0) {
-            const z = Math.abs((snap.price.amount - avg) / stddev);
-            if (z > 4) {
-              isSuspect = true;
-              log.warn(
-                {
-                  event: 'price.suspect.outlier',
-                  skuId,
-                  price: snap.price.amount,
-                  recentAvg: avg,
-                  recentStddev: stddev,
-                  zScore: z,
-                },
-                'precio fuera de rango estadístico marcado como sospechoso',
-              );
-            }
-          }
-        }
-      } catch (err) {
-        log.debug(
-          { err, event: 'price.suspect.stats_skipped' },
-          'detección estadística de outliers no disponible, usando umbral fijo',
-        );
-      }
-    }
-    if (isSuspect && change !== null && Math.abs(change) > 80) {
-      log.warn(
-        { event: 'price.suspect.flagged', previous, current: snap.price.amount, change },
-        'variación sospechosa marcada',
-      );
-    }
-
-    await this.db
-      .insertInto('price_record')
-      .values({
-        store_sku_id: skuId,
-        price_amount: snap.price.amount.toFixed(2),
-        currency: 'ARS',
-        list_or_promo: snap.price.listOrPromo,
-        unit_price: snap.price.unitPrice !== undefined ? snap.price.unitPrice.toFixed(3) : null,
-        source_url: snap.url,
-        captured_at: new Date(snap.capturedAt),
-        run_id: runId,
-        is_suspect: isSuspect,
-      })
-      .onConflict((oc) => oc.columns(['store_sku_id', 'captured_at', 'list_or_promo']).doNothing())
-      .execute();
-  }
-
-  private async createProduct(
-    norm: ReturnType<typeof normalizeDescription>,
-    snap: ProductSnapshot,
-    imageHash: string | null,
-  ): Promise<number> {
+  private forgeSlug(norm: ReturnType<typeof normalizeDescription>, snap: ProductSnapshot): string {
     const slugBase = norm.normName.replace(/\s+/g, '-').slice(0, 60) || 'producto';
     const hash = createHash('sha1')
       .update(snap.ean ?? norm.normName)
       .digest('base64url')
       .slice(0, 6);
-    const slug = `${slugBase}-${hash}`;
-    const categoryId = await this.resolveCategory(snap.categoryPath, norm.normName);
-
-    const inserted = await this.db
-      .insertInto('product')
-      .values({
-        slug,
-        canonical_name: norm.normName,
-        brand: norm.brand ?? snap.brand ?? null,
-        ean: snap.ean ?? null,
-        unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
-        unit_type: norm.unitType,
-        image_url: snap.imageUrl ?? null,
-        image_hash: imageHash,
-        category_id: categoryId,
-      })
-      .onConflict((oc) =>
-        oc.column('slug').doUpdateSet({
-          updated_at: new Date(),
-          ...(categoryId !== null ? { category_id: categoryId } : {}),
-          ...(snap.imageUrl ? { image_url: snap.imageUrl } : {}),
-        }),
-      )
-      .returning('id')
-      .executeTakeFirstOrThrow();
-    return Number(inserted.id);
-  }
-
-  private async resolveCategory(
-    categoryPath: string[] | undefined,
-    name?: string,
-  ): Promise<number | null> {
-    const storePath = matchCategoryByStorePath(categoryPath);
-    const namePath = name ? matchCategoryByName(name) : null;
-    let taxPath: string | null = null;
-    if (storePath && namePath) {
-      // Preferir el resultado más específico. Si la tienda solo aporta un path
-      // genérico (ej: 'almacen'), el nombre del producto suele clasificar mejor.
-      // A igual profundidad gana el nombre: la góndola de la tienda es genérica
-      // ("frescos") mientras el nombre identifica el producto real (ej: un budín
-      // envasado es de "almacen/reposteria" aunque la tienda lo ponga en panadería).
-      taxPath = storePath.split('/').length > namePath.split('/').length ? storePath : namePath;
-    } else {
-      taxPath = storePath ?? namePath;
-    }
-    if (taxPath) {
-      const byPath = await this.db
-        .selectFrom('category')
-        .select('id')
-        .where('path', '=', taxPath)
-        .limit(1)
-        .executeTakeFirst();
-      if (byPath) return Number(byPath.id);
-    }
-    if (!categoryPath || categoryPath.length === 0) return null;
-    const fullPath = categoryPath.map(normalizeToken).filter(Boolean).join('/');
-    const exact = await this.db
-      .selectFrom('category')
-      .select('id')
-      .where('path', '=', fullPath)
-      .limit(1)
-      .executeTakeFirst();
-    if (exact) return Number(exact.id);
-    const root = await this.db
-      .selectFrom('category')
-      .select('id')
-      .where('path', '=', normalizeToken(categoryPath[0]!))
-      .limit(1)
-      .executeTakeFirst();
-    return root ? Number(root.id) : null;
+    return `${slugBase}-${hash}`;
   }
 }
 
