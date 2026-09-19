@@ -6,6 +6,12 @@ import { FRESH_WINDOW_DAYS } from './refresh-aggregates.ts';
 
 /** Umbral de descuento mínimo vs avg_30d para considerar oportunidad (US3: 15%). */
 export const DEAL_DISCOUNT_THRESHOLD = 0.15;
+/**
+ * Tope de descuento aceptable. Descuentos mayores casi siempre provienen de
+ * avg_30d poluido por un registro anómalo (p. ej. una única captura de
+ * 245.555 vs 5.690), no de una oferta real: se descartan.
+ */
+export const DEAL_MAX_DISCOUNT = 0.8;
 /** Mínimo de tiendas con oferta fresca para proponer (evita ruido de una sola tienda). */
 export const DEAL_MIN_STORES = 2;
 /** Días antes de volver a proponer un candidato rechazado por el admin. */
@@ -39,6 +45,7 @@ export function decideDeal(input: DealCandidateInput, now: Date): DealDecision |
   if (input.bestPrice >= input.avg30d) return null;
   const discountPct = ((input.avg30d - input.bestPrice) / input.avg30d) * 100;
   if (discountPct / 100 < DEAL_DISCOUNT_THRESHOLD) return null;
+  if (discountPct / 100 > DEAL_MAX_DISCOUNT) return null;
   return { discountPct: Math.round(discountPct * 100) / 100 };
 }
 
@@ -51,6 +58,7 @@ interface CandidateRow {
   product_id: string;
   best_price: string | number;
   avg_30d: string | number | null;
+  avg_store_price: string | number | null;
   stores_count: number;
   evidence_stores: unknown;
 }
@@ -94,6 +102,7 @@ export async function detectDeals(
     stats as (
       select f.product_id,
              min(f.price_amount)::numeric as best_price,
+             round(avg(f.price_amount)::numeric, 2) as avg_store_price,
              count(distinct f.store_id)::int as stores_count,
              jsonb_agg(jsonb_build_object(
                'store_slug', s.slug,
@@ -107,6 +116,7 @@ export async function detectDeals(
     select st.product_id,
            st.best_price,
            pa.avg_30d,
+           st.avg_store_price,
            st.stores_count,
            st.evidence_stores
     from stats st
@@ -136,7 +146,7 @@ export async function detectDeals(
       {
         productId: row.product_id,
         bestPrice: Number(row.best_price),
-        avg30d: row.avg_30d === null ? null : Number(row.avg_30d),
+        avg30d: row.avg_30d === null ? Number(row.avg_store_price) : Number(row.avg_30d),
         storesCount: Number(row.stores_count),
         pendingOrPublished: false,
         rejectedUntil: rejectedUntilByProduct.get(row.product_id) ?? null,
@@ -145,6 +155,7 @@ export async function detectDeals(
     );
     if (!decision) continue;
 
+    const referenceAvg = row.avg_30d === null ? row.avg_store_price : row.avg_30d;
     await sql`
       insert into deal_candidate
         (product_id, detected_at, discount_pct, evidence, status)
@@ -152,6 +163,8 @@ export async function detectDeals(
               ${JSON.stringify({
                 best_price: Number(row.best_price),
                 avg_30d: row.avg_30d === null ? null : Number(row.avg_30d),
+                avg_store_price: row.avg_store_price === null ? null : Number(row.avg_store_price),
+                reference: referenceAvg,
                 stores_count: Number(row.stores_count),
                 offers: row.evidence_stores,
               })}::jsonb,

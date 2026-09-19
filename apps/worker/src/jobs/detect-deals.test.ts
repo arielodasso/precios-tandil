@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decideDeal,
   DEAL_DISCOUNT_THRESHOLD,
+  DEAL_MAX_DISCOUNT,
   DEAL_MIN_STORES,
   DEAL_REJECT_COOLDOWN_DAYS,
   type DealCandidateInput,
@@ -99,9 +100,16 @@ describe('decideDeal', () => {
     expect(result!.discountPct).toBe(33.3);
   });
 
+  it('rejecta descuentos absurdos por encima del tope (avg_30d poluido)', () => {
+    expect(decideDeal(base({ bestPrice: 50, avg30d: 1000 }), NOW)).toBeNull();
+    expect(decideDeal(base({ bestPrice: 199, avg30d: 1000 }), NOW)).toBeNull();
+    expect(decideDeal(base({ bestPrice: 200, avg30d: 1000 }), NOW)).not.toBeNull();
+  });
+
   it('constants son consistentes con la spec', () => {
     expect(DEAL_DISCOUNT_THRESHOLD).toBe(0.15);
     expect(DEAL_MIN_STORES).toBe(2);
     expect(DEAL_REJECT_COOLDOWN_DAYS).toBe(14);
+    expect(DEAL_MAX_DISCOUNT).toBe(0.8);
   });
 });

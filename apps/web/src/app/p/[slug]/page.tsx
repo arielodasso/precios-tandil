@@ -7,7 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { siteUrl } from '@/lib/site';
 import type { HistoryResponse, ProductDetail } from '@/lib/types';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 600;
 
 async function getProduct(slug: string): Promise<ProductDetail | null> {
   try {

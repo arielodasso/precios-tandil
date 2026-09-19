@@ -1,13 +1,10 @@
-import { sql } from 'kysely';
 import type { Metadata } from 'next';
-import { getDb } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { Pagination } from '@/components/Pagination';
 import { SortBar, type SortOption } from '@/components/SortBar';
-import { loadOffersByProduct } from '@/lib/queries/offers';
-import type { CardOffer, ProductUnit } from '@/lib/types';
-import { stripAccents } from '@/lib/utils';
+import { cachedSearch } from '@/lib/queries/cached';
+import type { SearchResultItem } from '@/lib/queries/search';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -19,10 +16,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/buscar' },
   robots: { index: false, follow: true },
 };
-
-const PAGE_SIZE = 12;
-const FRESH_WINDOW_DAYS = 7;
-const freshWindowInterval = sql.raw(`interval '${FRESH_WINDOW_DAYS} days'`);
 
 export default async function BuscarPage({
   searchParams,
@@ -40,112 +33,16 @@ export default async function BuscarPage({
       ? rawSort
       : 'relevance';
 
-  const db = getDb();
-
-  const items: Array<{
-    id: number;
-    slug: string;
-    name: string;
-    brand: string | null;
-    unit: ProductUnit | null;
-    best_price: number | null;
-    stores_count: number | null;
-    image_url: string | null;
-    offers: CardOffer[];
-  }> = [];
-  let total = 0;
+  const items: SearchResultItem[] = [];
   let totalPages = 1;
 
   if (q.length >= 2 && q.length <= 64) {
-    const normQ = stripAccents(q);
-    const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
-    const countRows = await sql<{ total: number }>`
-      select count(*)::int as total
-      from product p
-      join price_aggregate pa on pa.product_id = p.id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
-             or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${normQ}%`}
-             or unaccent(coalesce(p.brand, '')) ilike ${`%${normQ}%`})
-        and exists (
-          select 1 from price_record pr
-          join store_sku ss on ss.id = pr.store_sku_id
-          join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto','confirmed')
-          where pr.is_suspect = false
-            and pr.captured_at >= now() - ${freshWindowInterval}
-            and ml.product_id = p.id
-        )
-    `.execute(db);
-    total = Number(countRows.rows[0]?.total ?? 0);
-    totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-    const offset = (page - 1) * PAGE_SIZE;
-    const rows = await sql<{
-      id: string | number;
-      slug: string;
-      name: string;
-      brand: string | null;
-      unit_amount: string | null;
-      unit_type: string | null;
-      best_price: number | null;
-      stores_count: number | null;
-      image_url: string | null;
-    }>`
-      select p.id,
-             p.slug,
-             p.canonical_name as name,
-             p.brand,
-             p.unit_amount,
-             p.unit_type,
-             pa.best_price::float8 as best_price,
-             pa.stores_count,
-             p.image_url
-      from product p
-      join price_aggregate pa on pa.product_id = p.id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
-             or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${normQ}%`}
-             or unaccent(coalesce(p.brand, '')) ilike ${`%${normQ}%`})
-        and exists (
-          select 1 from price_record pr
-          join store_sku ss on ss.id = pr.store_sku_id
-          join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto','confirmed')
-          where pr.is_suspect = false
-            and pr.captured_at >= now() - ${freshWindowInterval}
-            and ml.product_id = p.id
-        )
-      order by
-        ${
-          sort === 'relevance'
-            ? sql`greatest(ts_rank_cd(p.search_vector, ${tsQuery}), similarity(p.canonical_name, unaccent(${q}))) desc, pa.best_price asc nulls last`
-            : sort === 'az'
-              ? sql`p.canonical_name asc nulls last`
-              : sort === 'za'
-                ? sql`p.canonical_name desc nulls last`
-                : sort === 'price_desc'
-                  ? sql`pa.best_price desc nulls last, p.canonical_name asc`
-                  : sql`pa.best_price asc nulls last, p.canonical_name asc`
-        }
-      limit ${PAGE_SIZE} offset ${offset}
-    `.execute(db);
-
-    const ids = rows.rows.map((r) => Number(r.id));
-    const offersByProduct = await loadOffersByProduct(db, ids);
-
-    for (const r of rows.rows) {
-      const id = Number(r.id);
-      items.push({
-        id,
-        slug: r.slug,
-        name: r.name,
-        brand: r.brand,
-        unit:
-          r.unit_amount != null && r.unit_type != null
-            ? { amount: Number(r.unit_amount), type: r.unit_type as ProductUnit['type'] }
-            : null,
-        best_price: r.best_price === null ? null : Math.round(Number(r.best_price) * 100) / 100,
-        stores_count: r.stores_count,
-        image_url: r.image_url,
-        offers: offersByProduct.get(id) ?? [],
-      });
+    try {
+      const results = await cachedSearch(q, page, sort);
+      items.push(...results.items);
+      totalPages = results.totalPages;
+    } catch {
+      totalPages = 1;
     }
   }
 

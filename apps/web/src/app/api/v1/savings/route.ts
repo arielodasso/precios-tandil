@@ -67,7 +67,7 @@ export async function GET() {
     const result = await sql<{ total: string; contributors: number }>`
       SELECT
         coalesce(round(sum(savings_amount)::numeric, 0), 0)::text as total,
-        count(*)::int as contributors
+        count(*) FILTER (WHERE device_id <> '__base_total__')::int as contributors
       FROM user_savings
     `.execute(db);
 

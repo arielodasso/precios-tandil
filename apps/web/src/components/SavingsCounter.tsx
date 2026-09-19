@@ -1,5 +1,4 @@
-import { sql } from 'kysely';
-import { getDb } from '@/lib/db';
+import { cachedSavingsTotal } from '@/lib/queries/cached';
 import { PiggyBank } from 'lucide-react';
 
 function formatArsBig(value: number): string {
@@ -15,16 +14,9 @@ export async function SavingsCounter() {
   let contributors = 0;
 
   try {
-    const db = getDb();
-    const result = await sql<{ total: string; contributors: number }>`
-      SELECT
-        coalesce(round(sum(savings_amount)::numeric, 0), 0)::text as total,
-        count(*)::int as contributors
-      FROM user_savings
-    `.execute(db);
-    const row = result.rows[0];
-    total = Number(row?.total ?? 0);
-    contributors = Number(row?.contributors ?? 0);
+    const data = await cachedSavingsTotal();
+    total = data.total;
+    contributors = data.contributors;
   } catch {
     total = 0;
     contributors = 0;

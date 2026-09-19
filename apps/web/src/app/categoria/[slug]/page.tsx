@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getDb } from '@/lib/db';
-import { getCategoryTree, type CategoryNode } from '@/lib/queries/categories';
 import {
-  listCategoryProducts,
-  getCategorySummary,
-  type CategorySummary,
-} from '@/lib/queries/category-products';
+  cachedCategorySummary,
+  cachedCategoryTree,
+  cachedListCategoryProducts,
+} from '@/lib/queries/cached';
+import { type CategoryNode } from '@/lib/queries/categories';
+import { type CategorySummary } from '@/lib/queries/category-products';
 import { ProductCard } from '@/components/ProductCard';
 import { BackButton } from '@/components/BackButton';
 import { Pagination } from '@/components/Pagination';
@@ -35,12 +35,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const db = getDb();
-  const tree = await getCategoryTree(db);
+  const tree = await cachedCategoryTree();
   const match = findCategory(tree, slug);
   if (!match) return { title: 'Categoría' };
 
-  const summary = await getCategorySummary(db, slug);
+  const summary = await cachedCategorySummary(slug);
   const avg = summary?.avg_best_price ?? null;
   const description =
     avg !== null && avg !== undefined
@@ -86,15 +85,13 @@ export default async function CategoryPage({
       : 'relevance';
   const page = Math.max(1, Number.parseInt(rawPage ?? '1', 10) || 1);
 
-  const db = getDb();
-
-  const tree = await getCategoryTree(db);
+  const tree = await cachedCategoryTree();
   const match = findCategory(tree, slug);
   if (!match) notFound();
 
   const [summary, result] = await Promise.all([
-    getCategorySummary(db, slug),
-    listCategoryProducts(db, slug, { page, pageSize: PAGE_SIZE, q, sort }),
+    cachedCategorySummary(slug),
+    cachedListCategoryProducts(slug, { page, pageSize: PAGE_SIZE, q, sort }),
   ]);
 
   const items = result?.items ?? [];

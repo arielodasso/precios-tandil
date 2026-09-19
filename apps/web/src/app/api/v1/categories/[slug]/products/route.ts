@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
-import { listCategoryProducts } from '@/lib/queries/category-products';
+import { cachedListCategoryProducts } from '@/lib/queries/cached';
 import { jsonWithCache } from '@/lib/http';
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
-    const db = getDb();
     const { slug } = await params;
     const url = new URL(request.url);
     const pageRaw = Number(url.searchParams.get('page'));
@@ -14,7 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     const pageSize = Number.isInteger(sizeRaw) && sizeRaw > 0 ? sizeRaw : undefined;
     const legacyLimit = Number(url.searchParams.get('limit'));
 
-    const result = await listCategoryProducts(db, slug, { page, pageSize });
+    const result = await cachedListCategoryProducts(slug, { page, pageSize });
     if (result === null) {
       return NextResponse.json(
         { error: { code: 'not_found', message: `Categoría no encontrada: ${slug}` } },

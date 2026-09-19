@@ -9,6 +9,7 @@
     "ingest": "tsx src/cli-ingest.ts",
     "bulk-import": "tsx src/cli-bulk-import.ts",
     "ingest-all": "tsx src/cli-ingest-all.ts",
+    "finalize": "tsx src/cli-finalize.ts",
     "backfill-categories": "tsx src/cli-backfill-categories.ts",
     "retag-categories": "tsx src/cli-retag-categories.ts",
     "reconcile": "tsx src/cli-reconcile.ts",

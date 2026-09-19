@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { sql } from 'kysely';
 import { getDb } from '@/lib/db';
 import { jsonWithCache, SEARCH_JSON_CACHE } from '@/lib/http';
-import { stripAccents } from '@/lib/utils';
+import { cachedSearchApi } from '@/lib/queries/cached';
+import { resolveCategoryPath, type SearchApiParams } from '@/lib/queries/search';
 
-const FRESH_WINDOW_DAYS = 7;
-const freshWindowInterval = sql.raw(`interval '${FRESH_WINDOW_DAYS} days'`);
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 20;
 
@@ -28,19 +26,6 @@ function resolveCursorOffset(cursor: string | undefined): number {
     /* fallthrough */
   }
   throw new Error('Cursor inválido');
-}
-
-async function resolveCategoryPath(
-  db: ReturnType<typeof getDb>,
-  token: string,
-): Promise<string | null> {
-  const rows = await sql<{ path: string }>`
-    select path from category
-    where slug = ${token} or path = ${token}
-    order by case when path = ${token} then 0 else 1 end
-    limit 1
-  `.execute(db);
-  return rows.rows[0]?.path ?? null;
 }
 
 export async function GET(request: Request) {
@@ -74,71 +59,8 @@ export async function GET(request: Request) {
       if (!categoryPath) return NextResponse.json({ results: [], next_cursor: null });
     }
 
-    const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
-    const storeFilter = stores.length > 0 ? sql`s.slug in (${stores})` : sql`true`;
-    const categoryFilter =
-      categoryPath !== null
-        ? sql`and (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})`
-        : sql``;
-    const ilikeClause = sql`or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${stripAccents(q)}%`} or unaccent(coalesce(p.brand, '')) ilike ${`%${stripAccents(q)}%`}`;
-
-    const result = await sql<{
-      slug: string;
-      name: string;
-      brand: string | null;
-      category: string | null;
-      image_url: string | null;
-      best_price: number | null;
-      stores_count: number | null;
-      freshest_captured_at: Date | string | null;
-    }>`
-      with avail as (
-        select distinct ml.product_id
-        from price_record pr
-        join store_sku ss on ss.id = pr.store_sku_id
-        join match_link ml on ml.store_sku_id = ss.id and ml.status in ('auto', 'confirmed')
-        join store s on s.id = ss.store_id
-        where pr.is_suspect = false
-          and pr.captured_at >= now() - ${freshWindowInterval}
-          and ${storeFilter}
-      )
-      select p.slug,
-             p.canonical_name as name,
-             p.brand,
-             c.path as category,
-             p.image_url,
-             pa.best_price::float8 as best_price,
-             pa.stores_count,
-             pa.best_captured_at as freshest_captured_at
-      from product p
-      join price_aggregate pa on pa.product_id = p.id
-      left join category c on c.id = p.category_id
-      where (p.search_vector @@ ${tsQuery} or p.canonical_name % unaccent(${q})
-             ${ilikeClause})
-        and exists (select 1 from avail a where a.product_id = p.id)
-        and pa.stores_count >= 2
-        and pa.best_price::numeric >= 500
-        ${categoryFilter}
-      order by greatest(
-                 ts_rank_cd(p.search_vector, ${tsQuery}),
-                 similarity(p.canonical_name, unaccent(${q}))
-               ) desc,
-               pa.best_price asc
-      limit ${limit} offset ${offset}
-    `.execute(db);
-
-    const results = result.rows.map((row) => ({
-      slug: row.slug,
-      name: row.name,
-      brand: row.brand,
-      category: row.category,
-      image_url: row.image_url,
-      best_price: row.best_price === null ? null : Math.round(Number(row.best_price) * 100) / 100,
-      stores_count: row.stores_count,
-      freshest_captured_at: row.freshest_captured_at
-        ? new Date(row.freshest_captured_at).toISOString()
-        : null,
-    }));
+    const params: SearchApiParams = { q, limit, offset, category: categoryPath, stores };
+    const results = await cachedSearchApi(params);
 
     return jsonWithCache(
       {

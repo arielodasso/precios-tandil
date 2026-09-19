@@ -15,16 +15,17 @@ export async function getProductHistory(
   }
   const window = windowRaw as '30' | '90' | 'all';
 
-  const product = await sql<{ id: string }>`
-    select p.id::text as id
+  const product = await sql<{ id: string; name: string }>`
+    select p.id::text as id, p.canonical_name::text as name
     from product p
     join price_aggregate pa on pa.product_id = p.id
     where p.slug = ${slug}
       and pa.stores_count >= 2 and pa.best_price::numeric >= 500
     limit 1
   `.execute(db);
-  const productId = product.rows[0]?.id;
-  if (!productId) throw new AppError('not_found', `Producto '${slug}' no encontrado`);
+  const productRow = product.rows[0];
+  if (!productRow) throw new AppError('not_found', `Producto '${slug}' no encontrado`);
+  const productId = productRow.id;
 
   const since =
     window === 'all' ? null : sql.raw(`now() - interval '${window === '30' ? 30 : 90} days'`);
@@ -71,6 +72,7 @@ export async function getProductHistory(
 
   return {
     product_slug: slug,
+    product_name: productRow.name,
     window,
     insufficient_history: insufficientHistory,
     series,

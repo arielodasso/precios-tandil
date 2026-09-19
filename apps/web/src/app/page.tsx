@@ -2,15 +2,11 @@ import Link from 'next/link';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import { SearchBar } from '@/components/SearchBar';
 import { ProductCard } from '@/components/ProductCard';
-import { apiFetch } from '@/lib/api';
-import { getDb } from '@/lib/db';
 import {
-  getOverview,
-  getBasketByStore,
-  getCbaBasketByStore,
-  getCbaBasketDetail,
-} from '@/lib/queries/analytics';
-import { resolveCbaBasket } from '@/lib/cba';
+  cachedCategoryTree,
+  cachedPublishedDeals,
+  cachedHomeAnalytics,
+} from '@/lib/queries/cached';
 import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { SavingsCounter } from '@/components/SavingsCounter';
 import { PanoramaCarousel } from '@/components/PanoramaCarousel';
@@ -20,7 +16,7 @@ import { siteUrl } from '@/lib/site';
 import type { CategoryNode } from '@/lib/queries/categories';
 import type { DealItem } from '@/lib/types';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 function formatInt(value: number | null | undefined): string {
   if (value == null) return '—';
@@ -35,19 +31,16 @@ export default async function HomePage() {
   let categories: CategoryNode[] = [];
   let deals: DealItem[] = [];
 
-  let overview: Awaited<ReturnType<typeof getOverview>> | null = null;
-  let basket: Awaited<ReturnType<typeof getBasketByStore>> = [];
-  let cbaBasket: Awaited<ReturnType<typeof getCbaBasketByStore>> = [];
-  let cbaDetails: Awaited<ReturnType<typeof getCbaBasketDetail>> = [];
+  let overview: Awaited<ReturnType<typeof cachedHomeAnalytics>>['overview'] | null = null;
+  let basket: Awaited<ReturnType<typeof cachedHomeAnalytics>>['basket'] = [];
+  let cbaBasket: Awaited<ReturnType<typeof cachedHomeAnalytics>>['cbaBasket'] = [];
+  let cbaDetails: Awaited<ReturnType<typeof cachedHomeAnalytics>>['cbaDetails'] = [];
   try {
-    const db = getDb();
-    const cbaItems = await resolveCbaBasket(db);
-    [overview, basket, cbaBasket, cbaDetails] = await Promise.all([
-      getOverview(db),
-      getBasketByStore(db),
-      getCbaBasketByStore(db, cbaItems),
-      getCbaBasketDetail(db, cbaItems),
-    ]);
+    const data = await cachedHomeAnalytics();
+    overview = data.overview;
+    basket = data.basket;
+    cbaBasket = data.cbaBasket;
+    cbaDetails = data.cbaDetails;
   } catch {
     overview = null;
     basket = [];
@@ -56,10 +49,8 @@ export default async function HomePage() {
   }
 
   try {
-    const cat = await apiFetch<{ categories: CategoryNode[] }>('/categories', 300);
-    categories = cat.categories;
-    const d = await apiFetch<{ deals: DealItem[] }>('/deals?status=published');
-    deals = d.deals;
+    categories = await cachedCategoryTree();
+    deals = (await cachedPublishedDeals()) as unknown as DealItem[];
   } catch {
     // API caída: la home sigue funcionando con búsqueda
   }

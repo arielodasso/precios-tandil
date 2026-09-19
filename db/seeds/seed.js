@@ -101,6 +101,13 @@ async function main() {
       );
     }
 
+    // El catálogo de La Coope en Casa (lacoopeencasa.coop) es la web de
+    // Cooperativa Obrera: se permite ese host para validar las URLs de sus productos.
+    await client.query(
+      `UPDATE store SET config = config || '{"extraHosts":["lacoopeencasa.coop"]}'::jsonb
+       WHERE slug = 'cooperativa-obrera'`,
+    );
+
     const idsBySlug = new Map();
     for (const cat of CATEGORIES) {
       const path = cat.parent ? `${cat.parent}/${cat.slug}` : cat.slug;
@@ -129,7 +136,16 @@ async function main() {
       [tokenHash],
     );
 
-    console.log('Seed completado: tiendas, categorías y token admin dev.');
+    // Punto de partida del contador "Los tandilenses ahorraron".
+    // device_id reservado: no cuenta como contributor, solo suma el monto base.
+    await client.query(
+      `INSERT INTO user_savings (device_id, savings_amount, item_count, updated_at)
+       VALUES ('__base_total__', $1, 0, now())
+       ON CONFLICT (device_id) DO UPDATE SET savings_amount = $1`,
+      [2330500],
+    );
+
+    console.log('Seed completado: tiendas, categorías, token admin y base de ahorro.');
   } finally {
     await client.end();
   }
