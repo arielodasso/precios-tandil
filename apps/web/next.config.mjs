@@ -7,7 +7,7 @@ const nextConfig = {
     '/p/[slug]/opengraph-image': ['./assets/fonts/*'],
   },
   images: {
-    formats: ['image/avif', 'image/webp'],
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'carrefourar.vteximg.com.br' },
       { protocol: 'https', hostname: 'www.golopolis.com.ar' },

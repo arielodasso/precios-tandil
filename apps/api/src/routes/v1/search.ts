@@ -151,7 +151,7 @@ export async function searchProducts(
   }
 
   const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
-  const storeFilter = stores.length > 0 ? sql`s.slug in (${stores})` : sql`true`;
+  const storeFilter = stores.length > 0 ? sql`s.slug in (${sql.join(stores, sql`, `)})` : sql`true`;
   const categoryFilter =
     categoryPath !== null
       ? sql`and (c.path = ${categoryPath} or c.path like ${`${categoryPath}/%`})`

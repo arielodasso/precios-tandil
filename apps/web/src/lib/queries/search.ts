@@ -62,7 +62,7 @@ export async function searchApiRows(
 ): Promise<SearchApiRow[]> {
   const { q, limit, offset, category, stores } = params;
   const tsQuery = sql`websearch_to_tsquery('spanish', unaccent(${q}))`;
-  const storeFilter = stores.length > 0 ? sql`s.slug in (${stores})` : sql`true`;
+  const storeFilter = stores.length > 0 ? sql`s.slug in (${sql.join(stores, sql`, `)})` : sql`true`;
   const categoryFilter =
     category !== null ? sql`and (c.path = ${category} or c.path like ${`${category}/%`})` : sql``;
   const ilikeClause = sql`or unaccent(coalesce(p.canonical_name, '')) ilike ${`%${stripAccents(q)}%`} or unaccent(coalesce(p.brand, '')) ilike ${`%${stripAccents(q)}%`}`;
