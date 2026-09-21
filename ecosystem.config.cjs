@@ -27,7 +27,7 @@ module.exports = {
       args: '--import tsx/esm src/server.ts',
       env: {
         DATABASE_URL: env.DATABASE_URL,
-        REDIS_URL: env.REDIS_URL ?? 'redis://localhost:6379',
+        REDIS_URL: env.REDIS_URL,
         PORT: env.PORT ?? '3001',
         NODE_ENV: 'production',
         ADMIN_TOKEN_DEV: env.ADMIN_TOKEN_DEV ?? 'dev-token',

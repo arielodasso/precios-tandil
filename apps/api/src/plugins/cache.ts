@@ -41,7 +41,10 @@ let redisClient: Redis | null = null;
 
 export function createCacheStore(redisUrl?: string): CacheStore {
   if (!redisUrl) return new MemoryCache();
-  redisClient = new Redis(redisUrl, { maxRetriesPerRequest: 2 });
+  redisClient = new Redis(redisUrl, { maxRetriesPerRequest: 2, enableOfflineQueue: false });
+  redisClient.on('error', () => {
+    // Redis es opcional: si no responde, la caché degenera a best-effort.
+  });
   return {
     async get(key) {
       try {
