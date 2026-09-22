@@ -41,7 +41,9 @@ const NOT_CORRECTED = sql<boolean>`not exists (
  *  - métricas históricas: min_30d/min_90d/min_all_time, avg_30d,
  *    pct_change_24h y pct_change_7d (precio actual vs último precio válido
  *    anterior a 24h / 7 días), excluyendo suspects, registros corregidos y
- *    matches rechazados.
+ *    matches rechazados. Si la serie aún no llega a 7 días, pct_change_7d
+ *    compara contra el registro más antiguo disponible (variación desde el
+ *    inicio de los datos), para publicar cambios apenas hay 1 día de historia.
  */
 export async function refreshAggregates(
   db: Kysely<DB>,
@@ -132,8 +134,17 @@ export async function refreshAggregates(
           and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
           and ${NOT_CORRECTED}
         where ml.status in ('auto', 'confirmed')
-          and pr.captured_at <= ${now}::timestamptz - interval '7 days'
-        order by ml.product_id, pr.captured_at desc
+        order by ml.product_id,
+          case
+            when pr.captured_at <= ${now}::timestamptz - interval '7 days'
+              then pr.captured_at
+            else null
+          end desc nulls last,
+          case
+            when pr.captured_at <= ${now}::timestamptz - interval '7 days'
+              then null
+            else pr.captured_at
+          end asc nulls last
       ),
       removed as (
         delete from price_aggregate pa

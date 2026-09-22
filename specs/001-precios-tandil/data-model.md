@@ -159,7 +159,7 @@ CREATE TABLE price_aggregate (
   min_90d           numeric(12,2),
   min_all_time      numeric(12,2),
   avg_30d           numeric(12,2),
-  pct_change_7d     numeric(6,2),               -- % vs hace 7 días
+  pct_change_7d     numeric(6,2),               -- % vs hace 7 días (o vs el registro más antiguo disponible si la serie no llega a 7 días)
   pct_change_24h    numeric(6,2),
   stores_count      smallint,
   refreshed_at      timestamptz NOT NULL

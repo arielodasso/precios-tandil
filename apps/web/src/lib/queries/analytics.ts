@@ -60,7 +60,9 @@ export async function getOverview(db: KyselyDB) {
  * Products with biggest price drops in 7 days.
  * El porcentaje siempre compara el precio actual contra el último precio
  * válido de hace 7 días (NUNCA cae a avg_30d, para que coincida con lo
- * visible). Si no hay historia de 7 días, el producto se excluye.
+ * visible). Si la serie aún no tiene historia de 7 días, se compara contra
+ * el registro más antiguo disponible (variación desde el inicio de los datos)
+ * para poblar las tablas apenas hay datos.
  */
 export async function getBiggestDrops(db: KyselyDB, limit = 10) {
   return db

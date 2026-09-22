@@ -244,6 +244,39 @@ describe('job refresh-aggregates contra PostgreSQL real', () => {
     expect(agg3.pct_change_24h).toBeNull(); // sin registros previos a 24h
   }, 30_000);
 
+  it('publica pct_change_7d con menos de 7 días de historia (fallback al registro más antiguo)', async (ctx) => {
+    if (!dbDisponible) ctx.skip();
+    const { diaId } = await seedEscenario();
+
+    // Producto con solo ~10h y ~2h de historia: aún no hay registro de 7 días,
+    // pero la variación debe publicarse contra el registro más antiguo.
+    const p4 = await insertProduct('fideos-inicio');
+    await insertSku({
+      storeId: diaId,
+      externalId: 'd4',
+      productId: p4,
+      precios: [
+        { amount: 1800, ageMs: 10 * HORA },
+        { amount: 1500, ageMs: 2 * HORA },
+      ],
+    });
+
+    const { refreshAggregates } =
+      await import('../../../apps/worker/src/jobs/refresh-aggregates.ts');
+    await refreshAggregates(db!, logger, { now: NOW });
+
+    const agg = await db!
+      .selectFrom('price_aggregate')
+      .select(['pct_change_24h', 'pct_change_7d', 'min_all_time', 'avg_30d'])
+      .where('product_id', '=', p4)
+      .executeTakeFirstOrThrow();
+    expect(agg.pct_change_24h).toBeNull(); // sin registros previos a 24h
+    // fallback: base = registro más antiguo (1800) → (1500-1800)/1800
+    expect(Number(agg.pct_change_7d)).toBeCloseTo(-16.67, 2);
+    expect(Number(agg.min_all_time)).toBe(1500);
+    expect(Number(agg.avg_30d)).toBeCloseTo(1650, 2);
+  }, 30_000);
+
   it('elimina agregados de productos que se quedan sin datos frescos', async (ctx) => {
     if (!dbDisponible) ctx.skip();
     const { p2 } = await seedEscenario();

@@ -59,6 +59,7 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
     .join(' ');
 
   const pctWeek = stats.pct_change_7d;
+  const weeklyLabel = insufficient_history ? 'Desde inicio' : 'Hoy vs 7 días';
   const firstDate = series.length > 0 ? new Date(`${series[0]!.date}T00:00:00Z`) : null;
   const dayCount =
     firstDate !== null
@@ -149,7 +150,7 @@ export function HistoryStrip({ history }: { history: HistoryResponse }) {
             }
           />
           <Stat
-            label="Hoy vs 7 días"
+            label={weeklyLabel}
             value={pctWeek !== null ? `${pctWeek > 0 ? '+' : ''}${pctWeek}%` : '—'}
             tone={pctWeek === null ? undefined : pctWeek <= 0 ? 'good' : 'bad'}
           />
