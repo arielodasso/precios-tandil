@@ -454,6 +454,7 @@ export async function getCbaBasketDetail(db: KyselyDB, items: CbaResolvedProduct
 export async function getStoreCompetitiveness(db: KyselyDB) {
   return db
     .selectFrom('price_aggregate as pa')
+    .innerJoin('product as p', 'p.id', 'pa.product_id')
     .innerJoin('store as s', 's.id', 'pa.best_store_id')
     .select([
       's.slug as store_slug',
