@@ -9,6 +9,14 @@ import type { CbaResolvedProduct } from '@/lib/cba';
 
 export type KyselyDB = Kysely<DB>;
 
+/**
+ * Filtro para el índice de alimentos: excluye electrodomésticos y electrónica,
+ * cuyos montos altos y capturas de precio-cuota distorsionan variaciones,
+ * brechas y ahorros (p. ej. un freezer "a 70 mil pesos").
+ * Requiere el alias `p` en la consulta.
+ */
+const NOT_DURABLE_GOODS = sql<SqlBool>`p.category_id is null or p.category_id not in (select id from category where path like 'electrodomesticos%')`;
+
 /** General overview stats */
 export async function getOverview(db: KyselyDB) {
   const [products, stores, prices, deals] = await Promise.all([
@@ -62,6 +70,7 @@ export async function getBiggestDrops(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
+    .where(NOT_DURABLE_GOODS)
     .where('pa.pct_change_7d', '<', '0')
     .select([
       'p.slug',
@@ -90,6 +99,7 @@ export async function getBiggestRises(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
+    .where(NOT_DURABLE_GOODS)
     .where('pa.pct_change_7d', '>', '0')
     .select([
       'p.slug',
@@ -116,6 +126,7 @@ export async function getPriceGaps(db: KyselyDB, limit = 10) {
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.avg_30d', '>', sql.lit('0'))
+    .where(NOT_DURABLE_GOODS)
     .select([
       'p.slug',
       'p.canonical_name as name',
@@ -162,6 +173,8 @@ export async function getBasketByStore(db: KyselyDB) {
       join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
         and pr.price_amount::numeric >= 500
         and pr.captured_at >= now() - interval '7 days'
+        and not exists (select 1 from price_correction pc
+                        where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
       where ml.status in ('auto', 'confirmed')
       group by ml.product_id, ss.store_id
     ),
@@ -265,6 +278,8 @@ export async function getCbaBasketByStore(db: KyselyDB, items: CbaResolvedProduc
       join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
         and pr.price_amount::numeric >= 500
         and pr.captured_at >= now() - interval '7 days'
+        and not exists (select 1 from price_correction pc
+                        where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
       where ml.status in ('auto', 'confirmed')
         and ml.product_id in (select product_id from sel)
       group by ml.product_id, ss.store_id
@@ -381,6 +396,8 @@ export async function getCbaBasketDetail(db: KyselyDB, items: CbaResolvedProduct
       join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
         and pr.price_amount::numeric >= 500
         and pr.captured_at >= now() - interval '7 days'
+        and not exists (select 1 from price_correction pc
+                        where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
       where ml.status in ('auto', 'confirmed')
         and ml.product_id in (select product_id from sel)
       group by ml.product_id, ss.store_id
@@ -443,6 +460,7 @@ export async function getStoreCompetitiveness(db: KyselyDB) {
     ])
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
+    .where(NOT_DURABLE_GOODS)
     .where('pa.stores_count', '>=', 2)
     .groupBy(['s.slug', 's.name'])
     .orderBy(sql`count(*)`, 'desc')
@@ -478,6 +496,7 @@ export async function getNearHistoricalLow(db: KyselyDB, limit = 10) {
       and pa.min_90d is not null
       and pa.stores_count >= 2
       and pa.best_price::numeric <= pa.min_90d::numeric * 1.05
+      and (p.category_id is null or p.category_id not in (select id from category where path like 'electrodomesticos%'))
     order by pa.best_price::numeric asc
     limit ${limit}
   `
@@ -494,6 +513,7 @@ export async function getMostVolatile(db: KyselyDB, limit = 10) {
     .where('pa.stores_count', '>=', 2)
     .where('pa.best_price', 'is not', null)
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
+    .where(NOT_DURABLE_GOODS)
     .where('pa.pct_change_7d', 'is not', null)
     .select([
       'p.slug',
@@ -523,6 +543,7 @@ export async function getTopSavings(db: KyselyDB, limit = 10) {
     .where(sql<SqlBool>`pa.best_price::numeric >= 500`)
     .where('pa.avg_30d', '>', '0')
     .where('pa.best_price', '<', (eb) => eb.ref('pa.avg_30d'))
+    .where(NOT_DURABLE_GOODS)
     .select([
       'p.slug',
       'p.canonical_name as name',

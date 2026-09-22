@@ -23,12 +23,25 @@ interface RefreshCounts {
 }
 
 /**
+ * Filtro sobre price_record que descarta los registros corregidos vía
+ * price_correction (Constitución V: la serie es append-only y las correcciones
+ * se registran en tabla aparte, nunca como UPDATE).
+ *
+ * Precondición: la query usa los alias `pr` (price_record) y `ss` (store_sku).
+ */
+const NOT_CORRECTED = sql<boolean>`not exists (
+  select 1 from price_correction pc
+  where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at
+)`;
+
+/**
  * T035 + T051 — Agregados por producto unificado:
  *  - mejor precio vigente entre tiendas con datos frescos (< FRESH_WINDOW_DAYS),
  *  - tienda ganadora y su captured_at, stores_count,
  *  - métricas históricas: min_30d/min_90d/min_all_time, avg_30d,
  *    pct_change_24h y pct_change_7d (precio actual vs último precio válido
- *    anterior a 24h / 7 días), excluyendo suspects y matches rechazados.
+ *    anterior a 24h / 7 días), excluyendo suspects, registros corregidos y
+ *    matches rechazados.
  */
 export async function refreshAggregates(
   db: Kysely<DB>,
@@ -55,6 +68,7 @@ export async function refreshAggregates(
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
           and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
+          and ${NOT_CORRECTED}
         where ml.status in ('auto', 'confirmed')
       ),
       fresh as (
@@ -93,6 +107,7 @@ export async function refreshAggregates(
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
           and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
+          and ${NOT_CORRECTED}
         where ml.status in ('auto', 'confirmed')
         group by ml.product_id
       ),
@@ -103,6 +118,7 @@ export async function refreshAggregates(
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
           and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
+          and ${NOT_CORRECTED}
         where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '24 hours'
         order by ml.product_id, pr.captured_at desc
@@ -114,6 +130,7 @@ export async function refreshAggregates(
         join store_sku ss on ss.id = ml.store_sku_id
         join price_record pr on pr.store_sku_id = ss.id and pr.is_suspect = false
           and pr.price_amount::numeric >= ${MIN_SHELF_PRICE}
+          and ${NOT_CORRECTED}
         where ml.status in ('auto', 'confirmed')
           and pr.captured_at <= ${now}::timestamptz - interval '7 days'
         order by ml.product_id, pr.captured_at desc

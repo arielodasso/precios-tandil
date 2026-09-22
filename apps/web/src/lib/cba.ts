@@ -53,6 +53,12 @@ export const CBA_ITEMS: CbaItem[] = [
   { key: 'lacteos-queso', label: 'Queso', rubric: 'Lácteos', match: /^queso / },
   { key: 'lacteos-yogur', label: 'Yogur', rubric: 'Lácteos', match: /^yogur / },
   { key: 'lacteos-manteca', label: 'Manteca', rubric: 'Lácteos', match: /^manteca( tonadita)?$/ },
+  {
+    key: 'lacteos-leche',
+    label: 'Leche',
+    rubric: 'Lácteos',
+    match: /^leche (entera|descremada|parcialmente descremada|uat|en polvo)/,
+  },
 
   {
     key: 'verduras-tomate',

@@ -33,6 +33,7 @@ import {
   normalizeToken,
 } from '../lib/category-map.ts';
 import { computeImageHash } from '../lib/image-hash.ts';
+import { isCrossStoreOutlier } from '../lib/cross-store-outlier.ts';
 
 const UA_POOL = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -160,6 +161,7 @@ export class IngestPipeline {
     const categoryPathToId = await this.loadCategories();
     const latestPriceBySku = await this.loadLatestPrices(store.id);
     const statsBySku = await this.loadPriceStats(store.id);
+    const crossStoreRefBySku = await this.loadCrossStoreRefBySku(store.id);
     const seen = new Set<string>();
     let iteratorFailed = false;
 
@@ -340,6 +342,7 @@ export class IngestPipeline {
                 Number(p.price_amount),
                 latestPriceBySku,
                 statsBySku,
+                crossStoreRefBySku,
                 log,
               ),
             };
@@ -551,14 +554,19 @@ export class IngestPipeline {
 
   /**
    * Detección de precio sospechoso para un store_sku_id usando solo los mapas
-   * precargados (sin queries por snapshot). Umbral clásico >80% + z-score >4
-   * sobre la ventana de 90 días cuando hay suficiente historial.
+   * precargados (sin queries por snapshot). Reglas:
+   *  - umbral clásico >80% de variación contra el último precio de la tienda,
+   *  - z-score >4 sobre la ventana de 90 días cuando hay suficiente historial,
+   *  - desviación cross-store: precio absurdo respecto de la mediana de las
+   *    OTRAS tiendas del mismo producto (atrapa cuotas capturadas como precio
+   *    total, p. ej. un freezer "a 70 mil pesos").
    */
   private isPriceSuspect(
     skuId: number,
     amount: number,
     latestBySku: Map<number, number>,
     statsBySku: Map<number, { n: number; avg: number; stddev: number | null }>,
+    crossStoreRefBySku: Map<number, number>,
     log: Logger,
   ): boolean {
     const previous = latestBySku.get(skuId) ?? null;
@@ -570,6 +578,10 @@ export class IngestPipeline {
         const z = Math.abs((amount - stats.avg) / stats.stddev);
         if (z > 4) isSuspect = true;
       }
+    }
+    if (!isSuspect) {
+      const otherStoreRef = crossStoreRefBySku.get(skuId) ?? null;
+      if (isCrossStoreOutlier(amount, otherStoreRef)) isSuspect = true;
     }
     if (isSuspect) {
       log.warn(
@@ -679,6 +691,8 @@ export class IngestPipeline {
         from price_record pr
         join store_sku ss on ss.id = pr.store_sku_id
         where ss.store_id = ${storeId} and pr.is_suspect = false
+          and not exists (select 1 from price_correction pc
+                          where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
         order by pr.store_sku_id, pr.captured_at desc
       `.execute(this.db);
       return new Map(rows.rows.map((r) => [Number(r.store_sku_id), Number(r.price_amount)]));
@@ -732,6 +746,8 @@ export class IngestPipeline {
         where ss.store_id = ${storeId}
           and pr.is_suspect = false
           and pr.captured_at >= now() - interval '90 days'
+          and not exists (select 1 from price_correction pc
+                          where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
         group by pr.store_sku_id
       `.execute(this.db);
       const map = new Map<number, { n: number; avg: number; stddev: number | null }>();
@@ -750,6 +766,66 @@ export class IngestPipeline {
       );
       return new Map();
     }
+  }
+
+  /**
+   * Mediana del último precio (sin sospechosos) por producto considerando
+   * SOLO las OTRAS tiendas, mapeada a store_sku_id. Usada para detectar al
+   * ingreso precios absurdos frente a lo que cobran las demás tiendas.
+   * Si el ejecutor SQL crudo no está disponible (fake-db en tests) degrada a
+   * un mapa vacío, desactivando la regla cross-store en esos entornos.
+   */
+  private async loadCrossStoreRefBySku(storeId: number): Promise<Map<number, number>> {
+    let rows: Array<{ product_id: number; sku_id: number; price_amount: string }>;
+    try {
+      const result = await sql<{ product_id: number; sku_id: number; price_amount: string }>`
+        select distinct on (ml.product_id, ss.store_id)
+               ml.product_id, ss.id as sku_id, pr.price_amount::text as price_amount
+        from match_link ml
+        join store_sku ss on ss.id = ml.store_sku_id
+        join price_record pr on pr.store_sku_id = ss.id
+          and pr.is_suspect = false and pr.price_amount::numeric >= 500
+          and not exists (select 1 from price_correction pc
+                          where pc.store_sku_id = pr.store_sku_id and pc.original_captured_at = pr.captured_at)
+        where ml.status in ('auto', 'confirmed')
+          and ss.store_id <> ${storeId}
+        order by ml.product_id, ss.store_id, pr.captured_at desc, pr.price_amount asc
+      `.execute(this.db);
+      rows = result.rows;
+    } catch (err) {
+      this.logger.debug(
+        { err, event: 'price.cross_store.prefetch_fallback' },
+        'sin referencia cross-store: regla desactivada',
+      );
+      return new Map();
+    }
+
+    const byProduct = new Map<number, number[]>();
+    for (const r of rows) {
+      const pid = Number(r.product_id);
+      const arr = byProduct.get(pid);
+      if (arr) arr.push(Number(r.price_amount));
+      else byProduct.set(pid, [Number(r.price_amount)]);
+    }
+    const refByProduct = new Map<number, number>();
+    for (const [pid, prices] of byProduct) {
+      prices.sort((a, b) => a - b);
+      const mid = Math.floor(prices.length / 2);
+      const median = prices.length % 2 === 0 ? (prices[mid - 1]! + prices[mid]!) / 2 : prices[mid]!;
+      refByProduct.set(pid, median);
+    }
+
+    const links = await this.db
+      .selectFrom('match_link')
+      .select(['store_sku_id', 'product_id'])
+      .where('status', 'in', ['auto', 'confirmed'])
+      .execute();
+    const refBySku = new Map<number, number>();
+    for (const l of links) {
+      const ref = refByProduct.get(Number(l.product_id));
+      if (ref !== undefined) refBySku.set(Number(l.store_sku_id), ref);
+    }
+    return refBySku;
   }
 
   /**
