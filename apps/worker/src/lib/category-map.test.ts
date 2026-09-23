@@ -177,6 +177,34 @@ describe('matchCategoryByName - electrodomesticos', () => {
     expect(matchCategoryByName('balanza cocina digital 5kg')).toBe('electrodomesticos');
     expect(matchCategoryByName('freidora de aire 3.5lt')).toBe('electrodomesticos');
     expect(matchCategoryByName('airfryer philco 5lt')).toBe('electrodomesticos');
+    expect(matchCategoryByName('jarra electrica smart life 1.7l')).toBe('electrodomesticos');
+    expect(matchCategoryByName('balanza cocina kanjihome bowl')).toBe('electrodomesticos');
+  });
+
+  it('saca del default almacen: cuidado personal, hogar y audio', () => {
+    expect(matchCategoryByName('afeitadora electrica philips s5898')).toBe('electrodomesticos');
+    expect(matchCategoryByName('secador pelo philips 2100w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('depiladora ga ma skin pro go')).toBe('electrodomesticos');
+    expect(matchCategoryByName('cortacabello ga ma clipper')).toBe('electrodomesticos');
+    expect(matchCategoryByName('estacion planchado atma')).toBe('electrodomesticos');
+    expect(matchCategoryByName('vaporizador prendas atma')).toBe('electrodomesticos');
+    expect(matchCategoryByName('barra sonido inteligente lg 300w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('termotanque electrico senorial')).toBe('electrodomesticos');
+    expect(matchCategoryByName('fabricadora hielo atma')).toBe('electrodomesticos');
+    expect(matchCategoryByName('horno whirlpool empotrable electrico')).toBe('electrodomesticos');
+    expect(matchCategoryByName('sierra caladora daewoo 400w')).toBe('electrodomesticos');
+    expect(matchCategoryByName('mouse logitech g203')).toBe('electrodomesticos');
+    expect(matchCategoryByName('cava vino botellas drean cvdr12cn0')).toBe('electrodomesticos');
+  });
+
+  it('no mete no-electro en electrodomesticos', () => {
+    expect(matchCategoryByName('crema depilatoria veet corporal')).toBe(
+      'perfumeria/cuidado-corporal',
+    );
+    expect(matchCategoryByName('secador ballena novica')).toBe('almacen');
+    expect(matchCategoryByName('zapatilla enespumada running')).toBe('almacen');
+    expect(matchCategoryByName('mousse para el cabello')).toBe('perfumeria/cuidado-cabello');
+    expect(matchCategoryByName('cava vinos vondom estantes madera')).toBe('almacen');
   });
 
   it('cafeteras (máquinas) van a electrodomesticos, no a almacen/cafe', () => {
