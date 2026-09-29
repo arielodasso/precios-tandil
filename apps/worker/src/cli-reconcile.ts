@@ -38,9 +38,10 @@ interface ProductRow {
 
 function toCandidate(p: ProductRow): MatchCandidate {
   const norm = normalizeDescription(p.canonical_name, { brand: p.brand });
+  const normalizedEan = p.ean ? String(p.ean).padStart(13, '0') : null;
   return {
     productId: p.id,
-    ean: p.ean,
+    ean: normalizedEan,
     normName: norm.normName,
     unitAmount: p.unit_amount !== null ? Number(p.unit_amount) : null,
     unitType: p.unit_type,

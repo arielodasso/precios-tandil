@@ -18,6 +18,9 @@
     "unconflict": "tsx src/cli-unconflict.ts",
     "consolidate": "tsx src/cli-consolidate.ts",
     "merge-by-ean": "tsx src/cli-merge-by-ean.ts",
+    "cleanup-orphans": "tsx src/cli-cleanup-orphans.ts",
+    "diagnose-orphans": "tsx src/cli-diagnose-orphans.ts",
+    "repair-orphans": "tsx src/cli-repair-orphans.ts",
     "purge": "tsx src/cli-purge.ts",
     "refresh": "tsx src/cli-refresh.ts",
     "typecheck": "tsc --noEmit"

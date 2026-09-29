@@ -80,14 +80,15 @@ async function run() {
     storesByProduct.set(pid, set);
   }
 
-  // Agrupar por EAN válido.
+  // Agrupar por EAN válido (normalizado a 13 dígitos).
   const byEan = new Map<string, ProductRow[]>();
   for (const p of products) {
-    const ean = p.ean ? String(p.ean).trim() : '';
-    if (!isValidEan13(ean)) continue;
-    const arr = byEan.get(ean) ?? [];
+    const rawEan = p.ean ? String(p.ean).trim() : '';
+    const normalizedEan = rawEan ? rawEan.padStart(13, '0') : '';
+    if (!isValidEan13(normalizedEan)) continue;
+    const arr = byEan.get(normalizedEan) ?? [];
     arr.push(p);
-    byEan.set(ean, arr);
+    byEan.set(normalizedEan, arr);
   }
 
   for (const [, group] of byEan) {
@@ -110,8 +111,9 @@ async function run() {
     }
     if (conflict) {
       counts.skipped++;
+      const groupEan = group[0]!.ean ? String(group[0]!.ean).padStart(13, '0') : '';
       logger.warn(
-        { ean: group[0]!.ean, ids: group.map((g) => g.id) },
+        { ean: groupEan, ids: group.map((g) => g.id) },
         'merge-by-ean: grupo omitido (misma tienda, EAN sospechoso)',
       );
       continue;
@@ -130,7 +132,7 @@ async function run() {
 
     logger.info(
       {
-        ean: keeper.ean,
+        ean: keeper.ean ? String(keeper.ean).padStart(13, '0') : '',
         keeper: keeper.id,
         keeperName: keeper.canonical_name,
         merged: secondaries.map((s) => s.id),

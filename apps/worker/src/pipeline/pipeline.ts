@@ -48,6 +48,13 @@ const EAN_CONFLICT_SIMILARITY = 0.75;
 const CANDIDATE_POOL_SIZE = 100000;
 const FLUSH_EVERY = 300;
 
+function normalizeEan(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const s = value.trim();
+  if (!/^\d{8,}$/.test(s)) return null;
+  return s.padStart(13, '0');
+}
+
 export interface PipelineRunOptions {
   runId: string;
   correlationId: string;
@@ -64,6 +71,13 @@ export interface IngestRunSummary {
   rejected: number;
   httpErrors: number;
   quarantined: boolean;
+  matchStats: {
+    ean: number;
+    semantic: number;
+    pendingReview: number;
+    newProduct: number;
+    noLink: number;
+  };
 }
 
 interface StoreLite {
@@ -291,13 +305,17 @@ export class IngestPipeline {
         pendingSkus.length = 0;
 
         // ---- match_link ----
+        const droppedLinkItems: PendingLink[] = [];
         const links = pendingLinks
           .map((l) => {
             const skuId = extToSkuId.get(l.external_id);
             if (skuId === undefined) return null;
             const productId: number | undefined =
               l.product_id ?? (l.product_slug ? productSlugToId.get(l.product_slug) : undefined);
-            if (productId === undefined) return null;
+            if (productId === undefined) {
+              droppedLinkItems.push(l);
+              return null;
+            }
             return {
               store_sku_id: skuId,
               product_id: productId,
@@ -308,6 +326,95 @@ export class IngestPipeline {
           })
           .filter((x) => x !== null);
         pendingLinks.length = 0;
+
+        // Handle dropped links: create products for them so no SKU is orphaned
+        if (droppedLinkItems.length > 0) {
+          matchStats.noLink += droppedLinkItems.length;
+          log.error(
+            { event: 'match.link.dropped', count: droppedLinkItems.length },
+            'INTEGRIDAD: SKUs sin match - creando productos',
+          );
+
+          for (const item of droppedLinkItems) {
+            // Find the corresponding SKU to get its data
+            const sku = pendingSkus.find((s) => s.external_id === item.external_id);
+            if (!sku) continue;
+
+            const norm = normalizeDescription(sku.raw_description, {
+              description: sku.description,
+            });
+            // forgeSlug only uses snap.ean, so pass minimal snapshot
+            const slug = this.forgeSlug(norm, { ean: sku.declared_ean } as ProductSnapshot);
+
+            if (createdSlugs.has(slug)) {
+              item.product_slug = slug;
+            } else {
+              const existingId = productSlugToId.get(slug);
+              if (existingId !== undefined) {
+                item.product_id = existingId;
+              } else {
+                createdSlugs.add(slug);
+                pendingProducts.push({
+                  slug,
+                  canonical_name: norm.normName,
+                  brand: norm.brand ?? null,
+                  ean: sku.declared_ean,
+                  unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
+                  unit_type: norm.unitType,
+                  image_url: null,
+                  category_id: null,
+                });
+                item.product_slug = slug;
+              }
+            }
+          }
+
+          // Re-process links after creating products
+          if (pendingProducts.length > 0) {
+            // Insert the new products and resolve their IDs
+            const unique = new Map<string, PendingProduct>();
+            for (const p of pendingProducts) {
+              if (!unique.has(p.slug)) unique.set(p.slug, p);
+            }
+            const ins = await this.db
+              .insertInto('product')
+              .values([...unique.values()])
+              .onConflict((oc) => oc.column('slug').doUpdateSet({ updated_at: new Date() }))
+              .returning(['id', 'slug'])
+              .execute();
+            for (const r of ins) {
+              const id = Number(r.id);
+              productSlugToId.set(r.slug, id);
+              for (const link of droppedLinkItems) {
+                if (link.product_slug === r.slug) link.product_id = id;
+              }
+            }
+            pendingProducts.length = 0;
+          }
+
+          // Now create links for the previously dropped items
+          for (const item of droppedLinkItems) {
+            const skuId = extToSkuId.get(item.external_id);
+            if (skuId === undefined) continue;
+            const productId: number | undefined =
+              item.product_id ??
+              (item.product_slug ? productSlugToId.get(item.product_slug) : undefined);
+            if (productId === undefined) {
+              log.error(
+                { externalId: item.external_id },
+                'No se pudo resolver product_id para SKU dropeado',
+              );
+              continue;
+            }
+            links.push({
+              store_sku_id: skuId,
+              product_id: productId,
+              method: item.method,
+              score: item.score,
+              status: item.status,
+            });
+          }
+        }
         if (links.length > 0) {
           await this.db
             .insertInto('match_link')
@@ -380,6 +487,8 @@ export class IngestPipeline {
       }
     };
 
+    const matchStats = { ean: 0, semantic: 0, pendingReview: 0, newProduct: 0, noLink: 0 };
+
     try {
       for await (const raw of adapter.scrapeCatalog(ctx)) {
         const result = validateSnapshot(raw, { allowedHosts });
@@ -404,7 +513,8 @@ export class IngestPipeline {
           description: snap.description,
         });
 
-        let outcome = findBestMatch(norm, snap.ean, candidates, {
+        const normalizedEan: string | undefined = normalizeEan(snap.ean) ?? undefined;
+        let outcome = findBestMatch(norm, normalizedEan, candidates, {
           autoThreshold: AUTO_MATCH_THRESHOLD,
         });
         const outProductId: number | null =
@@ -415,7 +525,7 @@ export class IngestPipeline {
         let incomingHash: string | null = null;
         if (snap.imageUrl && matched?.imageHash && matched.imageUrl !== snap.imageUrl) {
           incomingHash = await this.hashImage(snap.imageUrl);
-          const refined = findBestMatch(norm, snap.ean, candidates, {
+          const refined = findBestMatch(norm, normalizedEan, candidates, {
             autoThreshold: AUTO_MATCH_THRESHOLD,
             incomingImageHash: incomingHash,
           });
@@ -433,6 +543,7 @@ export class IngestPipeline {
         let linkStatus: 'auto' | 'pending_review' = 'auto';
 
         if (outcome.method === 'ean') {
+          matchStats.ean++;
           productId = outcome.productId;
           method = 'ean';
           score = '1';
@@ -449,10 +560,12 @@ export class IngestPipeline {
             );
           }
         } else if (outcome.method === 'semantic') {
+          matchStats.semantic++;
           productId = outcome.productId;
           method = 'semantic';
           score = outcome.score.toFixed(4);
         } else if (outcome.bestCandidateId !== null && outcome.bestScore >= REVIEW_THRESHOLD) {
+          matchStats.pendingReview++;
           productId = outcome.bestCandidateId;
           method = 'semantic';
           score = outcome.bestScore.toFixed(4);
@@ -462,6 +575,7 @@ export class IngestPipeline {
             'match dudoso enviado a revisión',
           );
         } else {
+          matchStats.newProduct++;
           const catId = resolveCategoryId(snap.categoryPath, norm.normName);
           const slug = this.forgeSlug(norm, snap);
           if (createdSlugs.has(slug)) {
@@ -478,7 +592,7 @@ export class IngestPipeline {
                 slug,
                 canonical_name: norm.normName,
                 brand: norm.brand ?? snap.brand ?? null,
-                ean: snap.ean ?? null,
+                ean: normalizedEan ?? null,
                 unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
                 unit_type: norm.unitType,
                 image_url: snap.imageUrl ?? null,
@@ -495,7 +609,7 @@ export class IngestPipeline {
           url: snap.url,
           raw_description: snap.rawDescription,
           description: snap.description ?? null,
-          declared_ean: snap.ean ?? null,
+          declared_ean: normalizedEan ?? null,
           unit_label: snap.unitLabel ?? null,
           last_seen_at: new Date(),
           is_active: true,
@@ -549,7 +663,14 @@ export class IngestPipeline {
     const status = resolveStatus({ ...stats, iteratorFailed });
     const { quarantined } = await reporter.finish(status);
 
-    return { runId: opts.runId, storeSlug: store.slug, status, ...stats, quarantined };
+    log.info({ matchStats }, 'matching statistics');
+
+    // Integridad: no debe haber SKUs sin match_link
+    if (matchStats.noLink > 0) {
+      log.error({ noLink: matchStats.noLink }, 'INTEGRIDAD: se detectaron SKUs sin match_link');
+    }
+
+    return { runId: opts.runId, storeSlug: store.slug, status, ...stats, quarantined, matchStats };
   }
 
   /**
@@ -648,9 +769,10 @@ export class IngestPipeline {
         declared: n.isPack,
         isPack: n.isPack,
       };
+      const normalizedEan = r.ean ? String(r.ean).padStart(13, '0') : null;
       return {
         productId: r.id,
-        ean: r.ean,
+        ean: normalizedEan,
         normName: n.normName,
         unitAmount: r.unit_amount !== null ? Number(r.unit_amount) : null,
         unitType: r.unit_type,
