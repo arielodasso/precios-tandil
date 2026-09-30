@@ -60,7 +60,7 @@ export async function up(pgm) {
     FROM v_orphan_store_sku o
     JOIN product p ON p.ean = o.declared_ean
     WHERE o.declared_ean IS NOT NULL
-      AND o.declared_ean ~ '^\d{13}$'
+      AND o.declared_ean ~ '^[0-9]{13}$'
     ORDER BY o.price_count DESC;
   `);
 

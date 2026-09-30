@@ -64,8 +64,8 @@ interface SkuRow {
 function normalizeEan(value: string | null | undefined): string | null {
   if (!value) return null;
   const s = value.trim();
-  if (!/^\d{8,}$/.test(s)) return null;
-  return s;
+  if (!/^\d{8,13}$/.test(s)) return null;
+  return s.padStart(13, '0');
 }
 
 function toCandidate(p: ProductRow): MatchCandidate {
