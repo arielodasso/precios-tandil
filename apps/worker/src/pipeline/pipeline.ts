@@ -97,6 +97,7 @@ interface PendingSku {
   unit_label: string | null;
   last_seen_at: Date;
   is_active: boolean;
+  categoryPath: string[] | undefined;
 }
 
 interface PendingProduct {
@@ -354,6 +355,7 @@ export class IngestPipeline {
                 item.product_id = existingId;
               } else {
                 createdSlugs.add(slug);
+                const catId = resolveCategoryId(sku.categoryPath ?? undefined, norm.normName);
                 pendingProducts.push({
                   slug,
                   canonical_name: norm.normName,
@@ -362,7 +364,7 @@ export class IngestPipeline {
                   unit_amount: norm.unitAmount !== null ? String(norm.unitAmount) : null,
                   unit_type: norm.unitType,
                   image_url: null,
-                  category_id: null,
+                  category_id: catId,
                 });
                 item.product_slug = slug;
               }
@@ -613,6 +615,7 @@ export class IngestPipeline {
           unit_label: snap.unitLabel ?? null,
           last_seen_at: new Date(),
           is_active: true,
+          categoryPath: snap.categoryPath,
         });
         pendingLinks.push({
           external_id: snap.externalId,
