@@ -71,6 +71,8 @@ export interface IngestRunSummary {
   rejected: number;
   httpErrors: number;
   quarantined: boolean;
+  /** El catálogo se capturó pero falló la persistencia: no se escribió nada. */
+  flushFailed: boolean;
   matchStats: {
     ean: number;
     semantic: number;
@@ -179,6 +181,7 @@ export class IngestPipeline {
     const crossStoreRefBySku = await this.loadCrossStoreRefBySku(store.id);
     const seen = new Set<string>();
     let iteratorFailed = false;
+    let flushFailed = false;
 
     const pendingSkus: PendingSku[] = [];
     const pendingProducts: PendingProduct[] = [];
@@ -286,9 +289,12 @@ export class IngestPipeline {
           ...pendingLinks.filter((_, i) => keepSet.has(i)),
         );
 
+        // `categoryPath` es metadata del lote (para resolver categorías de
+        // productos nuevos), no una columna de store_sku: hay que quitarla
+        // antes del INSERT o Postgres rechaza la fila completa.
         const ins = await this.db
           .insertInto('store_sku')
-          .values(pendingSkus)
+          .values(pendingSkus.map(({ categoryPath: _categoryPath, ...row }) => row))
           .onConflict((oc) =>
             oc.columns(['store_id', 'external_id']).doUpdateSet({
               url: sql.ref('excluded.url'),
@@ -645,7 +651,15 @@ export class IngestPipeline {
         reporter.countCaptured();
 
         if (pendingSkus.length >= FLUSH_EVERY) {
-          await flushBuffer();
+          try {
+            await flushBuffer();
+          } catch (err) {
+            // Un fallo de persistencia deja el catálogo capturado sin guardar.
+            // Se marca aparte del iterador para que el caller pueda fallar
+            // duro en vez de reportar una corrida "partial" sin datos.
+            flushFailed = true;
+            throw err;
+          }
         }
       }
     } catch (err) {
@@ -657,6 +671,7 @@ export class IngestPipeline {
       try {
         await flushBuffer();
       } catch (err) {
+        flushFailed = true;
         reporter.countHttpError(err);
         log.error({ err }, 'fallo persistiendo el lote final');
       }
@@ -673,7 +688,19 @@ export class IngestPipeline {
       log.error({ noLink: matchStats.noLink }, 'INTEGRIDAD: se detectaron SKUs sin match_link');
     }
 
-    return { runId: opts.runId, storeSlug: store.slug, status, ...stats, quarantined, matchStats };
+    if (flushFailed) {
+      log.error({ flushFailed: true }, 'persistencia fallida: el catálogo capturado se perdió');
+    }
+
+    return {
+      runId: opts.runId,
+      storeSlug: store.slug,
+      status,
+      ...stats,
+      quarantined,
+      matchStats,
+      flushFailed,
+    };
   }
 
   /**

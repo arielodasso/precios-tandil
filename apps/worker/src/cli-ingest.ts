@@ -38,6 +38,11 @@ try {
     proxies: config.PROXY_POOL_URL ? [config.PROXY_POOL_URL] : undefined,
   });
   logger.info(summary, 'corrida manual finalizada');
+  if (summary.status === 'failed' || summary.flushFailed) {
+    // Sin esto el job de GitHub Actions quedaba en verde aunque no se
+    // haya escrito ni un precio.
+    process.exitCode = 1;
+  }
 } finally {
   await browser.close().catch(() => undefined);
   await db.destroy();
