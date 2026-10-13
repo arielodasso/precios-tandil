@@ -65,6 +65,13 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Push snapshot a Lovable (ingesta diaria del sitio)
+        if: success()
+        run: node scripts/lovable-push.mjs
+        env:
+          LOVABLE_INGEST_URL: ${{ secrets.LOVABLE_INGEST_URL }}
+          INGEST_SECRET: ${{ secrets.LOVABLE_INGEST_SECRET }}
+
       - name: Update Vercel deployment
         if: success()
         run: npx vercel --prod --yes

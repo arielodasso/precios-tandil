@@ -5,10 +5,11 @@
 > `github.com/arielodasso/perfect-pixel-replica` (TanStack Start + Supabase JS,
 > esquema en `drizzle/migrations/`) sobre **Lovable Cloud**, cuyas tablas planas
 > (`stores, categories, products, offers, price_history, deals, cba_items,
-user_savings`) son un superconjunto 1:1 de las nuestras. Por eso el único
-> entregable es **cargar los datos reales** ahí, como migración Drizzle
-> `0001_real_data.sql` (generada por `scripts/lovable-export.mjs`). Las secciones
-> de schema/views/rpc de abajo quedan como referencia del camino no elegido.
+user_savings`) son un superconjunto 1:1 de las nuestras. El entregable es:
+> (a) **cargar los datos reales** ahí (`db/seed/real_data.sql`, generado por
+> `scripts/lovable-export.mjs`) y (b) **replicar la ingesta diaria automática**
+> en el sitio (§7). Las secciones de schema/views/rpc de abajo quedan como
+> referencia del camino no elegido.
 
 > Objetivo: reemplazar `apps/web` (Next.js SSR sobre Neon) por una SPA React
 > dentro de Lovable, leyendo de **Supabase**. El scraping/ETL sigue corriendo
@@ -133,21 +134,71 @@ En Lovable: activar **Supabase Auth** (email/OAuth), tabla `admin_user`, y mover
 las acciones de escritura (decidir match, publicar deal) a **Edge Functions** con
 `service_role`. No exponer escritura admin vía RLS anon.
 
-## 7. Ingesta (sin cambios de código salvo el destino)
+## 7. Ingesta diaria automática (implementada)
 
-- `nightly-scrape.yml`: matrix por tienda + job `finalize`; cambiar el secret
-  `DATABASE_URL` a la cadena de Supabase y borrar el paso `npx vercel --prod`.
-- `ecosystem.config.cjs` (local/PM2): `DATABASE_URL` → Supabase.
-- Prune/particiones `2026_09`/`2026_10` seguirán funcionando.
+El scraping (Playwright, horas por tienda) y el `finalize` siguen corriendo en
+GitHub Actions escribiendo a **Neon**. Lovable no ejecuta Playwright ni cron de
+horas, y **no expone credencial de escritura externa** a su Postgres (no hay
+password ni `service_role` descargable). Por eso el último paso del workflow
+**empuja un snapshot** al sitio, que escribe en Lovable Cloud vía `service_role`.
+
+```
+[Playwright/adapters] --write--> Neon
+        (GitHub Actions scrape + finalize)
+                                    |
+              node scripts/lovable-push.mjs  (finalize job)
+                                    |  POST /api/ingest  (Bearer INGEST_SECRET)
+                                    v
+                        [Lovable] src/routes/api.ingest.ts
+                                    |  supabaseAdmin (service_role)
+                                    v
+                        Lovable Cloud (tablas planas) <--read-- SPA
+```
+
+- `src/routes/api.ingest.ts` (repo Lovable): `POST /api/ingest` con
+  `{ table, mode: "upsert"|"replace", rows[] }`, autenticado con
+  `Authorization: Bearer $INGEST_SECRET`. Upsert por PK
+  (`offers (product_id,store_id)`, `price_history (product_id,day)`,
+  `stores/categories/products/cba_items`), y `replace` (vacía + inserta) para
+  `deals`, que no tiene clave natural. `user_savings` no se toca.
+- `scripts/lovable-push.mjs` (repo precios-tandil): lee Neon y empuja
+  `stores, categories, products, cba_items` completos; `offers` completo
+  (último precio por producto/tienda); `price_history` de los últimos
+  `HISTORY_DAYS` (default 7; `HISTORY_FULL=1` para todo); y `deals` recalculadas
+  contra la serie propia del producto (mismas reglas que
+  `drizzle/migrations/0001_deals_fix.sql`, tope 60%).
+- `.github/workflows/nightly-scrape.yml`: paso **"Push snapshot a Lovable"** en
+  el job `finalize` (después de `finalize`, antes del deploy de Vercel).
+
+### Puesta en marcha (una vez)
+
+1. En Lovable: `More → Cloud → Secrets` → agregar `INGEST_SECRET` (valor
+   aleatorio largo).
+2. En GitHub → Settings → Secrets → Actions → agregar:
+   - `LOVABLE_INGEST_URL` = base pública del sitio, p. ej.
+     `https://<proyecto>.lovable.app` (sin `/` final).
+   - `LOVABLE_INGEST_SECRET` = el mismo valor que `INGEST_SECRET`.
+3. Correr el job manualmente (`workflow_dispatch`) o esperar el cron de las
+   03:00 UTC.
+
+### Backfill
+
+El historial ya se cargó completo con `db/seed/real_data.sql`. Para forzar un
+envío completo del historial: `HISTORY_FULL=1 node --env-file=.env
+scripts/lovable-push.mjs` (con `LOVABLE_INGEST_URL` e `INGEST_SECRET` en el
+entorno).
 
 ## 8. Variables
 
-| Var                         | Dónde                   | Uso                |
-| --------------------------- | ----------------------- | ------------------ |
-| `VITE_SUPABASE_URL`         | Lovable                 | cliente Supabase   |
-| `VITE_SUPABASE_ANON_KEY`    | Lovable                 | cliente Supabase   |
-| `SUPABASE_SERVICE_ROLE_KEY` | Edge Functions (server) | admin/escritura    |
-| `DATABASE_URL`              | GitHub Actions (secret) | ingesta → Supabase |
+| Var                             | Dónde                   | Uso                                 |
+| ------------------------------- | ----------------------- | ----------------------------------- |
+| `VITE_SUPABASE_URL`             | Lovable (`.env`)        | cliente Supabase (lectura)          |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Lovable (`.env`)        | cliente Supabase (lectura)          |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Lovable Cloud (runtime) | escritura del endpoint `api.ingest` |
+| `INGEST_SECRET`                 | Lovable Cloud → Secrets | bearer de `POST /api/ingest`        |
+| `DATABASE_URL`                  | GitHub Actions (secret) | scraping/finalize → Neon (lectura)  |
+| `LOVABLE_INGEST_URL`            | GitHub Actions (secret) | base del sitio de Lovable           |
+| `LOVABLE_INGEST_SECRET`         | GitHub Actions (secret) | = `INGEST_SECRET`                   |
 
 ## 9. Prompt para Lovable (pegar tal cual)
 
@@ -177,9 +228,10 @@ las acciones de escritura (decidir match, publicar deal) a **Edge Functions** co
 
 ## 10. Checklist
 
-- [ ] Supabase creado + los 4 SQL aplicados (schema → views → rls → rpc).
-- [ ] `import.ps1` corrido (modo `public` o `full`).
-- [ ] `worker finalize` contra Supabase.
-- [ ] Secret `DATABASE_URL` de GH Actions → Supabase; quitar deploy Vercel.
-- [ ] SPA de Lovable desplegada y validada contra las RPCs.
-- [ ] (fase 2) Auth + Edge Functions para admin.
+- [x] Datos reales cargados en Lovable Cloud (`db/seed/real_data.sql`).
+- [x] `/admin/` eliminado; quedan `/admin/tandilalerta` y `/admin/sigmatecnologias`.
+- [x] Endpoint `POST /api/ingest` + paso "Push snapshot a Lovable" en el workflow.
+- [ ] `INGEST_SECRET` en Lovable Cloud → Secrets.
+- [ ] `LOVABLE_INGEST_URL` y `LOVABLE_INGEST_SECRET` en GitHub → Secrets → Actions.
+- [ ] Aplicar `drizzle/migrations/0001_deals_fix.sql` cuando Lovable tenga créditos.
+- [ ] Validar la primera corrida (`workflow_dispatch`).
