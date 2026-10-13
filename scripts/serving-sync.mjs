@@ -69,35 +69,6 @@ const c = new Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized
 await c.connect();
 const sel = async (sql) => (await c.query(sql)).rows;
 
-async function upsert(table, cols, conflictCols, rows) {
-  if (!rows.length) {
-    console.log(`  ${table}: 0 filas (skip)`);
-    return;
-  }
-  const setCols = cols.filter((col) => !conflictCols.includes(col));
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const slice = rows.slice(i, i + CHUNK);
-    const params = [];
-    const tuples = slice.map(
-      (row) =>
-        '(' +
-        cols
-          .map((col) => {
-            params.push(row[col]);
-            return `$${params.length}`;
-          })
-          .join(',') +
-        ')',
-    );
-    const sql =
-      `insert into public.${table} (${cols.join(',')}) values ${tuples.join(',')} ` +
-      `on conflict (${conflictCols.join(',')}) do update set ` +
-      setCols.map((col) => `${col} = excluded.${col}`).join(', ');
-    await c.query(sql, params);
-  }
-  console.log(`  ${table}: ${rows.length} filas (upsert)`);
-}
-
 async function replaceAll(table, cols, rows) {
   await c.query(`delete from public.${table}`);
   if (!rows.length) {
@@ -157,7 +128,6 @@ const cand = await sel(
   `select p.id product_id, p.canonical_name, pa.stores_count, pa.best_price
    from product p join price_aggregate pa on pa.product_id = p.id`,
 );
-await c.end();
 
 const catSort = new Map();
 {
@@ -223,10 +193,12 @@ console.log(
     `ofertas=${offers.length} historial=${hist.length} deals=${dealsRows.length} cba=${cba.length}`,
 );
 
-await upsert(
+await c.query('begin');
+await c.query('set session_replication_role = replica');
+
+await replaceAll(
   'stores',
   ['id', 'slug', 'name', 'base_url', 'is_active'],
-  ['id'],
   stores.map((s) => ({
     id: s.id,
     slug: s.slug,
@@ -235,10 +207,9 @@ await upsert(
     is_active: s.is_active,
   })),
 );
-await upsert(
+await replaceAll(
   'categories',
   ['id', 'slug', 'name', 'parent_id', 'sort'],
-  ['id'],
   cats.map((cc) => ({
     id: cc.id,
     slug: cc.slug,
@@ -247,7 +218,7 @@ await upsert(
     sort: catSort.get(cc.id) ?? 0,
   })),
 );
-await upsert(
+await replaceAll(
   'products',
   [
     'id',
@@ -261,7 +232,6 @@ await upsert(
     'category_id',
     'created_at',
   ],
-  ['id'],
   prods.map((p) => ({
     id: p.id,
     slug: p.slug,
@@ -275,11 +245,10 @@ await upsert(
     created_at: isoStr(p.created_at),
   })),
 );
-await upsert('cba_items', ['key', 'label', 'rubric', 'product_id', 'sort'], ['key'], cba);
-await upsert(
+await replaceAll('cba_items', ['key', 'label', 'rubric', 'product_id', 'sort'], cba);
+await replaceAll(
   'offers',
   ['product_id', 'store_id', 'price', 'source_url', 'captured_at'],
-  ['product_id', 'store_id'],
   offers.map((o) => ({
     product_id: o.product_id,
     store_id: o.store_id,
@@ -288,10 +257,9 @@ await upsert(
     captured_at: isoStr(o.captured_at),
   })),
 );
-await upsert(
+await replaceAll(
   'price_history',
   ['product_id', 'day', 'min_price', 'avg_price'],
-  ['product_id', 'day'],
   hist.map((h) => ({
     product_id: h.product_id,
     day: dayStr(h.day),
@@ -304,5 +272,9 @@ await replaceAll(
   ['product_id', 'store_id', 'discount_pct', 'badge', 'status', 'published_at', 'expires_at'],
   dealsRows,
 );
+
+await c.query('commit');
+
+await c.end();
 
 console.log('Listo.');

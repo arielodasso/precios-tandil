@@ -8,6 +8,13 @@ export function createDb(databaseUrl: string): Kysely<DB> {
     max: 5,
     ssl: databaseUrl.includes('sslmode') ? { rejectUnauthorized: false } : undefined,
   });
+  pool.on('connect', (client) => {
+    client
+      .query(
+        'SET statement_timeout = 0; SET lock_timeout = 0; SET idle_in_transaction_session_timeout = 0;',
+      )
+      .catch(() => {});
+  });
   pool.on('error', (err) => {
     console.error('pg pool error (ignorado):', err.message);
   });
