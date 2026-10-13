@@ -168,15 +168,16 @@ password ni `service_role` descargable). Por eso el último paso del workflow
   contra la serie propia del producto (mismas reglas que
   `drizzle/migrations/0001_deals_fix.sql`, tope 60%).
 - `.github/workflows/nightly-scrape.yml`: paso **"Push snapshot a Lovable"** en
-  el job `finalize` (después de `finalize`, antes del deploy de Vercel).
+  el job `finalize` (después de `finalize`). El sitio se sirve desde Lovable y se
+  retiró el deploy a Vercel del workflow.
 
 ### Puesta en marcha (una vez)
 
 1. En Lovable: `More → Cloud → Secrets` → agregar `INGEST_SECRET` (valor
    aleatorio largo).
 2. En GitHub → Settings → Secrets → Actions → agregar:
-   - `LOVABLE_INGEST_URL` = base pública del sitio, p. ej.
-     `https://<proyecto>.lovable.app` (sin `/` final).
+   - `LOVABLE_INGEST_URL` = base pública del sitio,
+     `https://preciostandil.com` (sin `/` final).
    - `LOVABLE_INGEST_SECRET` = el mismo valor que `INGEST_SECRET`.
 3. Correr el job manualmente (`workflow_dispatch`) o esperar el cron de las
    03:00 UTC.
@@ -231,7 +232,7 @@ entorno).
 - [x] Datos reales cargados en Lovable Cloud (`db/seed/real_data.sql`).
 - [x] `/admin/` eliminado; quedan `/admin/tandilalerta` y `/admin/sigmatecnologias`.
 - [x] Endpoint `POST /api/ingest` + paso "Push snapshot a Lovable" en el workflow.
-- [ ] `INGEST_SECRET` en Lovable Cloud → Secrets.
-- [ ] `LOVABLE_INGEST_URL` y `LOVABLE_INGEST_SECRET` en GitHub → Secrets → Actions.
-- [ ] Aplicar `drizzle/migrations/0001_deals_fix.sql` cuando Lovable tenga créditos.
-- [ ] Validar la primera corrida (`workflow_dispatch`).
+- [x] `INGEST_SECRET` en Lovable Cloud → Secrets.
+- [x] `LOVABLE_INGEST_URL` y `LOVABLE_INGEST_SECRET` en GitHub → Secrets → Actions.
+- [x] Push validado manualmente: `node scripts/lovable-push.mjs` → stores=7, categorías=57, productos=5641, ofertas=13814, historial=45083, deals=120, cba=22.
+- [ ] Aplicar `drizzle/migrations/0001_deals_fix.sql` (el push nocturno recalcula `deals`, así que es de bajo impacto).

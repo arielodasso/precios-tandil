@@ -183,7 +183,8 @@ El snippet (`NEXT_PUBLIC_GA_ID`) mide el tráfico, pero el dashboard consulta la
    service account con rol **Lector**.
 4. Copiar el **Property ID** numérico (Admin → Configuración de propiedad) en
    `GA_PROPERTY_ID`.
-5. Cargar las tres variables en el entorno de despliegue (Vercel → Project →
-   Settings → Environment Variables) y redeployar. En local van en `.env.local`.
-   Alternativa a `GA_CLIENT_EMAIL`/`GA_PRIVATE_KEY`: `GA_SERVICE_ACCOUNT_JSON`
-   con el JSON completo en una sola línea.
+5. Cargar las tres variables como **Secrets** del proyecto en Lovable
+   (`More → Cloud → Secrets`) y republicar. El `.env` de Lovable solo expone
+   valores `VITE_*`; los de servidor van en Secrets. Alternativa a
+   `GA_CLIENT_EMAIL`/`GA_PRIVATE_KEY`: `GA_SERVICE_ACCOUNT_JSON` con el JSON
+   completo en una sola línea.
