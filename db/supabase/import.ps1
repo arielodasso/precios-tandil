@@ -63,6 +63,8 @@ if (-not $SkipSchema) {
   Invoke-Psql -Db $SupabaseUrl -Args @('-f', (Join-Path $PSScriptRoot 'views.sql'))
   Write-Host "== 3/5 RLS y grants ==" -ForegroundColor Cyan
   Invoke-Psql -Db $SupabaseUrl -Args @('-f', (Join-Path $PSScriptRoot 'supabase_rls.sql'))
+  Write-Host "== 3b/5 serving (tablas planas SPA + contador) ==" -ForegroundColor Cyan
+  Invoke-Psql -Db $SupabaseUrl -Args @('-f', (Join-Path $PSScriptRoot 'serving.sql'))
 }
 
 if (-not $SkipDump) {
