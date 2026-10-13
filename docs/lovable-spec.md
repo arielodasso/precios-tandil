@@ -1,5 +1,15 @@
 # Precios Tandil — Spec de migración a Lovable + Supabase
 
+> **Estado / decisión (actualizado):** se descartó crear un Supabase propio
+> (§1–§3 de este doc). La SPA de Lovable ya vive en
+> `github.com/arielodasso/perfect-pixel-replica` (TanStack Start + Supabase JS,
+> esquema en `drizzle/migrations/`) sobre **Lovable Cloud**, cuyas tablas planas
+> (`stores, categories, products, offers, price_history, deals, cba_items,
+user_savings`) son un superconjunto 1:1 de las nuestras. Por eso el único
+> entregable es **cargar los datos reales** ahí, como migración Drizzle
+> `0001_real_data.sql` (generada por `scripts/lovable-export.mjs`). Las secciones
+> de schema/views/rpc de abajo quedan como referencia del camino no elegido.
+
 > Objetivo: reemplazar `apps/web` (Next.js SSR sobre Neon) por una SPA React
 > dentro de Lovable, leyendo de **Supabase**. El scraping/ETL sigue corriendo
 > fuera (GitHub Actions + worker), escribiendo a la misma base Supabase.
