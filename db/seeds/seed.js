@@ -142,7 +142,7 @@ async function main() {
       `INSERT INTO user_savings (device_id, savings_amount, item_count, updated_at)
        VALUES ('__base_total__', $1, 0, now())
        ON CONFLICT (device_id) DO UPDATE SET savings_amount = $1`,
-      [2330500],
+      [4314951],
     );
 
     console.log('Seed completado: tiendas, categorías, token admin y base de ahorro.');

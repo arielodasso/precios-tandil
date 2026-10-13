@@ -157,12 +157,33 @@ pnpm test:integration
 
 ## 8. Variables de entorno críticas
 
-| Variable          | Descripción                                | Default     |
-| ----------------- | ------------------------------------------ | ----------- |
-| `DATABASE_URL`    | URL de conexión PostgreSQL                 | requerida   |
-| `REDIS_URL`       | URL de Redis (opcional, usa memoria si no) | —           |
-| `ADMIN_TOKEN_DEV` | Token admin para desarrollo                | —           |
-| `PORT`            | Puerto de la API                           | 8080        |
-| `NODE_ENV`        | Producción o desarrollo                    | development |
+| Variable            | Descripción                                                | Default      |
+| ------------------- | ---------------------------------------------------------- | ------------ |
+| `DATABASE_URL`      | URL de conexión PostgreSQL                                 | requerida    |
+| `REDIS_URL`         | URL de Redis (opcional, usa memoria si no)                 | —            |
+| `ADMIN_TOKEN_DEV`   | Token admin para desarrollo                                | —            |
+| `PORT`              | Puerto de la API                                           | 8080         |
+| `NODE_ENV`          | Producción o desarrollo                                    | development  |
+| `NEXT_PUBLIC_GA_ID` | Tag GA4 del snippet en el layout raíz                      | G-7V77W8GP1C |
+| `GA_PROPERTY_ID`    | Property ID numérico de GA4 (Data API)                     | —            |
+| `GA_CLIENT_EMAIL`   | Email del service account con acceso Lector a la propiedad | —            |
+| `GA_PRIVATE_KEY`    | Clave privada del service account (saltos como `\n`)       | —            |
 
 Nunca commitear valores reales. Usar `.env.local` (en `.gitignore`).
+
+### Google Analytics 4 (dashboard `/admin/sigmatecnologias`)
+
+El snippet (`NEXT_PUBLIC_GA_ID`) mide el tráfico, pero el dashboard consulta la
+**Data API** con un service account. Sin `GA_PROPERTY_ID`, `GA_CLIENT_EMAIL` y
+`GA_PRIVATE_KEY` la página muestra "No se pudo consultar Google Analytics".
+
+1. En Google Cloud, crear un proyecto y **habilitar la Google Analytics Data API**.
+2. Crear un **service account** y una clave JSON (la aprobás como `GA_PRIVATE_KEY`).
+3. En GA4 → Admin → _Administrar acceso a la propiedad_, agregar el email del
+   service account con rol **Lector**.
+4. Copiar el **Property ID** numérico (Admin → Configuración de propiedad) en
+   `GA_PROPERTY_ID`.
+5. Cargar las tres variables en el entorno de despliegue (Vercel → Project →
+   Settings → Environment Variables) y redeployar. En local van en `.env.local`.
+   Alternativa a `GA_CLIENT_EMAIL`/`GA_PRIVATE_KEY`: `GA_SERVICE_ACCOUNT_JSON`
+   con el JSON completo en una sola línea.
