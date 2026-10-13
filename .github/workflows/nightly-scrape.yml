@@ -65,8 +65,11 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Sync directo a Supabase (tablas planas)
-        if: success() && vars.SUPABASE_DIRECT == 'true'
+      - name: Sync directo a Lovable Web
+        if: success()
         run: node scripts/serving-sync.mjs
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
           HISTORY_DAYS: '30'
+
