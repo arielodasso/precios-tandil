@@ -32,7 +32,7 @@ ORDER BY rr.started_at DESC LIMIT 10;
    ```sql
    UPDATE store SET config = jsonb_set(config, '{quarantine}', 'false') WHERE slug = 'SLUG';
    ```
-7. Relanzar corrida desde admin: POST `/api/v1/admin/ingest/stores/SLUG/retry` con Bearer token.
+7. Relanzar corrida desde admin: POST `/api/v1/admin/scrape/stores/SLUG/retry` con Bearer token.
 
 ---
 
@@ -49,12 +49,12 @@ ORDER BY rr.started_at DESC LIMIT 10;
 
 ---
 
-## 3. Relanzar una corrida de ingesta
+## 3. Relanzar una corrida de scraping
 
 **Via API** (requiere Bearer admin):
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/ingest/stores/dia/retry \
+curl -X POST http://localhost:8080/api/v1/admin/scrape/stores/dia/retry \
   -H "Authorization: Bearer TU_TOKEN"
 ```
 
