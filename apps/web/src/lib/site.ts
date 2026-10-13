@@ -1,7 +1,5 @@
 export const SITE_BASE_URL =
-  process.env.SITE_BASE_URL ??
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  'https://precios-tandil.vercel.app';
+  process.env.SITE_BASE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'https://preciostandil.com';
 
 export const siteUrl = (path = '/'): string => {
   const base = SITE_BASE_URL.replace(/\/+$/, '');

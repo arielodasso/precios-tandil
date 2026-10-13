@@ -2,6 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['pg'],
+  async redirects() {
+    return [
+      {
+        // El sitio vivo ahora es la SPA de Lovable en preciostandil.com.
+        // Esta app quedó como legado: manda todo (308) al dominio nuevo.
+        source: '/:path*',
+        destination: 'https://preciostandil.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   outputFileTracingIncludes: {
     '/opengraph-image': ['./assets/fonts/*'],
     '/p/[slug]/opengraph-image': ['./assets/fonts/*'],
