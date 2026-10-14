@@ -207,6 +207,24 @@ await postTable(
   })),
 );
 
+// Limpieza de tablas dependientes para evitar choques de slug o acumular productos dados de baja
+for (const t of ['cba_items', 'deals', 'price_history', 'offers', 'products']) {
+  console.log(`  Vaciando tabla ${t}...`);
+  const res = await fetch(INGEST_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${INGEST_SECRET}`,
+    },
+    body: JSON.stringify({ table: t, mode: 'truncate' }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Fallo vaciado de ${t}: ${res.status} ${err}`);
+  }
+  console.log(`  ${t}: vaciada con éxito`);
+}
+
 await postTable(
   'products',
   prods.map((p) => ({
