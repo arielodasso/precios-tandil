@@ -1,0 +1,35 @@
+name: manual-sync
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: sync-to-lovable
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LOG_LEVEL: info
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Post-process (purge, aggregates, series, deals)
+        run: pnpm --filter @precios/worker run finalize
+        env:
+          NODE_ENV: production
+
+      - name: Sync directo a Lovable Web
+        run: node scripts/serving-sync.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          HISTORY_DAYS: '30'
