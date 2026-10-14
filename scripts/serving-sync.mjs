@@ -2,6 +2,7 @@
  * Sync de la base de scraping hacia la web de Precios Tandil via HTTP (/api/ingest).
  */
 import pg from 'pg';
+import { writeFileSync } from 'node:fs';
 
 const { DATABASE_URL, INGEST_SECRET } = process.env;
 const INGEST_URL = process.env.INGEST_URL || 'https://preciostandil.com/api/ingest';
@@ -49,6 +50,8 @@ const CBA_ITEMS = [
   ['otros-sal', 'Sal fina', 'Otros', /^sal fina /],
   ['otros-agua', 'Agua mineral', 'Otros', /^agua mineral /],
 ];
+
+const SYNC_START = new Date().toISOString();
 
 const dayStr = (v) => {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -207,23 +210,6 @@ await postTable(
   })),
 );
 
-// Limpieza de tablas dependientes para evitar choques de slug o acumular productos dados de baja
-for (const t of ['cba_items', 'deals', 'price_history', 'offers', 'products']) {
-  console.log(`  Vaciando tabla ${t}...`);
-  const res = await fetch(INGEST_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${INGEST_SECRET}`,
-    },
-    body: JSON.stringify({ table: t, mode: 'truncate' }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Fallo vaciado de ${t}: ${res.status} ${err}`);
-  }
-  console.log(`  ${t}: vaciada con éxito`);
-}
 
 await postTable(
   'products',
