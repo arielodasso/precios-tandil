@@ -70,7 +70,7 @@ jobs:
           });
           '
         env:
-          REPORT_URL: 'https://id-preview--e42ab6f0-ccf3-4e9d-809e-1d70e5c6e414.lovable.app/api/public/scrape-runs'
+          REPORT_URL: 'https://preciostandil.com/api/public/scrape-runs'
           SCRAPE_REPORT_SECRET: ${{ secrets.SCRAPE_REPORT_SECRET }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           JOB_STATUS: ${{ job.status }}
