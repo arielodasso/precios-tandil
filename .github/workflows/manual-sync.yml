@@ -33,3 +33,45 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
           HISTORY_DAYS: '30'
+
+      - name: Reportar corrida a Lovable Web
+        if: always()
+        run: |
+          node -e '
+          const runId = String(process.env.GITHUB_RUN_ID || Date.now());
+          const jobStatus = process.env.JOB_STATUS === "success" ? "success" : "failed";
+          const stores = ["carrefour", "vea", "dia", "monarca", "golopolis", "cooperativa-obrera"];
+          
+          const payload = {
+            runs: stores.map(source => ({
+              github_run_id: runId,
+              source,
+              status: jobStatus,
+              finished_at: new Date().toISOString()
+            }))
+          };
+
+          fetch(process.env.REPORT_URL, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "authorization": `Bearer ${process.env.SCRAPE_REPORT_SECRET}`
+            },
+            body: JSON.stringify(payload)
+          }).then(async res => {
+            if (!res.ok) {
+              console.error("Fallo al reportar corrida:", res.status, await res.text());
+              process.exit(1);
+            }
+            console.log("Corrida reportada con exito a Lovable Web");
+          }).catch(err => {
+            console.error("Error de conexion al reportar:", err);
+            process.exit(1);
+          });
+          '
+        env:
+          REPORT_URL: 'https://id-preview--e42ab6f0-ccf3-4e9d-809e-1d70e5c6e414.lovable.app/api/public/scrape-runs'
+          SCRAPE_REPORT_SECRET: ${{ secrets.SCRAPE_REPORT_SECRET }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+
