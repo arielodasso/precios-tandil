@@ -12,6 +12,7 @@ if (!INGEST_SECRET) throw new Error('falta INGEST_SECRET');
 const HISTORY_FULL = process.env.HISTORY_FULL === '1';
 const HISTORY_DAYS = Number.parseInt(process.env.HISTORY_DAYS ?? '30', 10);
 const CHUNK = 3000;
+const SYNC_START = new Date().toISOString();
 
 const CBA_ITEMS = [
   ['cereales-pan', 'Pan lactal', 'Cereales', /^pan lactal/],
@@ -78,6 +79,24 @@ async function postTable(table, rows, mode = 'upsert') {
     }
   }
   console.log(`  ${table}: ${rows.length} filas enviadas con éxito`);
+}
+
+async function closeOffers(since) {
+  console.log(`  Cerrando ofertas no vistas desde ${since}...`);
+  const res = await fetch(INGEST_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${INGEST_SECRET}`,
+    },
+    body: JSON.stringify({ table: 'offers', mode: 'close_offers', since }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Fallo al cerrar ofertas: ${res.status} ${err}`);
+  }
+  const result = await res.json();
+  console.log(`  Ofertas cerradas: ${result.closed ?? 0}`);
 }
 
 const { Client } = pg;
@@ -247,5 +266,7 @@ await postTable(
 );
 
 await postTable('deals', dealsRows, 'replace');
+
+await closeOffers(SYNC_START);
 
 console.log('--- Sincronización completada con éxito ---');
