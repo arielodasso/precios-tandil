@@ -32,6 +32,8 @@ interface VtexCatalogTreeNode {
 interface VtexCommertialOffer {
   Price?: number | string | null;
   ListPrice?: number | string | null;
+  AvailableQuantity?: number | string | null;
+  IsAvailable?: boolean | null;
 }
 
 interface VtexSearchItem {
@@ -137,8 +139,16 @@ function unitLabelFromSku(item: VtexSearchItem): string | null {
 function offerPrice(item: VtexSearchItem): { amount: number | null; listPrice: number | null } {
   for (const seller of item.sellers ?? []) {
     const offer = seller?.commertialOffer ?? null;
-    const amount = asNum(offer?.Price);
-    const listPrice = asNum(offer?.ListPrice);
+    if (!offer) continue;
+
+    const availableQty = asNum(offer.AvailableQuantity) ?? 0;
+    const isAvailable = offer.IsAvailable !== false;
+
+    // Si no hay stock o está marcado como no disponible, se ignora
+    if (availableQty <= 0 || !isAvailable) continue;
+
+    const amount = asNum(offer.Price);
+    const listPrice = asNum(offer.ListPrice);
     if (amount !== null && amount > 0) {
       return {
         amount,
@@ -148,6 +158,7 @@ function offerPrice(item: VtexSearchItem): { amount: number | null; listPrice: n
   }
   return { amount: null, listPrice: null };
 }
+
 
 /** Mapea un producto de la Search API a un registro normalizado VtexItemRecord. */
 export function vtexSearchProductToRecord(
