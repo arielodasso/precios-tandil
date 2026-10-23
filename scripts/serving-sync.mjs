@@ -2,7 +2,6 @@
  * Sync de la base de scraping hacia la web de Precios Tandil via HTTP (/api/ingest).
  */
 import pg from 'pg';
-import { writeFileSync } from 'node:fs';
 
 const { DATABASE_URL, INGEST_SECRET } = process.env;
 const INGEST_URL = process.env.INGEST_URL || 'https://preciostandil.com/api/ingest';
@@ -50,8 +49,6 @@ const CBA_ITEMS = [
   ['otros-sal', 'Sal fina', 'Otros', /^sal fina /],
   ['otros-agua', 'Agua mineral', 'Otros', /^agua mineral /],
 ];
-
-const SYNC_START = new Date().toISOString();
 
 const dayStr = (v) => {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -209,7 +206,6 @@ await postTable(
     sort: catSort.get(cc.id) ?? 0,
   })),
 );
-
 
 await postTable(
   'products',
