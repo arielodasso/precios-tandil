@@ -215,12 +215,36 @@ export class IngestPipeline {
     };
 
     /**
-     * Persistencia en lote: productos nuevos, store_sku, match_link y
-     * price_record se insertan con multi-row INSERT ... ON CONFLICT para
-     * reducir round-trips a la DB (el sistema principal de ingesta diaria).
-     * Devuelve el número de precios sospechosos marcados para el log.
+     * Persistencia en lote con reintentos para tolerar saturación transitoria
+     * del pooler de la base de datos (Supavisor EAUTHQUERY timeout).
      */
     const flushBuffer = async (): Promise<void> => {
+      if (pendingSkus.length === 0 && pendingProducts.length === 0) return;
+
+      const maxRetries = 3;
+      let lastErr: unknown;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await doFlush();
+          return;
+        } catch (err) {
+          lastErr = err;
+          log.warn(
+            { attempt, maxRetries, err: err instanceof Error ? err.message : String(err) },
+            'Fallo transitorio al persistir lote en la DB, reintentando...',
+          );
+
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 2500));
+          }
+        }
+      }
+
+      throw lastErr;
+    };
+
+    const doFlush = async (): Promise<void> => {
       if (pendingSkus.length === 0 && pendingProducts.length === 0) return;
 
       // ---- productos nuevos ----
