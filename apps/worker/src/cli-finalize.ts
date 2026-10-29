@@ -4,7 +4,6 @@ import { logger } from './lib/logger.ts';
 import { refreshAggregates } from './jobs/refresh-aggregates.ts';
 import { refreshDailySeries } from './jobs/refresh-daily-series.ts';
 import { detectDeals } from './jobs/detect-deals.ts';
-import { purgeSingleSource } from './jobs/purge-single-source.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL);
@@ -20,10 +19,6 @@ try {
     { rowsAffected: Number((fixed as { numUpdatedRows: bigint }).numUpdatedRows) },
     'run_reports arreglados',
   );
-
-  logger.info('purgando productos de una sola fuente y precios < mínimo');
-  const purgeResult = await purgeSingleSource(db, logger);
-  logger.info({ ...purgeResult }, 'purga completada');
 
   logger.info('refrescando agregados');
   const aggResult = await refreshAggregates(db, logger);
