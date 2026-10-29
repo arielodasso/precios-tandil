@@ -13,9 +13,13 @@ import {
   getTopSavings,
   type KyselyDB,
 } from '@/lib/queries/analytics';
+import { getDailyOffers } from '@/lib/queries/daily-offers';
+import { getRegisteredMerchants } from '@/lib/queries/merchants';
 import { resolveCbaBasket } from '@/lib/cba';
 import { CbaBasketCard } from '@/components/CbaBasketCard';
 import { CaptureSection } from '@/components/CaptureSection';
+import { DailyOffersSection } from '@/components/DailyOffersSection';
+import { MerchantsSection } from '@/components/MerchantsSection';
 import { BackButton } from '@/components/BackButton';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { ProductHistorySearch } from '@/components/ProductHistorySearch';
@@ -101,6 +105,8 @@ export default async function AnalyticsPage() {
     nearLow,
     volatile,
     topSavings,
+    dailyOffers,
+    merchants,
   ] = await Promise.all([
     getOverview(db),
     getBiggestDrops(db, 10),
@@ -112,6 +118,8 @@ export default async function AnalyticsPage() {
     getNearHistoricalLow(db, 10),
     getMostVolatile(db, 10),
     getTopSavings(db, 10),
+    getDailyOffers(db),
+    getRegisteredMerchants(),
   ]);
 
   return (
@@ -140,6 +148,43 @@ export default async function AnalyticsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Ofertas del día (agrupadas por rubro) */}
+      <CaptureSection
+        title="Ofertas del día"
+        description="Ofertas vigentes de los supermercados, agrupadas por rubro o categoría."
+        fileName="precios-tandil-ofertas-del-dia.png"
+        action={
+          <ExportCsvButton
+            label="Exportar CSV"
+            fileName="ofertas-del-dia.csv"
+            headers={[
+              'rubro',
+              'producto',
+              'marca',
+              'tienda',
+              'precio',
+              'prom_30d',
+              'descuento_%',
+              'publicado',
+              'vence',
+            ]}
+            rows={dailyOffers.offers.map((offer) => [
+              offer.rubro,
+              offer.name,
+              offer.brand,
+              offer.store_name,
+              offer.best_price,
+              offer.avg_30d,
+              offer.discount_pct,
+              offer.published_at,
+              offer.expires_at,
+            ])}
+          />
+        }
+      >
+        <DailyOffersSection result={dailyOffers} />
+      </CaptureSection>
 
       {/* Canasta por tienda (al principio del panel) */}
       <CaptureSection
@@ -617,6 +662,9 @@ export default async function AnalyticsPage() {
           </div>
         )}
       </CaptureSection>
+
+      {/* Comercios registrados: ficha, productos y ofertas */}
+      <MerchantsSection result={merchants} />
     </div>
   );
 }
