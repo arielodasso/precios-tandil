@@ -2,31 +2,26 @@
 
 /**
  * Contador de ahorro agregado de los tandilenses.
- *
- * Cada usuario (identificado por un device_id anónimo generado en el cliente)
- * reporta su ahorro actual calculado con su lista. La tabla guarda el último
- * ahorro reportado por usuario y el dashboard suma todos los montos para
- * mostrar "cuánto llevan ahorrado los tandilenses" con información real.
- *
- * Idempotente y seguro de mantener: cada POST hace un UPSERT por device_id.
  */
 
 exports.up = (pgm) => {
-  pgm.createTable(
-    'user_savings',
-    {
-      device_id: { type: 'text', notNull: true },
-      savings_amount: { type: 'numeric', notNull: true, default: 0 },
-      item_count: { type: 'integer', notNull: true, default: 0 },
-      updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
-    },
-    { ifNotExists: true },
-  );
-  pgm.addConstraint('user_savings', 'user_savings_pkey', {
-    primaryKey: ['device_id'],
-    ifNotExists: true,
-  });
-  pgm.createIndex('user_savings', ['updated_at']);
+  pgm.sql(`
+    CREATE TABLE IF NOT EXISTS "user_savings" (
+      "device_id" text NOT NULL,
+      "savings_amount" numeric DEFAULT 0 NOT NULL,
+      "item_count" integer DEFAULT 0 NOT NULL,
+      "updated_at" timestamptz DEFAULT now() NOT NULL
+    );
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'user_savings_pkey'
+      ) THEN
+        ALTER TABLE "user_savings" ADD CONSTRAINT "user_savings_pkey" PRIMARY KEY ("device_id");
+      END IF;
+    END $$;
+    CREATE INDEX IF NOT EXISTS "user_savings_updated_at_index" ON "user_savings" ("updated_at");
+  `);
 };
 
 exports.down = (pgm) => {
