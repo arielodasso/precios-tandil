@@ -267,6 +267,10 @@ await postTable(
 
 await postTable('deals', dealsRows, 'replace');
 
-await closeOffers(SYNC_START);
+if (offers.length > 0) {
+  await closeOffers(SYNC_START);
+} else {
+  console.log('  Omitiendo closeOffers: no se detectaron ofertas en esta corrida.');
+}
 
 console.log('--- Sincronización completada con éxito ---');
