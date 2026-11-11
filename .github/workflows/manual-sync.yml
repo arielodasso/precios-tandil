@@ -10,6 +10,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
     steps:
       - uses: actions/checkout@v4
 
