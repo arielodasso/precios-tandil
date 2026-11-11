@@ -22,6 +22,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Migraciones y seed de base de datos
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Post-process (purge, aggregates, series, deals)
         run: pnpm --filter @precios/worker run finalize
         env:
@@ -74,4 +81,3 @@ jobs:
           SCRAPE_REPORT_SECRET: ${{ secrets.SCRAPE_REPORT_SECRET }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           JOB_STATUS: ${{ job.status }}
-
