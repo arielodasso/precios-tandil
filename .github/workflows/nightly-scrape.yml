@@ -33,7 +33,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
+        env:
+          DEBIAN_FRONTEND: noninteractive
 
       - name: Scrape ${{ matrix.store }}
         run: pnpm --filter @precios/worker run ingest --store ${{ matrix.store }}
@@ -74,4 +76,3 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
           HISTORY_DAYS: '30'
-
