@@ -28,6 +28,7 @@ jobs:
           pnpm db:seed
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: no-verify
 
       - name: Post-process (purge, aggregates, series, deals)
         run: pnpm --filter @precios/worker run finalize
