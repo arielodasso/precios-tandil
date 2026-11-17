@@ -1,0 +1,11 @@
+{
+  "name": "@precios/adapters-asia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@precios/scraper-core": "workspace:*",
+    "@precios/shared": "workspace:*"
+  }
+}
