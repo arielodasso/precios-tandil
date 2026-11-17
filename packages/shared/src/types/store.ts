@@ -6,6 +6,7 @@ export const STORE_SLUGS = [
   'cooperativa-obrera',
   'vea',
   'golopolis',
+  'asia',
 ] as const;
 
 export type StoreSlug = (typeof STORE_SLUGS)[number];
@@ -17,6 +18,7 @@ export interface StoreInfo {
 }
 
 export const STORES: StoreInfo[] = [
+  { slug: 'asia', name: 'Asia Supermercado', baseUrl: 'https://asiasupermercado.ar/' },
   { slug: 'carrefour', name: 'Carrefour', baseUrl: 'https://www.carrefour.com.ar/' },
   { slug: 'monarca', name: 'Monarca', baseUrl: 'https://web.monarcadigital.com.ar/' },
   {
