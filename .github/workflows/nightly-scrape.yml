@@ -30,7 +30,7 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium
@@ -62,7 +62,7 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Post-process (purge, aggregates, series, deals)
         run: pnpm --filter @precios/worker run finalize
