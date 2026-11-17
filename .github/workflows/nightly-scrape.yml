@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        store: [golopolis, carrefour, monarca, dia, cooperativa-obrera, vea]
+        store: [golopolis, carrefour, monarca, dia, cooperativa-obrera, vea, asia]
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LOG_LEVEL: info
@@ -83,7 +83,7 @@ jobs:
           node -e '
           const runId = String(process.env.GITHUB_RUN_ID || Date.now());
           const jobStatus = process.env.JOB_STATUS === "success" ? "success" : "failed";
-          const stores = ["carrefour", "vea", "dia", "monarca", "golopolis", "cooperativa-obrera"];
+          const stores = ["carrefour", "vea", "dia", "monarca", "golopolis", "cooperativa-obrera", "asia"];
           
           const payload = {
             runs: stores.map(source => ({
