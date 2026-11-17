@@ -33,6 +33,7 @@
     "@precios/adapters-golopolis": "workspace:*",
     "@precios/adapters-monarca": "workspace:*",
     "@precios/adapters-vea": "workspace:*",
+    "@precios/adapters-asia": "workspace:*",
     "@precios/normalizer": "workspace:*",
     "@precios/scraper-core": "workspace:*",
     "@precios/shared": "workspace:*",
