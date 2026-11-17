@@ -10,6 +10,7 @@ const LOADERS: Array<[StoreSlug, () => Promise<AdapterModule>]> = [
   ['cooperativa-obrera', () => import('@precios/adapters-cooperativa-obrera')],
   ['vea', () => import('@precios/adapters-vea')],
   ['golopolis', () => import('@precios/adapters-golopolis')],
+  ['asia', () => import('@precios/adapters-asia')], // <--- NUEVO  
 ];
 
 export async function loadAdapters(logger: {
